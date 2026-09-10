@@ -94,6 +94,8 @@ Remotes.VoteTally.OnClientEvent:Connect(function(t)
     renderVotes()
 end)
 
+local reported: { [number]: boolean } = {} -- UserIds this client has reported
+
 local function renderPlayers()
     local listFrame = lobby.Players.List
     local template = listFrame.RowTemplate
@@ -129,6 +131,32 @@ local function renderPlayers()
                 Remotes.RequestTrade:FireServer("open", other)
                 row.Trade.Text = "ASKED"
             end
+        end)
+
+        row.Report.Visible = other ~= plr
+        row.Report.Text = reported[other.UserId] and "REPORTED" or "REPORT"
+        setEnabled(row.Report, not reported[other.UserId])
+        local armed = false
+        row.Report.Activated:Connect(function()
+            if reported[other.UserId] or other.Parent ~= Players then
+                return
+            end
+            if not armed then
+                -- One tap arms it, a second sends: a report is never an accident
+                armed = true
+                row.Report.Text = "CHEATING?"
+                task.delay(3, function()
+                    if armed and not reported[other.UserId] then
+                        armed = false
+                        row.Report.Text = "REPORT"
+                    end
+                end)
+                return
+            end
+            reported[other.UserId] = true
+            Remotes.RequestReport:FireServer(other, "exploiting")
+            row.Report.Text = "REPORTED"
+            setEnabled(row.Report, false)
         end)
         row.Parent = listFrame
     end

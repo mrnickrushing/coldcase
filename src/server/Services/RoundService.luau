@@ -15,6 +15,7 @@ local AbilityService = require(script.Parent.AbilityService)
 local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
 local OnboardingService = require(script.Parent.OnboardingService)
+local SpectatorService = require(script.Parent.SpectatorService)
 
 local RoundService = {}
 local state, stateEnds = "INTERMISSION", 0
@@ -45,6 +46,16 @@ local function aliveList(): { Player }
     for plr in alive do
         table.insert(out, plr)
     end
+    return out
+end
+
+-- Sorted so every spectator cycles through the same order
+local function aliveNames(): { string }
+    local out = {}
+    for plr in alive do
+        table.insert(out, plr.Name)
+    end
+    table.sort(out)
     return out
 end
 
@@ -90,6 +101,10 @@ end
 
 function RoundService:IsParticipant(plr: Player): boolean
     return table.find(participants, plr) ~= nil
+end
+
+function RoundService:AliveNames(): { string }
+    return aliveNames()
 end
 
 function RoundService:GetEligible(): { Player }
@@ -237,6 +252,13 @@ function RoundService:MarkDead(plr: Player, killer: Player?, method: string)
     AbilityService:StopDrag(plr)
     DataService:SetScreen(plr, "SPECTATING")
     broadcastAlive()
+    if state == "ACTIVE" then
+        local names = aliveNames()
+        SpectatorService:Broadcast(names)
+        if method ~= "left" then
+            SpectatorService:Enter(plr, names)
+        end
+    end
     self:CheckWinConditions()
 end
 
@@ -250,6 +272,9 @@ function RoundService:Revive(plr: Player): boolean
     table.insert(timeline, { at = os.clock() - activeStart, victim = plr.Name, method = "revived" })
     DataService:SetScreen(plr, "ACTIVE")
     broadcastAlive()
+    SpectatorService:Exit(plr)
+    SpectatorService:Broadcast(aliveNames())
+    RoleService:Arm(plr) -- LoadCharacter took their weapon
     return true
 end
 
@@ -403,6 +428,7 @@ function RoundService:Resolve(winner: string, reason: string)
     end
     diedConnections = {}
     alive = {}
+    SpectatorService:Reset()
     CoinService:Disarm()
     EventService:Clear()
     setState("RESOLUTION", Config.RESOLUTION_TIME)

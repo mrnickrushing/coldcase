@@ -77,6 +77,11 @@ Remotes.Clue.OnClientEvent:Connect(function(clues)
     end
 end)
 
+-- Radio pass broadcasts, filtered by the server
+Remotes.RadioMessage.OnClientEvent:Connect(function(from: string, message: string)
+    pushClue(("RADIO · %s: %s"):format(from, message), "radio")
+end)
+
 ---------------------------------------------------------------- Roles
 local cardToken = 0
 

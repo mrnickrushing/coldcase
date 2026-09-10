@@ -1,24 +1,37 @@
 -- Every client -> server remote goes through here (Handbook §06 · Remote spam).
--- 20 calls/sec per player across all remotes, rejected silently; sustained
--- abuse kicks. Handlers never learn about the limiter and never tell the
--- client why a call failed.
+-- A ceiling per player across every remote, and a tighter one per remote from
+-- Config.REMOTE_LIMITS. Over-limit calls are rejected silently; sustained
+-- abuse of either kicks. Handlers never learn about the limiter and never
+-- tell the client why a call failed.
 local Players = game:GetService("Players")
 local Config = require(game.ReplicatedStorage.Shared.Config)
 local RateLimiter = require(game.ReplicatedStorage.Shared.RateLimiter)
 local Remotes = game.ReplicatedStorage.Remotes
 
 local RemoteGuard = {}
-local limiter = RateLimiter.new(
-    Config.REMOTE_CALLS_PER_SEC,
-    Config.REMOTE_STRIKES_TO_KICK,
-    Config.REMOTE_STRIKE_WINDOW
-)
+local PER_REMOTE: { [string]: number } = Config.REMOTE_LIMITS :: any
+
+local function newLimiter(perSec: number): RateLimiter.RateLimiter
+    return RateLimiter.new(perSec, Config.REMOTE_STRIKES_TO_KICK, Config.REMOTE_STRIKE_WINDOW)
+end
+
+local global = newLimiter(Config.REMOTE_CALLS_PER_SEC)
+local limiters: { RateLimiter.RateLimiter } = { global }
 
 function RemoteGuard.Connect(remoteName: string, handler: (Player, ...any) -> ())
     local remote = Remotes:FindFirstChild(remoteName) :: RemoteEvent
     assert(remote, "RemoteGuard: no remote named " .. remoteName)
+    local perSec = PER_REMOTE[remoteName]
+    local own = if perSec then newLimiter(perSec) else nil
+    if own then
+        table.insert(limiters, own)
+    end
     remote.OnServerEvent:Connect(function(plr, ...)
-        local allowed, kick = limiter:Hit(plr, os.clock())
+        local now = os.clock()
+        local allowed, kick = global:Hit(plr, now)
+        if allowed and own then
+            allowed, kick = own:Hit(plr, now)
+        end
         if kick then
             plr:Kick("Disconnected.")
             return
@@ -44,7 +57,9 @@ function RemoteGuard.IsFiniteVector(v: any): boolean
 end
 
 Players.PlayerRemoving:Connect(function(plr)
-    limiter:Remove(plr)
+    for _, limiter in limiters do
+        limiter:Remove(plr)
+    end
 end)
 
 return RemoteGuard

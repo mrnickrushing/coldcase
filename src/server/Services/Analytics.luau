@@ -215,6 +215,17 @@ function Analytics.FirstSessionExit(
     )
 end
 
+-- Not one of the handbook's ten: SocialService reports. The reported player is
+-- never a field (cardinality); the value is how many reports they have here.
+function Analytics.PlayerReport(plr: Player, reason: string, reportsOnTarget: number)
+    custom(
+        plr,
+        "player_report",
+        reportsOnTarget,
+        fields(reason, Analytics.Bucket(reportsOnTarget, { 2, 3, 5, 10 }))
+    )
+end
+
 -- Onboarding funnel: each step logs once per player, in order
 Analytics.FUNNEL = {
     JOINED = { 1, "joined" },

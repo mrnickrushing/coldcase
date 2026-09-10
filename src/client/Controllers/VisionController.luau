@@ -107,7 +107,11 @@ RunService.RenderStepped:Connect(function(dt)
         applied = false
     end
 
-    local myPos = myChar and myChar:GetPivot().Position
+    -- Spectators measure from whoever they are watching
+    local camera = workspace.CurrentCamera
+    local subject = camera and camera.CameraSubject
+    local focus = if subject and subject:IsA("Humanoid") then subject.Parent else myChar
+    local myPos = if focus and focus:IsA("Model") then focus:GetPivot().Position else nil
     for _, other in Players:GetPlayers() do
         local char = other.Character
         if other == plr or not char then

@@ -21,6 +21,9 @@ local NAMES = {
     "AbilityState",
     "CosmeticChanged",
     "ShopResult",
+    "Spectate",
+    "RadioMessage",
+    "EmotePlayed",
     -- client -> server (every one is rate-limited and re-validated)
     "RequestStab",
     "RequestThrow",
@@ -38,6 +41,10 @@ local NAMES = {
     "RequestEquip",
     "RequestBuy",
     "RequestReroll",
+    "RequestRadio",
+    "RequestEmote",
+    "RequestReport",
+    "RequestSpectate",
 }
 
 return function()

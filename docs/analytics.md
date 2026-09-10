@@ -30,6 +30,12 @@ with the source or sink as the item SKU.
 dupe investigation needs them, add a server-side trade ledger (DataStore keyed by trade id) rather
 than an analytics field.
 
+## Also logged
+
+| Event | Value | Field 1 | Field 2 | Why |
+| --- | --- | --- | --- | --- |
+| `player_report` | reports against that player on this server | reason (`exploiting`, `harassment`, `other`) | report-count bucket | Roblox's own report flow does the moderation; this shows whether reports cluster on one player. The reported player is never a field. |
+
 ## Onboarding funnel
 
 Logged with `LogOnboardingFunnelStepEvent`, once per new player, in order:

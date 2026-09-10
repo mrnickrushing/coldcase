@@ -4,6 +4,7 @@ local Config = require(game.ReplicatedStorage.Shared.Config)
 local RoleService = require(script.Parent.RoleService)
 local AudioService = require(script.Parent.AudioService)
 local EvidenceService = require(script.Parent.EvidenceService)
+local CosmeticService = require(script.Parent.CosmeticService)
 
 local CombatService = {}
 local lastAction = {} -- [Player] = { [action] = os.clock() }
@@ -84,6 +85,7 @@ function CombatService:RequestStab(plr: Player, target: Player)
     if not ready(plr, "knife", Config.KNIFE_COOLDOWN) then
         return
     end
+    CosmeticService:DrawWeapon(plr, "knife", Config.WEAPON_DRAW_TIME)
 
     local a = myChar:GetPivot().Position
     AudioService:Emit("knife_swing", a)
@@ -108,6 +110,7 @@ function CombatService:RequestThrow(plr: Player, aimPoint: Vector3)
     if not ready(plr, "throw", Config.THROW_COOLDOWN) then
         return
     end
+    CosmeticService:DrawWeapon(plr, "knife", Config.WEAPON_DRAW_TIME)
 
     local dir = toAim.Unit
     AudioService:Emit("knife_throw", origin)
@@ -143,6 +146,7 @@ function CombatService:RequestShoot(plr: Player, aimPoint: Vector3)
     if not ready(plr, "gun", Config.GUN_COOLDOWN) then
         return
     end
+    CosmeticService:DrawWeapon(plr, "gun", Config.WEAPON_DRAW_TIME)
 
     -- Never trust a client origin: fire from the real character
     local head = char:FindFirstChild("Head")

@@ -15,6 +15,8 @@ local ClientState = {
         hintsSeen = {},
     },
     prompt = "—",
+    screen = nil :: string?,
+    spectating = false,
 }
 
 local listeners: { [string]: { (any) -> () } } = {}

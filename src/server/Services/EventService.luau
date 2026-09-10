@@ -1,3 +1,4 @@
+local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Config = require(game.ReplicatedStorage.Shared.Config)
 local AudioService = require(script.Parent.AudioService)
@@ -36,6 +37,19 @@ local function lockdownDoors()
     return out
 end
 
+-- The map's lamps (BuildMaps tags them MapLight) go dark with the room
+local function setMapLights(on: boolean)
+    for _, lamp in CollectionService:GetTagged("MapLight") do
+        if lamp:IsA("BasePart") and lamp:IsDescendantOf(workspace) then
+            local light = lamp:FindFirstChildOfClass("PointLight")
+            if light then
+                light.Enabled = on
+            end
+            lamp.Material = on and Enum.Material.Neon or Enum.Material.SmoothPlastic
+        end
+    end
+end
+
 function EventService:FireWeighted(mapIsIndoor: boolean)
     local pool = {}
     for _, e in EVENTS do
@@ -71,12 +85,15 @@ function EventService:Fire(event)
         AudioService:Play2D(nil, "lights_out")
         Lighting.Brightness = 0
         Lighting.Ambient = Color3.fromRGB(8, 10, 14)
+        setMapLights(false)
     elseif event.id == "POWER_SURGE" then
         AudioService:Play2D(nil, "power_surge")
         task.spawn(function()
             local t0 = os.clock()
             while os.clock() - t0 < event.duration and active == event do
-                Lighting.Brightness = math.random() > 0.5 and 0 or 2
+                local on = math.random() > 0.5
+                Lighting.Brightness = on and 2 or 0
+                setMapLights(on)
                 task.wait(math.random(4, 22) / 100)
             end
         end)
@@ -112,6 +129,7 @@ function EventService:Clear()
     active = nil
     Lighting.Brightness = BASE.Brightness
     Lighting.Ambient = BASE.Ambient
+    setMapLights(true)
     Remotes.EventFired:FireAllClients("CLEAR", 0)
 end
 

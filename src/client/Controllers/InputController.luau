@@ -277,10 +277,13 @@ Remotes.AbilityState.OnClientEvent:Connect(function(kind: string, duration: numb
 end)
 
 ---------------------------------------------------------------- Context prompt
+-- The touch USE button relabels to what it will do, like the E prompt does
+local shownTitle: string, shownFor: string? = "USE", nil
+
 task.spawn(function()
     while true do
         task.wait(0.1)
-        local text = "—"
+        local text, title = "—", "USE"
         local pos = myPosition()
         local role = ClientState.role
         if ability and os.clock() > ability.untilTime then
@@ -290,30 +293,48 @@ task.spawn(function()
             ability = nil
         end
 
-        if ability then
-            text = ability.text
-        elseif pos and role and inRound() then
+        if pos and role and inRound() then
             local touch = isTouch()
             local use = touch and "USE" or "E"
             local body = nearestTagged("Body", pos, Config.EXAMINE_RANGE)
             if role == "murderer" and nearestTarget(pos) then
-                text = use .. " · stab"
+                text, title = use .. " · stab", "STAB"
             elseif body and role == "medic" then
                 text = ("%s · revive   %s · examine"):format(touch and "REVIVE" or "R", use)
+                title = "EXAMINE"
             elseif body then
                 text = ("%s · examine   %s · drag"):format(use, touch and "DRAG" or "F")
+                title = "EXAMINE"
             elseif
                 role == "innocent" and nearestTagged("DroppedPistol", pos, Config.GUN_PICKUP_RANGE)
             then
-                text = use .. " · take pistol"
+                text, title = use .. " · take pistol", "TAKE"
             elseif role == "sheriff" or role == "hero" then
                 text = (touch and "FIRE" or "Click") .. " · shoot"
             elseif role == "murderer" then
                 text = (touch and "THROW" or "Q") .. " · throw knife"
             end
         end
+        if ability then
+            text = ability.text
+        end
         ClientState.Set("prompt", text)
+
+        -- A role change rebinds the button, which resets it to USE
+        if role ~= shownFor then
+            shownFor, shownTitle = role, "USE"
+        end
+        if role and title ~= shownTitle then
+            shownTitle = title
+            ContextActionService:SetTitle("CC_Interact", title)
+        end
     end
+end)
+
+-- The server draws weapons when they are used. The hotbar would let a player
+-- hold one out, and a knife in hand names the murderer.
+pcall(function()
+    game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 end)
 
 return InputController

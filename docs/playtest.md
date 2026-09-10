@@ -44,6 +44,19 @@ workflow — no manual Studio setup is needed.)
 - [ ] Lights Out shrinks the vision radius (fog at 88 studs), not just brightness
 - [ ] Fog Bank hides name tags past 40 studs
 - [ ] With `LiveOpsDay = 28`, TRADE opens a table between two players who both ask
+- [ ] Dying puts the camera on a living player; ‹ › (or ← →) switches; respawning in the lobby keeps
+      spectating; a revive or the end of the round hands the camera back
+- [ ] The murderer's knife and the sheriff's pistol stay hidden while walking about and appear in hand
+      only on a stab, throw or shot
+- [ ] With the Radio pass a message reaches everyone; the dead cannot send one mid-round
+- [ ] With the Emote pass the five emotes show over the player's head within 40 studs
+- [ ] REPORT on a lobby row asks to confirm; reporting the same player twice is refused
+
+## Mobile pass — test on a phone, not the emulator
+
+- [ ] FIRE / THROW / REVIVE appear only for the roles that can use them
+- [ ] USE relabels to STAB / EXAMINE / TAKE as the context changes
+- [ ] Every button is comfortably thumb-sized, and the radio and emote dock covers none of them
 
 ## Exploit sweep — before any public test
 
@@ -63,6 +76,9 @@ Run from a LocalScript or the client command bar.
 - [ ] Fire `RequestEquip` with a uid you do not own — nothing changes
 - [ ] Fire `RequestBuy` for an item not on the shelf, or without the coins — nothing granted
 - [ ] Deliver the same developer-product receipt twice — coins granted once
+- [ ] Fire `RequestStab` 10× in a second — at most 4 reach the handler (`Config.REMOTE_LIMITS`)
+- [ ] Fire `RequestRadio` without the pass, or while dead mid-round — nothing is broadcast
+- [ ] Fire `RequestReport` at the same player repeatedly — one report counted
 - [ ] Regional policy: until `PlayerPolicy` resolves (and wherever PolicyService restricts), crates,
       seasonal keys, crafting and re-rolls are refused with a message, and TRADE shows N/A. Test a
       restricted player with a VPN or an account in a restricted region; attributes set by hand only
@@ -70,8 +86,10 @@ Run from a LocalScript or the client command bar.
 
 ## Only after all of the above passes
 
-- [ ] Art pass on one map
-- [ ] Sound assets into `SoundCues`
+- [ ] Walk each map: lamps light the rooms and go dark for Lights Out, furniture blocks no route,
+      spawn or coin
+- [ ] Listen to all 22 cues in a round; swap any that miss the brief ([assets](assets.md))
+- [ ] Weapons sit right in the hand when drawn
 - [ ] Store page assets ([store-page.md](store-page.md))
 - [ ] 30-stranger closed test
 

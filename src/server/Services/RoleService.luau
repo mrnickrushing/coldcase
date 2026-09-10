@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local Config = require(game.ReplicatedStorage.Shared.Config)
 local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
+local CosmeticService = require(script.Parent.CosmeticService)
 local Remotes = game.ReplicatedStorage.Remotes
 
 local RoleService = {}
@@ -95,6 +96,18 @@ function RoleService:Assign(participants: { Player })
 
         local data = DataService:Get(plr)
         Analytics.RoleAssigned(plr, roles[plr], data and data.rank or 0, isFirstRound(plr))
+        self:Arm(plr)
+    end
+end
+
+-- Weapons are carried hidden and drawn by CombatService on each use. A knife
+-- held all round would name the murderer to anyone who looks.
+function RoleService:Arm(plr: Player)
+    local role = roles[plr]
+    if role == "murderer" then
+        CosmeticService:GiveWeapon(plr, "knife")
+    elseif role == "sheriff" or role == "hero" then
+        CosmeticService:GiveWeapon(plr, "gun")
     end
 end
 
@@ -108,6 +121,7 @@ function RoleService:MakeHero(plr: Player): boolean
     end
     roles[plr] = "hero"
     Remotes.RoleAssigned:FireClient(plr, "hero")
+    self:Arm(plr)
     return true
 end
 

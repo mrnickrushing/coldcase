@@ -3,9 +3,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
--- Remotes and grey-box maps must exist before any service is required
+-- Remotes, maps and lighting must exist before any service is required
 require(ReplicatedStorage.Shared.RemoteSetup)()
 require(ServerStorage.Build.BuildMaps)()
+require(ServerStorage.Build.BuildLighting)()
 
 local Services = script.Parent.Services
 local RemoteGuard = require(Services.RemoteGuard)
@@ -21,6 +22,8 @@ local AbilityService = require(Services.AbilityService)
 local CosmeticService = require(Services.CosmeticService)
 local ShopService = require(Services.ShopService)
 local LiveOpsClock = require(Services.LiveOpsClock)
+local SocialService = require(Services.SocialService)
+local SpectatorService = require(Services.SpectatorService)
 require(Services.PlayerPolicy) -- regional policy for paid random items and trading
 require(Services.MonetizationService) -- installs ProcessReceipt
 
@@ -132,6 +135,28 @@ end)
 
 RemoteGuard.Connect("HintSeen", function(plr, hintId)
     OnboardingService:MarkHintSeen(plr, hintId)
+end)
+
+RemoteGuard.Connect("RequestRadio", function(plr, message)
+    if type(message) == "string" then
+        SocialService:Radio(plr, message)
+    end
+end)
+
+RemoteGuard.Connect("RequestEmote", function(plr, emoteId)
+    if type(emoteId) == "string" then
+        SocialService:Emote(plr, emoteId)
+    end
+end)
+
+RemoteGuard.Connect("RequestReport", function(plr, target, reason)
+    if typeof(target) == "Instance" and target:IsA("Player") and type(reason) == "string" then
+        SocialService:Report(plr, target, reason)
+    end
+end)
+
+RemoteGuard.Connect("RequestSpectate", function(plr)
+    SpectatorService:Send(plr, RoundService:AliveNames())
 end)
 
 RoundService:Start()

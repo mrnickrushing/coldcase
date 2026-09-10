@@ -39,6 +39,7 @@ Theme.CLUE = {
     time = Color3.fromHex("37bcf0"),
     witness = Color3.fromHex("d9443f"),
     cold = Color3.fromHex("2b323c"),
+    radio = Color3.fromHex("a9afb7"),
 }
 
 Theme.TAP_MIN = 44 -- px, every touch target

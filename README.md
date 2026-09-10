@@ -8,9 +8,10 @@ one murderer, one sheriff, and a room full of people who have no idea which is w
 killer's coat, a time of death — and reading it fast is how innocents win instead of guessing.
 
 **Status:** grey-box vertical slice, feature-complete in code. Three blockout maps, the full round
-loop, evidence, medic revive and body drag, Last Call, economy with crates, crafting, direct buys and
-Robux products, every menu screen, and the Production Handbook systems. No art and no audio assets
-yet.
+loop, evidence, medic revive and body drag, Last Call, spectating, economy with crates, crafting,
+direct buys and Robux products including the Radio and Emote passes, player reports, every menu
+screen, and the Production Handbook systems. First art pass: per-map materials, lamps, night
+lighting, all 22 sound cues, and generated weapon and furniture models (see [docs/assets.md](docs/assets.md)).
 
 Design lives in Claude Design (project *Murder Mystery 2 Game Design*): the **Design Bible**,
 **Production Handbook**, **Map Blockouts**, the interactive prototype, and a `studio/` folder of
@@ -32,7 +33,9 @@ rojo build -o build/ColdCase.rbxlx
 
 Nothing needs to be placed by hand, and no command-bar steps are needed. On server start
 `Bootstrap` creates every RemoteEvent, builds the three grey-box maps into `ServerStorage.Maps` and a
-`BodyTemplate`; each client builds its own HUD, menus and notices.
+`BodyTemplate`; each client builds its own HUD, menus and notices. The generated weapon and
+furniture models live only in the place file (`ServerStorage.Cosmetics`, `ServerStorage.Props`); without
+them the game still runs with blockout weapons and bare walls.
 
 **Playtesting in Studio**
 
@@ -42,6 +45,7 @@ Nothing needs to be placed by hand, and no command-bar steps are needed. On serv
 | Test solo | Set a number attribute `MinPlayers = 1` on `ServerStorage` (Studio only). |
 | Preview a live-ops day | Set a number attribute `LiveOpsDay` on `ServerStorage`, e.g. `28` to open trading or `14` for Season One (Studio only). |
 | Run a full round | Test → Clients and Servers → 4 players. |
+| Get the intended lighting | Set `Lighting.Technology` to *Future* in the Properties panel. Scripts cannot set it. |
 | Sell Robux products | Put real ids in `src/shared/Products.luau`. An id of `0` is never shown or granted. |
 
 See [docs/playtest.md](docs/playtest.md) for the vertical-slice checklist and exploit sweep.
@@ -55,6 +59,9 @@ See [docs/playtest.md](docs/playtest.md) for the vertical-slice checklist and ex
 | Shoot | Click | FIRE (aims at screen centre) | sheriff, hero |
 | Revive a body | R | REVIVE | medic |
 | Drag a body | hold F | hold DRAG | everyone |
+| Switch spectated player | ← / → | ‹ › | the dead |
+| Radio message / emote | dock above the evidence log | same | Radio / Emote pass owners |
+| Report a player | REPORT on their lobby row, twice | same | everyone |
 
 ## Project layout
 
@@ -81,17 +88,20 @@ src/
                              AbilityService, EventService, EconomyService, ShopService,
                              CosmeticService, MonetizationService, CoinService, TradeService,
                              DataService, OnboardingService, AudioService, Analytics,
-                             RemoteGuard, LiveOpsClock
+                             RemoteGuard, LiveOpsClock, PlayerPolicy, SpectatorService,
+                             SocialService
   serverstorage/Build/       → ServerStorage.Build
-    BuildMaps.luau           grey-box maps from the blockout data
+    BuildMaps.luau           maps from the blockout data: materials, lamps, furniture
+    BuildLighting.luau       night sky, colour grade, bloom (no Atmosphere: vision uses fog)
   client/                    → StarterPlayerScripts
     ClientBootstrap.client.luau
     ClientState.luau         this client's role, data, prompt and screen
     Controllers/             HudController, MenuController, TradeController, InputController,
-                             VisionController, NoticeController, SoundController, CoinController
+                             VisionController, NoticeController, SoundController, CoinController,
+                             SpectatorController, SocialController
 vendor/ProfileStore.luau     MadStudio ProfileStore (Apache-2.0)
 tests/                       Lune unit tests for pure modules
-docs/                        store page and store art, analytics, live-ops, playtest
+docs/                        store page and store art, assets, analytics, live-ops, playtest
 ```
 
 ## Architecture
@@ -111,8 +121,8 @@ RESOLUTION   (6s)      results screen: murderer, roster, kill timeline, payout
 Rules the code follows, and new code should too:
 
 - **Every client → server remote goes through `RemoteGuard.Connect`** in `Bootstrap`: 20 calls/sec
-  per player, silent rejection, kick on sustained abuse. Handlers type-check their arguments and
-  forward only what they expect.
+  per player overall plus a tighter ceiling per remote (`Config.REMOTE_LIMITS`), silent rejection,
+  kick on sustained abuse. Handlers type-check their arguments and forward only what they expect.
 - **The client sends intent, never outcomes.** Stabs, shots, throws, revives and drags are
   re-measured against real character positions. Coin pickups name a node; the server owns the node
   list and the amount. Prices come from shared modules but are charged on the server.
@@ -179,7 +189,12 @@ Places where the design documents disagree with each other, and what the code do
   Oswald and Roboto Mono until the faces are uploaded.
 - **Map events.** The blockouts assign one event per map; `EventService` draws by weight as the
   Design Bible describes.
+- **Visible weapons.** Claude Design's `CosmeticService` equips the knife on the murderer at role
+  assignment, which names the murderer to anyone who looks. Weapons are carried hidden and drawn for
+  `Config.WEAPON_DRAW_TIME` on each stab, throw or shot instead.
+- **Emote pass.** Wave, point and laugh are also free Roblox chat emotes (`/e wave`), so the pass
+  mostly sells shrug, panic and the over-head label.
 
-Not built yet: kill-cam, cosmetic models and effects for the 24 items (equipping works; nothing is
-drawn), Radio and Emote pass perks (ownership is tracked), map preview images, report tooling,
-audio assets, art.
+Not built yet: kill-cam, per-item weapon models (one knife and one revolver stand in for all 24
+items, rarity shown as an outline), effects and pets, map preview images, a dressed lobby, and
+hand-made art.

@@ -31,6 +31,7 @@ return {
     GUN_RANGE = 300,
     GUN_PICKUP_RANGE = 10,
     SHERIFF_MISFIRE_KILLS_SELF = true,
+    WEAPON_DRAW_TIME = 1.2, -- weapons are carried hidden and drawn only while used
 
     -- Evidence
     BODY_CLUE_WINDOW = 20,
@@ -98,6 +99,29 @@ return {
     REMOTE_CALLS_PER_SEC = 20, -- hard ceiling per player, across every RemoteEvent
     REMOTE_STRIKES_TO_KICK = 5, -- seconds over the ceiling...
     REMOTE_STRIKE_WINDOW = 10, -- ...within this many seconds
+    -- Tighter ceilings for single remotes, on top of the global one (calls/sec)
+    REMOTE_LIMITS = {
+        RequestStab = 4,
+        RequestShoot = 4,
+        RequestThrow = 2,
+        RequestExamine = 6,
+        RequestCoin = 30,
+        RequestVote = 4,
+        RequestCrate = 3,
+        RequestBuy = 3,
+        RequestTrade = 10,
+        RequestRadio = 2,
+        RequestEmote = 3,
+        RequestReport = 2,
+        RequestSpectate = 4,
+    },
+
+    -- Social: Radio and Emote passes, reports
+    RADIO_COOLDOWN = 3,
+    RADIO_MAX_CHARS = 100,
+    EMOTE_COOLDOWN = 2,
+    EMOTES = { "wave", "point", "shrug", "laugh", "panic" },
+    REPORT_REASONS = { "exploiting", "harassment", "other" },
 
     -- Analytics
     HEATMAP_CELL = 80, -- studs per death-position grid cell
