@@ -15,6 +15,10 @@ shape, two colours, no text.
 
 Palette for the icon: knife `#f2a63b`, ground `#0a0c0f` → `#1b2530`, wash `#d9443f` at 35%.
 
+The icon, pass and product images, and four key-art thumbnail cards standing in for the briefs
+above, are uploaded; files and sources are in [store-art](store-art/README.md). Replace the
+thumbnails with in-game shots after the art pass.
+
 ## Description — paste as-is
 
 **One of you has a knife. Nobody knows who.**

@@ -91,7 +91,7 @@ src/
                              VisionController, NoticeController, SoundController, CoinController
 vendor/ProfileStore.luau     MadStudio ProfileStore (Apache-2.0)
 tests/                       Lune unit tests for pure modules
-docs/                        store page, analytics, live-ops, playtest
+docs/                        store page and store art, analytics, live-ops, playtest
 ```
 
 ## Architecture
