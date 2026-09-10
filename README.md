@@ -127,6 +127,9 @@ Rules the code follows, and new code should too:
 - **All deaths and revives go through `RoundService`** (`MarkDead`, `Revive`), so win conditions,
   the kill timeline and analytics see every one.
 - **Robux receipts are idempotent.** Each `PurchaseId` is recorded in the profile and granted once.
+- **Regional policy is respected** (`PlayerPolicy`). Where `ArePaidRandomItemsRestricted` is true,
+  paid crates, seasonal keys, crafting and effect re-rolls are refused; where
+  `IsPaidItemTradingAllowed` is false, trading is refused. The lookup fails closed.
 
 ## Production handbook → code
 

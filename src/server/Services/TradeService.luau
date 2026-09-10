@@ -84,6 +84,16 @@ function TradeService:Invite(from: Player, to: Player)
     if not LiveOps.IsTradingOpen(LiveOpsClock.Day()) then
         return
     end
+    -- Paid item trading is not allowed in some regions (PolicyService)
+    local PlayerPolicy = require(script.Parent.PlayerPolicy)
+    if not PlayerPolicy:CanTradePaidItems(from) then
+        Remotes.Notify:FireClient(from, "Trading isn't available in your region.")
+        return
+    end
+    if not PlayerPolicy:CanTradePaidItems(to) then
+        Remotes.Notify:FireClient(from, ("%s can't trade."):format(to.DisplayName))
+        return
+    end
     if not (DataService:Get(from) and DataService:Get(to)) then
         return
     end

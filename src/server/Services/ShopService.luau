@@ -46,6 +46,11 @@ function ShopService:RerollEffect(plr: Player, uid: string)
     if not data then
         return
     end
+    -- A random outcome bought with coins counts as a paid random item
+    if not require(script.Parent.PlayerPolicy):CanUsePaidRandomItems(plr) then
+        reply(plr, false, "Effect re-rolls aren't available in your region.")
+        return
+    end
     local target
     for _, item in data.inventory do
         if item.uid == uid then

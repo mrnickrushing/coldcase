@@ -117,8 +117,13 @@ local function renderPlayers()
         row.PlayerName.Text = other == plr and (other.DisplayName .. " (you)") or other.DisplayName
         row.Rank.Text = ("RANK %d · %s"):format(rank, string.upper(Progression.TitleFor(rank)))
         row.Trade.Visible = other ~= plr
-        row.Trade.Text = tradingOpen and "TRADE" or ("DAY %d"):format(opensDay)
-        setEnabled(row.Trade, tradingOpen)
+        -- PolicyService: paid item trading is not allowed in some regions
+        local canTrade = tradingOpen and plr:GetAttribute("PaidItemTradingAllowed") == true
+        row.Trade.Text = if not tradingOpen
+            then ("DAY %d"):format(opensDay)
+            elseif canTrade then "TRADE"
+            else "N/A"
+        setEnabled(row.Trade, canTrade)
         row.Trade.Activated:Connect(function()
             if ReplicatedStorage:GetAttribute("TradingOpen") and other.Parent then
                 Remotes.RequestTrade:FireServer("open", other)
@@ -170,7 +175,10 @@ local function renderSide()
     for key, entry in STORE do
         local b = lobby.Store[key]
         local def = entry.def
-        b.Visible = def.id ~= 0
+        -- A key only opens a random crate, so it is not offered where those are restricted
+        local restricted = key == "seasonalKey"
+            and plr:GetAttribute("PaidRandomItemsRestricted") ~= false
+        b.Visible = def.id ~= 0 and not restricted
         local owned = entry.pass and d.passes and d.passes[key]
         b.Text = owned and (string.upper(def.name) .. " · OWNED")
             or ("%s · %d R$"):format(string.upper(def.name), def.price)
@@ -444,6 +452,9 @@ local function renderCrate(): boolean
     local canSpin = false
     if spinning then
         spin.Text = "ROLLING…"
+    elseif plr:GetAttribute("PaidRandomItemsRestricted") ~= false then
+        -- Unset while the server's policy lookup is pending; the server fails closed too
+        spin.Text = "NOT AVAILABLE IN YOUR REGION"
     elseif crateId == "seasonal" and keys > 0 then
         spin.Text = ("SPIN · USE KEY (%d)"):format(keys)
         canSpin = true
@@ -631,6 +642,14 @@ local function renderInventoryButtons()
     local e = selectedEntry()
     local def = e and Catalog[e.id]
     local craft, reroll = inv.Buttons.Craft, inv.Buttons.Reroll
+    if plr:GetAttribute("PaidRandomItemsRestricted") ~= false then
+        -- Both hand out random results for coins; restricted in some regions
+        craft.Text = "CRAFTING NOT AVAILABLE"
+        reroll.Text = "RE-ROLL NOT AVAILABLE"
+        setEnabled(craft, false)
+        setEnabled(reroll, false)
+        return
+    end
     if def and not def.starter then
         local n = countOf(e.id)
         local ready = n >= Config.CRAFT_DUPES
@@ -756,6 +775,19 @@ ClientState.On("data", function(d)
         end
     end
 end)
+
+-- Regional policy arrives from the server shortly after join
+for _, attr in { "PaidRandomItemsRestricted", "PaidItemTradingAllowed" } do
+    plr:GetAttributeChangedSignal(attr):Connect(function()
+        renderPlayers()
+        renderSide()
+        if current == "crate" then
+            renderCrate()
+        elseif current == "inventory" then
+            renderInventoryButtons()
+        end
+    end)
+end
 
 ---------------------------------------------------------------- Flow + layout
 local function onState()

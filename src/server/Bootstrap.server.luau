@@ -21,6 +21,7 @@ local AbilityService = require(Services.AbilityService)
 local CosmeticService = require(Services.CosmeticService)
 local ShopService = require(Services.ShopService)
 local LiveOpsClock = require(Services.LiveOpsClock)
+require(Services.PlayerPolicy) -- regional policy for paid random items and trading
 require(Services.MonetizationService) -- installs ProcessReceipt
 
 -- Player lifecycle

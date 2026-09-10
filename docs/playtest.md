@@ -63,6 +63,10 @@ Run from a LocalScript or the client command bar.
 - [ ] Fire `RequestEquip` with a uid you do not own — nothing changes
 - [ ] Fire `RequestBuy` for an item not on the shelf, or without the coins — nothing granted
 - [ ] Deliver the same developer-product receipt twice — coins granted once
+- [ ] Regional policy: until `PlayerPolicy` resolves (and wherever PolicyService restricts), crates,
+      seasonal keys, crafting and re-rolls are refused with a message, and TRADE shows N/A. Test a
+      restricted player with a VPN or an account in a restricted region; attributes set by hand only
+      change the UI, the server keeps its own cache
 
 ## Only after all of the above passes
 

@@ -269,6 +269,12 @@ function EconomyService:OpenCrate(plr: Player, crateId: any, free: boolean?)
     if not data then
         return nil
     end
+    -- Paid random items are restricted in some regions (PolicyService).
+    -- The one free onboarding crate is not a paid item.
+    if not free and not require(script.Parent.PlayerPolicy):CanUsePaidRandomItems(plr) then
+        Remotes.ShopResult:FireClient(plr, false, "Crates aren't available in your region.")
+        return nil
+    end
 
     local pools, cost, usesKey = nil, 0, false
     if crateId == "seasonal" then
@@ -349,6 +355,11 @@ function EconomyService:Craft(plr: Player, itemId: any)
     end
     local data = DataService:Get(plr)
     if not data then
+        return
+    end
+    -- Crafting pays coins for a random next-tier item: a paid random item
+    if not require(script.Parent.PlayerPolicy):CanUsePaidRandomItems(plr) then
+        Remotes.ShopResult:FireClient(plr, false, "Crafting isn't available in your region.")
         return
     end
     local matches = {}
