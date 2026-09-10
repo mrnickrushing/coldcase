@@ -3,10 +3,9 @@
 -- Every gate takes a launch day number; the server decides what "today" is.
 local LiveOps = {}
 
--- Set to the launch moment (UTC epoch seconds) on launch day, e.g.
---   os.time({ year = 2026, month = 11, day = 6, hour = 17 })
+-- The launch moment in UTC epoch seconds; days roll over at this time of day.
 -- While nil the game is pre-launch and every gate reads day 0.
-LiveOps.LAUNCH_UTC = nil :: number?
+LiveOps.LAUNCH_UTC = 1788998400 :: number? -- 2026-09-10 00:00 UTC
 
 LiveOps.TRADING_UNLOCK_DAY = 28
 LiveOps.FOURTH_MAP_DAY = 45

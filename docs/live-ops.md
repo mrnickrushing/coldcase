@@ -5,9 +5,17 @@ weeks, and players must see it changing.
 
 ## Launch day
 
-Set `LiveOps.LAUNCH_UTC` in `src/shared/LiveOps.luau` to the launch moment and publish. Until then
-every gate reads day 0. In Studio, set a number attribute `LiveOpsDay` on `ServerStorage` to preview
-any day.
+Cold Case launched on **2026-09-10** (`LiveOps.LAUNCH_UTC` in `src/shared/LiveOps.luau`, 00:00 UTC);
+days roll over at midnight UTC. Before it is set every gate reads day 0. In Studio, set a number
+attribute `LiveOpsDay` on `ServerStorage` to preview any day.
+
+| Day | Date (UTC) |
+| --- | --- |
+| 14 · Season One opens | 2026-09-24 |
+| 28 · Trading unlocks | 2026-10-08 |
+| 45 · Fourth map | 2026-10-25 |
+| 60–62 · Double coin weekend | 2026-11-09 – 2026-11-11 |
+| 76 / 90 · Season One closes | 2026-11-25 / 2026-12-09 |
 
 ## Calendar
 
