@@ -1,0 +1,9 @@
+std = "roblox"
+
+[config]
+empty_if = { comments_count = true }
+
+[lints]
+# UI geometry is written as UDim2.new(scale, offset, scale, offset) so it reads
+# the same as the handbook's {scale,offset},{scale,offset} notation.
+roblox_manual_fromscale_or_fromoffset = "allow"

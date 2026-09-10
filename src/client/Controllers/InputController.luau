@@ -1,0 +1,234 @@
+-- StarterPlayerScripts/Controllers/InputController
+-- The client only asks; the server decides. Client cooldowns here are
+-- cosmetic — they exist so honest players never brush the remote rate limit.
+local CollectionService = game:GetService("CollectionService")
+local ContextActionService = game:GetService("ContextActionService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local Config = require(ReplicatedStorage:WaitForChild("Shared").Config)
+local Theme = require(ReplicatedStorage.Shared.Theme)
+local ClientState = require(script.Parent.Parent.ClientState)
+
+local plr = Players.LocalPlayer
+local InputController = {}
+local lastUse: { [string]: number } = {}
+
+local function isTouch(): boolean
+    return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
+local function cooled(action: string, cooldown: number): boolean
+    local t = os.clock()
+    if t - (lastUse[action] or 0) < cooldown then
+        return false
+    end
+    lastUse[action] = t
+    return true
+end
+
+local function myPosition(): Vector3?
+    local char = plr.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hum or hum.Health <= 0 then
+        return nil
+    end
+    return char:GetPivot().Position
+end
+
+local function inRound(): boolean
+    return ClientState.GetRoundState() == "ACTIVE" and ClientState.role ~= nil
+end
+
+local function nearestTarget(origin: Vector3): Player?
+    local best, bestDist = nil, Config.KNIFE_RANGE
+    for _, other in Players:GetPlayers() do
+        local char = other.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if other ~= plr and hum and hum.Health > 0 then
+            local d = (char:GetPivot().Position - origin).Magnitude
+            if d < bestDist then
+                best, bestDist = other, d
+            end
+        end
+    end
+    return best
+end
+
+local function nearestTagged(tag: string, origin: Vector3, range: number): Instance?
+    local best, bestDist = nil, range
+    for _, inst in CollectionService:GetTagged(tag) do
+        if inst:IsDescendantOf(workspace) then
+            local pos = inst:IsA("Model") and inst:GetPivot().Position
+                or (inst :: BasePart).Position
+            local d = (pos - origin).Magnitude
+            if d < bestDist then
+                best, bestDist = inst, d
+            end
+        end
+    end
+    return best
+end
+
+local function aimAt(screenX: number, screenY: number): Vector3
+    local cam = workspace.CurrentCamera
+    local ray = cam:ViewportPointToRay(screenX, screenY)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = { plr.Character }
+    local hit = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
+    return hit and hit.Position or (ray.Origin + ray.Direction * 1000)
+end
+
+local function aimPoint(): Vector3
+    if isTouch() then
+        local vp = workspace.CurrentCamera.ViewportSize
+        return aimAt(vp.X / 2, vp.Y / 2)
+    end
+    local m = UserInputService:GetMouseLocation()
+    return aimAt(m.X, m.Y)
+end
+
+---------------------------------------------------------------- Actions
+local function interact()
+    local pos = myPosition()
+    if not (pos and inRound()) then
+        return
+    end
+    local role = ClientState.role
+    if role == "murderer" then
+        local target = nearestTarget(pos)
+        if target then
+            if cooled("knife", Config.KNIFE_COOLDOWN) then
+                Remotes.RequestStab:FireServer(target)
+            end
+            return
+        end
+    end
+    local body = nearestTagged("Body", pos, Config.EXAMINE_RANGE)
+    if body then
+        if cooled("examine", Config.EXAMINE_TIME) then
+            Remotes.RequestExamine:FireServer(body)
+        end
+        return
+    end
+    if role == "innocent" and nearestTagged("DroppedPistol", pos, Config.GUN_PICKUP_RANGE) then
+        if cooled("pickup", 0.5) then
+            Remotes.RequestPickup:FireServer()
+        end
+    end
+end
+
+local function fire()
+    local role = ClientState.role
+    if
+        (role == "sheriff" or role == "hero")
+        and inRound()
+        and myPosition()
+        and cooled("gun", Config.GUN_COOLDOWN)
+    then
+        Remotes.RequestShoot:FireServer(aimPoint())
+    end
+end
+
+local function throw()
+    if
+        ClientState.role == "murderer"
+        and inRound()
+        and myPosition()
+        and cooled("throw", Config.THROW_COOLDOWN)
+    then
+        Remotes.RequestThrow:FireServer(aimPoint())
+    end
+end
+
+---------------------------------------------------------------- Bindings
+-- Keyboard and gamepad always; on-screen buttons only for the actions the
+-- current role can take, sized to the 44px tap minimum.
+local function onBegin(fn)
+    return function(_, inputState)
+        if inputState == Enum.UserInputState.Begin then
+            fn()
+        end
+        return Enum.ContextActionResult.Sink
+    end
+end
+
+local function bind(name: string, fn, title: string, position: UDim2, ...: Enum.KeyCode)
+    ContextActionService:BindAction(name, onBegin(fn), true, ...)
+    ContextActionService:SetTitle(name, title)
+    ContextActionService:SetPosition(name, position)
+    local button = ContextActionService:GetButton(name)
+    if button then
+        local size = math.max(Theme.TAP_MIN, 64)
+        button.Size = UDim2.fromOffset(size, size)
+    end
+end
+
+local function refreshBindings()
+    local role = ClientState.role
+    for _, name in { "CC_Interact", "CC_Fire", "CC_Throw" } do
+        ContextActionService:UnbindAction(name)
+    end
+    if not role then
+        return
+    end
+    bind(
+        "CC_Interact",
+        interact,
+        "USE",
+        UDim2.new(1, -170, 1, -190),
+        Enum.KeyCode.E,
+        Enum.KeyCode.ButtonX
+    )
+    if role == "sheriff" or role == "hero" then
+        bind("CC_Fire", fire, "FIRE", UDim2.new(1, -95, 1, -250), Enum.KeyCode.ButtonR2)
+    elseif role == "murderer" then
+        bind(
+            "CC_Throw",
+            throw,
+            "THROW",
+            UDim2.new(1, -95, 1, -250),
+            Enum.KeyCode.Q,
+            Enum.KeyCode.ButtonY
+        )
+    end
+end
+ClientState.On("role", refreshBindings)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.UserInputType == Enum.UserInputType.MouseButton1 then
+        fire()
+    end
+end)
+
+---------------------------------------------------------------- Context prompt
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        local text = "—"
+        local pos = myPosition()
+        local role = ClientState.role
+        if pos and role and inRound() then
+            local touch = isTouch()
+            local use = touch and "USE" or "E"
+            if role == "murderer" and nearestTarget(pos) then
+                text = use .. " · stab"
+            elseif nearestTagged("Body", pos, Config.EXAMINE_RANGE) then
+                text = use .. " · examine body"
+            elseif
+                role == "innocent" and nearestTagged("DroppedPistol", pos, Config.GUN_PICKUP_RANGE)
+            then
+                text = use .. " · take pistol"
+            elseif role == "sheriff" or role == "hero" then
+                text = (touch and "FIRE" or "Click") .. " · shoot"
+            elseif role == "murderer" then
+                text = (touch and "THROW" or "Q") .. " · throw knife"
+            end
+        end
+        ClientState.Set("prompt", text)
+    end
+end)
+
+return InputController

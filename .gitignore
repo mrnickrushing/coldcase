@@ -1,0 +1,28 @@
+# Roblox Studio / Rojo output
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+*.lock
+/build/
+/sourcemap.json
+
+# Tool caches
+/Packages/
+/ServerPackages/
+/node_modules/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Local agent state
+.claude/
+.lazyweb/
