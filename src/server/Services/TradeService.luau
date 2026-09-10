@@ -4,6 +4,7 @@ local Catalog = require(game.ReplicatedStorage.Shared.Catalog)
 local LiveOps = require(game.ReplicatedStorage.Shared.LiveOps)
 local Remotes = game.ReplicatedStorage.Remotes
 local DataService = require(script.Parent.DataService)
+local CosmeticService = require(script.Parent.CosmeticService)
 local Analytics = require(script.Parent.Analytics)
 local LiveOpsClock = require(script.Parent.LiveOpsClock)
 
@@ -13,27 +14,29 @@ local sessionOf = {} -- [Player] = id
 local invites = {} -- [Player] = Player they asked to trade with
 local MAX_OFFER = 8
 
+-- What each side has on the table, resolved to catalog ids for display
+local function describe(owner: Player, uids: { string })
+    local out = {}
+    local data = DataService:Get(owner)
+    if not data then
+        return out
+    end
+    for _, uid in uids do
+        for _, item in data.inventory do
+            if item.uid == uid then
+                table.insert(out, { uid = uid, id = item.id, effect = item.effect })
+                break
+            end
+        end
+    end
+    return out
+end
+
+-- TradeUpdate(id, mine, theirs, myLock, theirLock, myConfirm, theirConfirm, partner)
 local function push(s)
-    Remotes.TradeUpdate:FireClient(
-        s.a,
-        s.id,
-        s.offerA,
-        s.offerB,
-        s.lockA,
-        s.lockB,
-        s.confirmA,
-        s.confirmB
-    )
-    Remotes.TradeUpdate:FireClient(
-        s.b,
-        s.id,
-        s.offerB,
-        s.offerA,
-        s.lockB,
-        s.lockA,
-        s.confirmB,
-        s.confirmA
-    )
+    local a, b = describe(s.a, s.offerA), describe(s.b, s.offerB)
+    Remotes.TradeUpdate:FireClient(s.a, s.id, a, b, s.lockA, s.lockB, s.confirmA, s.confirmB, s.b)
+    Remotes.TradeUpdate:FireClient(s.b, s.id, b, a, s.lockB, s.lockA, s.confirmB, s.confirmA, s.a)
 end
 
 -- Any change to the table resets both locks and both confirms. Non-negotiable.
@@ -88,7 +91,10 @@ function TradeService:Invite(from: Player, to: Player)
         self:Open(from, to)
     else
         invites[from] = to
-        Remotes.Notify:FireClient(to, ("%s wants to trade"):format(from.DisplayName))
+        Remotes.Notify:FireClient(
+            to,
+            ("%s wants to trade — press TRADE by their name"):format(from.DisplayName)
+        )
     end
 end
 
@@ -141,6 +147,14 @@ function TradeService:Lock(plr: Player)
         s.lockB = true
     end
     push(s)
+end
+
+-- Unlocking is a change to the table, so it resets both sides
+function TradeService:Unlock(plr: Player)
+    local s = sessions[sessionOf[plr]]
+    if s then
+        invalidate(s)
+    end
 end
 
 function TradeService:Confirm(plr: Player)
@@ -202,6 +216,8 @@ function TradeService:Execute(s)
     end
 
     Analytics.TradeComplete(s.a, valueOf(fromA), valueOf(fromB))
+    CosmeticService:Reconcile(s.a)
+    CosmeticService:Reconcile(s.b)
     Remotes.TradeComplete:FireClient(s.a)
     Remotes.TradeComplete:FireClient(s.b)
     DataService:PushToClient(s.a)
@@ -228,6 +244,8 @@ function TradeService:Handle(plr: Player, action: any, payload: any)
         self:SetOffer(plr, payload)
     elseif action == "lock" then
         self:Lock(plr)
+    elseif action == "unlock" then
+        self:Unlock(plr)
     elseif action == "confirm" then
         self:Confirm(plr)
     elseif action == "cancel" then

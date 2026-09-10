@@ -17,6 +17,11 @@ local EconomyService = require(Services.EconomyService)
 local CoinService = require(Services.CoinService)
 local TradeService = require(Services.TradeService)
 local OnboardingService = require(Services.OnboardingService)
+local AbilityService = require(Services.AbilityService)
+local CosmeticService = require(Services.CosmeticService)
+local ShopService = require(Services.ShopService)
+local LiveOpsClock = require(Services.LiveOpsClock)
+require(Services.MonetizationService) -- installs ProcessReceipt
 
 -- Player lifecycle
 Players.PlayerAdded:Connect(function(plr)
@@ -25,6 +30,16 @@ end)
 for _, plr in Players:GetPlayers() do
     task.spawn(DataService.Load, DataService, plr)
 end
+
+-- Public live-ops state: seasonal crate, countdown, trading unlock
+LiveOpsClock.Publish()
+ServerStorage:GetAttributeChangedSignal("LiveOpsDay"):Connect(LiveOpsClock.Publish)
+task.spawn(function()
+    while true do
+        task.wait(300)
+        LiveOpsClock.Publish()
+    end
+end)
 
 -- Client -> server entry points. Every one is rate-limited by RemoteGuard,
 -- type-checked here, and re-validated inside the service. Handlers forward
@@ -61,6 +76,20 @@ RemoteGuard.Connect("RequestCoin", function(plr, nodeId)
     CoinService:RequestCoin(plr, nodeId)
 end)
 
+RemoteGuard.Connect("RequestRevive", function(plr, model)
+    if typeof(model) == "Instance" then
+        AbilityService:RequestRevive(plr, model)
+    end
+end)
+
+RemoteGuard.Connect("RequestDrag", function(plr, model, stop)
+    if stop == true then
+        AbilityService:StopDrag(plr)
+    elseif typeof(model) == "Instance" then
+        AbilityService:StartDrag(plr, model)
+    end
+end)
+
 RemoteGuard.Connect("RequestVote", function(plr, mapName)
     if type(mapName) == "string" then
         RoundService:CastVote(plr, mapName)
@@ -70,6 +99,30 @@ end)
 
 RemoteGuard.Connect("RequestCrate", function(plr, crateId)
     EconomyService:OpenCrate(plr, crateId)
+end)
+
+RemoteGuard.Connect("RequestCraft", function(plr, itemId)
+    if type(itemId) == "string" then
+        EconomyService:Craft(plr, itemId)
+    end
+end)
+
+RemoteGuard.Connect("RequestEquip", function(plr, ref)
+    if type(ref) == "string" then
+        CosmeticService:Equip(plr, ref)
+    end
+end)
+
+RemoteGuard.Connect("RequestBuy", function(plr, id)
+    if type(id) == "string" then
+        ShopService:Buy(plr, id)
+    end
+end)
+
+RemoteGuard.Connect("RequestReroll", function(plr, uid)
+    if type(uid) == "string" then
+        ShopService:RerollEffect(plr, uid)
+    end
 end)
 
 RemoteGuard.Connect("RequestTrade", function(plr, action, payload)

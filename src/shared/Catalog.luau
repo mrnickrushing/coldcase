@@ -4,9 +4,11 @@
 -- retired forever when the season closes (see Shared/LiveOps).
 return {
     -- Common
-    ash = { name = "Ash", kind = "Knife", rarity = "Common", value = 40 },
+    -- `starter` items are given, never dropped: pulling the thing you already
+    -- own on round one is the worst possible first crate.
+    ash = { name = "Ash", kind = "Knife", rarity = "Common", value = 40, starter = true },
     tallow = { name = "Tallow", kind = "Knife", rarity = "Common", value = 40 },
-    ledger = { name = "Ledger", kind = "Pistol", rarity = "Common", value = 40 },
+    ledger = { name = "Ledger", kind = "Pistol", rarity = "Common", value = 40, starter = true },
     scrap = { name = "Scrap", kind = "Pistol", rarity = "Common", value = 40 },
     matchstick = { name = "Matchstick", kind = "Effect", rarity = "Common", value = 60 },
     gutter = { name = "Gutter", kind = "Knife", rarity = "Common", value = 40 },

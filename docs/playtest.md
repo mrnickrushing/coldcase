@@ -30,6 +30,20 @@ workflow — no manual Studio setup is needed.)
 - [ ] Results show "You were N coins short." when the balance is under 250
 - [ ] Locker shows `coins / 250` and reads NEED N MORE until affordable
 - [ ] Everyone returns to the lobby; coins and XP survive a rejoin (with API access on)
+- [ ] Results screen names the murderer, lists the roster with the dead struck through, shows the
+      kill timeline and the payout
+- [ ] Crate reel spins and lands on the item the server actually granted; the free first crate
+      opens the crate screen by itself
+- [ ] Published odds are visible on the crate screen, for the Locker and the seasonal crate
+- [ ] Direct-buy shelf charges 1.6× item value; effect re-roll always lands on a new effect
+- [ ] Inventory lists starters and owned items; Equip persists across a rejoin
+- [ ] Crafting five duplicates yields one item of the next tier
+- [ ] Medic R revives an unexamined body once per round; moving during the 3s breaks it
+- [ ] Holding F for 2s drags a body at reduced walk speed; releasing drops it
+- [ ] Last Call fires at 30s: banner, coins double, murderer outlined through walls
+- [ ] Lights Out shrinks the vision radius (fog at 88 studs), not just brightness
+- [ ] Fog Bank hides name tags past 40 studs
+- [ ] With `LiveOpsDay = 28`, TRADE opens a table between two players who both ask
 
 ## Exploit sweep — before any public test
 
@@ -44,6 +58,11 @@ Run from a LocalScript or the client command bar.
 - [ ] Fire `RequestShoot` with a NaN vector — ignored, no server error
 - [ ] Offer a uid you do not own, or the same uid twice, in a trade — rejected
 - [ ] Change an offer after both locked — both locks and confirms reset
+- [ ] Fire `RequestRevive` as a non-medic, or on an examined body — nothing happens
+- [ ] Fire `RequestDrag` on a body across the map — nothing happens
+- [ ] Fire `RequestEquip` with a uid you do not own — nothing changes
+- [ ] Fire `RequestBuy` for an item not on the shelf, or without the coins — nothing granted
+- [ ] Deliver the same developer-product receipt twice — coins granted once
 
 ## Only after all of the above passes
 

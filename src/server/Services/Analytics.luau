@@ -135,6 +135,8 @@ function Analytics.CoinsEarned(
     local transaction = Enum.AnalyticsEconomyTransactionType.Gameplay.Name
     if source == "streak" then
         transaction = Enum.AnalyticsEconomyTransactionType.TimedReward.Name
+    elseif source == "robux" then
+        transaction = Enum.AnalyticsEconomyTransactionType.IAP.Name
     end
     pcall(
         AnalyticsService.LogEconomyEvent,

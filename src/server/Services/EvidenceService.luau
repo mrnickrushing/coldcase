@@ -1,4 +1,7 @@
-local Config = require(game.ReplicatedStorage.Shared.Config)
+local Players = game:GetService("Players")
+local Shared = game.ReplicatedStorage.Shared
+local Config = require(Shared.Config)
+local FibreBands = require(Shared.FibreBands)
 local Remotes = game.ReplicatedStorage.Remotes
 local EventService = require(script.Parent.EventService)
 local AudioService = require(script.Parent.AudioService)
@@ -10,6 +13,11 @@ local bodies = {} -- [Model] = clueData
 local channeling = {} -- [Player] = true while a 1.5s examine is running
 local round: any = nil -- RoundService, handed over by BindRound
 
+-- Who has seen whom. `since` is when the current unbroken sightline began;
+-- `qualified` is the last moment that sightline had lasted WITNESS_LOS_TIME.
+type Sight = { since: number?, qualified: number? }
+local sight: { [Player]: { [Player]: Sight } } = {}
+
 function EvidenceService:BindRound(roundService)
     round = roundService
 end
@@ -17,41 +25,89 @@ end
 local DIRS =
     { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" }
 
-local FIBRES = {
-    "dark grey wool",
-    "navy cotton",
-    "black leather",
-    "rust-red flannel",
-    "pale linen",
-    "oiled canvas",
-}
-
 local function compass(from: Vector3, to: Vector3): string
     local d = to - from
     local deg = math.deg(math.atan2(d.X, -d.Z)) % 360
     return DIRS[(math.floor((deg + 22.5) / 45) % 8) + 1]
 end
 
+-- The killer's actual torso colour, bucketed into a broad band. Narrows,
+-- never names. (Shirt textures are not readable, so this is body colour.)
 function EvidenceService:ColourBandOf(plr: Player): string
-    -- Deterministic per player so two clues never contradict
-    local seed = 0
-    for i = 1, #plr.Name do
-        seed += string.byte(plr.Name, i)
-    end
-    return FIBRES[(seed % #FIBRES) + 1]
+    local char = plr.Character
+    local torso = char and (char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso"))
+    local colour = if torso and torso:IsA("BasePart")
+        then torso.Color
+        else Color3.fromRGB(128, 128, 128)
+    return FibreBands.Describe(colour:ToHSV())
 end
 
+---------------------------------------------------------------- Sightlines
+-- Called every SIGHTLINE_SAMPLE seconds by RoundService with the living
+-- participants. A witness clue needs a real, unbroken raycast sightline, not
+-- a facing check.
+function EvidenceService:SampleSightlines(players: { Player }, now: number)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    for _, viewer in players do
+        local vc = viewer.Character
+        local head = vc and vc:FindFirstChild("Head")
+        if not (head and head:IsA("BasePart")) then
+            continue
+        end
+        local mine = sight[viewer]
+        if not mine then
+            mine = {}
+            sight[viewer] = mine
+        end
+        for _, other in players do
+            if other == viewer then
+                continue
+            end
+            local st = mine[other]
+            if not st then
+                st = {}
+                mine[other] = st
+            end
+
+            local seen = false
+            local oc = other.Character
+            if oc then
+                local to = oc:GetPivot().Position - head.Position
+                local dist = to.Magnitude
+                if
+                    dist > 0
+                    and dist <= Config.SIGHTLINE_RANGE
+                    and head.CFrame.LookVector:Dot(to / dist) >= 0.5
+                then
+                    params.FilterDescendantsInstances = { vc :: Model, oc }
+                    seen = workspace:Raycast(head.Position, to, params) == nil
+                end
+            end
+
+            if seen then
+                st.since = st.since or now
+                if now - (st.since :: number) >= Config.WITNESS_LOS_TIME then
+                    st.qualified = now
+                end
+            else
+                st.since = nil
+            end
+        end
+    end
+end
+
+function EvidenceService:ResetSightlines()
+    sight = {}
+end
+
+-- Did the victim watch the killer for a full second, recently enough to matter?
 function EvidenceService:HadLineOfSight(victim: Player, killer: Player): boolean
-    -- Approximation: was the killer roughly in front of the victim?
-    local vc, kc = victim.Character, killer.Character
-    if not (vc and kc) then
-        return false
-    end
-    local facing = vc:GetPivot().LookVector
-    local toKiller = (kc:GetPivot().Position - vc:GetPivot().Position).Unit
-    return facing:Dot(toKiller) > 0.55
+    local st = sight[victim] and sight[victim][killer]
+    return st ~= nil and st.qualified ~= nil and os.clock() - st.qualified <= Config.WITNESS_WINDOW
 end
 
+---------------------------------------------------------------- Bodies
 function EvidenceService:DropBody(victim: Player, killer: Player)
     local char = victim.Character
     local roundFolder = workspace:FindFirstChild("Round")
@@ -62,22 +118,33 @@ function EvidenceService:DropBody(victim: Player, killer: Player)
     local killerPos = killer.Character and killer.Character:GetPivot().Position or pos
 
     local model = game.ServerStorage.BodyTemplate:Clone()
-    model:PivotTo(CFrame.new(pos))
+    model:PivotTo(CFrame.new(pos - Vector3.new(0, 2.5, 0)))
     model:AddTag("Body")
     model.Parent = roundFolder
 
     -- Facts the client is NEVER told until it earns them
     bodies[model] = {
         victim = victim.DisplayName,
+        victimPlayer = victim,
         killer = killer.Name,
         dir = compass(killerPos, pos),
         fibre = self:ColourBandOf(killer),
         at = os.clock(),
         sawKiller = killer ~= victim and self:HadLineOfSight(victim, killer),
         examined = false,
+        draggedBy = nil,
     }
     Remotes.BodyDropped:FireAllClients(model, pos)
     AudioService:Emit("body_drop", pos)
+end
+
+function EvidenceService:GetBody(model: any)
+    return bodies[model]
+end
+
+function EvidenceService:RemoveBody(model: Instance)
+    bodies[model] = nil
+    model:Destroy()
 end
 
 local function inRange(plr: Player, model: Model): boolean
@@ -93,8 +160,7 @@ function EvidenceService:Examine(plr: Player, model: Instance)
     if not data or data.examined or channeling[plr] then
         return
     end
-    local RoundService = round
-    if not RoundService:IsAlive(plr) then
+    if not round:IsAlive(plr) then
         return
     end
     -- Range check before anything is sent back: clues, "cold", even the sound
@@ -111,7 +177,7 @@ function EvidenceService:Examine(plr: Player, model: Instance)
     if
         bodies[model] ~= data
         or data.examined
-        or not RoundService:IsAlive(plr)
+        or not round:IsAlive(plr)
         or not inRange(plr, model :: Model)
     then
         return
@@ -138,7 +204,7 @@ function EvidenceService:Examine(plr: Player, model: Instance)
     end
     Remotes.Clue:FireClient(plr, clues)
 
-    RoundService.clueCounts[plr] = (RoundService.clueCounts[plr] or 0) + 1
+    round.clueCounts[plr] = (round.clueCounts[plr] or 0) + 1
     require(script.Parent.EconomyService):Grant(plr, Config.EXAMINE_REWARD, 0, "examine")
     local profile = DataService:Get(plr)
     Analytics.EvidenceExamined(plr, #clues, age, profile and profile.rank or 0)
@@ -147,6 +213,14 @@ end
 function EvidenceService:Clear()
     bodies = {}
     channeling = {}
+    sight = {}
 end
+
+Players.PlayerRemoving:Connect(function(plr)
+    sight[plr] = nil
+    for _, mine in sight do
+        mine[plr] = nil
+    end
+end)
 
 return EvidenceService

@@ -11,6 +11,7 @@ local EconomyService = require(script.Parent.EconomyService)
 local EvidenceService = require(script.Parent.EvidenceService)
 local CombatService = require(script.Parent.CombatService)
 local CoinService = require(script.Parent.CoinService)
+local AbilityService = require(script.Parent.AbilityService)
 local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
 local OnboardingService = require(script.Parent.OnboardingService)
@@ -21,9 +22,11 @@ local participants: { Player } = {}
 local votes: { [Player]: string } = {}
 local alive: { [Player]: boolean } = {}
 local diedConnections: { RBXScriptConnection } = {}
-local eventFired, snitchRevealed = false, false
+local eventFired, snitchRevealed, lastCallFired = false, false, false
 local currentMapName, mapIsIndoor = "none", true
 local activeStart, roundLength = 0, Config.ROUND_LENGTH
+-- Public only after the round resolves: { at, killer?, victim, method }
+local timeline: { { at: number, killer: string?, victim: string, method: string } } = {}
 RoundService.clueCounts = {} :: { [Player]: number }
 
 local function setState(new: string, duration: number)
@@ -37,12 +40,16 @@ local function setState(new: string, duration: number)
     end
 end
 
-local function broadcastAlive()
-    local n = 0
-    for _ in alive do
-        n += 1
+local function aliveList(): { Player }
+    local out = {}
+    for plr in alive do
+        table.insert(out, plr)
     end
-    Remotes.AliveChanged:FireAllClients(n)
+    return out
+end
+
+local function broadcastAlive()
+    Remotes.AliveChanged:FireAllClients(#aliveList())
 end
 
 local function broadcastTally()
@@ -79,6 +86,10 @@ end
 -- True only for a participant who is still alive in an ACTIVE round
 function RoundService:IsAlive(plr: Player): boolean
     return state == "ACTIVE" and alive[plr] == true and plr.Character ~= nil
+end
+
+function RoundService:IsParticipant(plr: Player): boolean
+    return table.find(participants, plr) ~= nil
 end
 
 function RoundService:GetEligible(): { Player }
@@ -149,7 +160,8 @@ function RoundService:LoadVotedMap()
     -- from everyone already placed rather than leaving a player in the lobby.
     local used = {}
     for _, plr in participants do
-        if #spawns == 0 or not plr.Character then
+        local char = plr.Character
+        if #spawns == 0 or not char then
             continue
         end
         local bestIndex, bestGap = 1, -1
@@ -166,7 +178,7 @@ function RoundService:LoadVotedMap()
             end
         end
         local s = table.remove(spawns, bestIndex)
-        plr.Character:PivotTo(s.CFrame + Vector3.new(0, 3, 0))
+        char:PivotTo(s.CFrame + Vector3.new(0, 3, 0))
         table.insert(used, s.Position)
     end
 end
@@ -179,6 +191,18 @@ function RoundService:SetMovementLocked(locked: boolean)
             hum.JumpHeight = locked and 0 or 7.2
             hum.JumpPower = locked and 0 or 50
         end
+    end
+end
+
+local function watchDeath(self, plr: Player)
+    local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
+    if hum then
+        table.insert(
+            diedConnections,
+            hum.Died:Connect(function()
+                self:MarkDead(plr, nil, "reset")
+            end)
+        )
     end
 end
 
@@ -195,23 +219,54 @@ function RoundService:MarkDead(plr: Player, killer: Player?, method: string)
         killerRole = RoleService:Get(killer) or method
     end
     local pos = plr.Character and plr.Character:GetPivot().Position or Vector3.zero
+    local elapsed = os.clock() - activeStart
     Analytics.PlayerDeath(
         plr,
         RoleService:Get(plr) or "unknown",
         killerRole,
-        os.clock() - activeStart,
+        elapsed,
         currentMapName,
         pos
     )
+    if killer then
+        table.insert(
+            timeline,
+            { at = elapsed, killer = killer.Name, victim = plr.Name, method = method }
+        )
+    end
+    AbilityService:StopDrag(plr)
     DataService:SetScreen(plr, "SPECTATING")
     broadcastAlive()
     self:CheckWinConditions()
 end
 
+-- A medic brought them back. Their role is unchanged.
+function RoundService:Revive(plr: Player): boolean
+    if state ~= "ACTIVE" or alive[plr] or not self:IsParticipant(plr) or not plr.Character then
+        return false
+    end
+    alive[plr] = true
+    watchDeath(self, plr)
+    table.insert(timeline, { at = os.clock() - activeStart, victim = plr.Name, method = "revived" })
+    DataService:SetScreen(plr, "ACTIVE")
+    broadcastAlive()
+    return true
+end
+
+local function murdererNames(): { string }
+    local names = {}
+    for plr in alive do
+        if RoleService:Get(plr) == "murderer" then
+            table.insert(names, plr.Name)
+        end
+    end
+    return names
+end
+
 function RoundService:Start()
     task.spawn(function()
         while true do
-            task.wait(0.25)
+            task.wait(Config.SIGHTLINE_SAMPLE)
             if os.clock() < stateEnds then
                 if state == "ACTIVE" then
                     local left = stateEnds - os.clock()
@@ -226,6 +281,19 @@ function RoundService:Start()
                         snitchRevealed = true
                         RoleService:RevealSnitch()
                     end
+                    -- Last Call: coins double and the murderer is outlined for
+                    -- everyone. Forces an ending instead of a hide-out.
+                    if not lastCallFired and left <= Config.LAST_CALL_AT then
+                        lastCallFired = true
+                        EconomyService:SetLastCall(true)
+                        Remotes.EventFired:FireAllClients(
+                            "LAST_CALL",
+                            math.ceil(left),
+                            murdererNames()
+                        )
+                    end
+                    -- Witness clues need real observation time, not a facing check
+                    EvidenceService:SampleSightlines(aliveList(), os.clock())
                 end
                 continue
             end
@@ -257,22 +325,18 @@ function RoundService:Advance()
         alive = {}
         for _, plr in participants do
             alive[plr] = true
-            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-            if hum then
-                table.insert(
-                    diedConnections,
-                    hum.Died:Connect(function()
-                        self:MarkDead(plr, nil, "reset")
-                    end)
-                )
-            end
+            watchDeath(self, plr)
         end
         broadcastAlive()
         setState("REVEAL", Config.REVEAL_TIME)
     elseif state == "REVEAL" then
-        eventFired, snitchRevealed = false, false
+        eventFired, snitchRevealed, lastCallFired = false, false, false
         self.clueCounts = {}
+        timeline = {}
         EventService:TakeRoundEvent()
+        EvidenceService:ResetSightlines()
+        AbilityService:Reset()
+        EconomyService:SetLastCall(false)
         roundLength = lengthFor(#participants)
         self:SetMovementLocked(false)
         CombatService:MarkRoundStart()
@@ -313,9 +377,11 @@ function RoundService:Resolve(winner: string, reason: string)
         return
     end
     state = "RESOLVING" -- blocks re-entry while payouts run
+    AbilityService:Reset()
     local survivors = table.clone(alive)
     EconomyService:PayOut(participants, winner, survivors, self.clueCounts)
-    Remotes.RoundOver:FireAllClients(winner, reason, RoleService:GetPublicReveal())
+    EconomyService:SetLastCall(false)
+    Remotes.RoundOver:FireAllClients(winner, reason, RoleService:GetPublicReveal(), timeline)
 
     for _, plr in participants do
         if plr.Parent == Players then
@@ -376,5 +442,6 @@ ReplicatedStorage:SetAttribute("RoundEnds", 0)
 CombatService:BindRound(RoundService)
 EvidenceService:BindRound(RoundService)
 CoinService:BindRound(RoundService)
+AbilityService:BindRound(RoundService)
 
 return RoundService

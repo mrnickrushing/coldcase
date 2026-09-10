@@ -2,6 +2,8 @@
 -- In an init file, "./" resolves beside the tests folder, i.e. the repo root
 local LiveOps = require("./src/shared/LiveOps")
 local RateLimiter = require("./src/shared/RateLimiter")
+local FibreBands = require("./src/shared/FibreBands")
+local Progression = require("./src/shared/Progression")
 
 local passed, failed = 0, 0
 
@@ -115,6 +117,42 @@ test("players are limited independently", function()
     eq((rl:Hit("b", 1)), true)
     rl:Remove("a")
     eq((rl:Hit("a", 1)), true, "state cleared on Remove")
+end)
+
+---------------------------------------------------------------- FibreBands
+test("fibre bands name broad colours, never exact ones", function()
+    eq(FibreBands.Describe(0, 0, 0.05), "black fabric")
+    eq(FibreBands.Describe(0.5, 0.05, 0.3), "dark grey fabric")
+    eq(FibreBands.Describe(0.5, 0.05, 0.6), "mid grey fabric")
+    eq(FibreBands.Describe(0.5, 0.05, 0.9), "off-white fabric")
+    eq(FibreBands.Describe(230 / 360, 0.7, 0.3), "deep navy fabric")
+    eq(FibreBands.Describe(30 / 360, 0.6, 0.4), "warm brown fabric")
+    eq(FibreBands.Describe(100 / 360, 0.5, 0.4), "olive fabric")
+end)
+
+test("rust red wraps through 0 degrees", function()
+    eq(FibreBands.Describe(355 / 360, 0.8, 0.6), "rust red fabric")
+    eq(FibreBands.Describe(5 / 360, 0.8, 0.6), "rust red fabric")
+end)
+
+test("colours outside every band fall back to dark or light", function()
+    eq(FibreBands.Describe(55 / 360, 0.9, 0.95), "light fabric")
+    eq(FibreBands.Describe(300 / 360, 0.9, 0.2), "dark fabric")
+end)
+
+---------------------------------------------------------------- Progression
+test("rank titles step up at their thresholds", function()
+    eq(Progression.TitleFor(1), "Bystander")
+    eq(Progression.TitleFor(4), "Bystander")
+    eq(Progression.TitleFor(5), "Witness")
+    eq(Progression.TitleFor(30), "Detective")
+    eq(Progression.TitleFor(250), "Cold Case")
+end)
+
+test("crate discount applies from its rank and never goes negative", function()
+    eq(Progression.CratePrice(250, 24, 25, 25), 250)
+    eq(Progression.CratePrice(250, 25, 25, 25), 225)
+    eq(Progression.CratePrice(10, 99, 25, 25), 0)
 end)
 
 print(("%d passed, %d failed"):format(passed, failed))

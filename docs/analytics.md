@@ -17,8 +17,8 @@ field.
 | `player_death` | role, killerRole, timeAlive, map, position | time alive (s) | role | killer role (`murderer`, `sheriff`, `hero`, `self`, `reset`, `left`) | `map:x,z` in 80-stud cells | Heatmaps find death-trap corners. Fix geometry, not numbers. |
 | `evidence_examined` | clueCount, timeSinceDeath, playerRank | seconds since death | clue count | rank bucket | — | If low ranks never examine, onboarding failed. |
 | `crate_opened` | crateId, rarity, itemId, coinsAfter | coins after | crate id | rarity | item id | Actual pulls vs published odds. Audit monthly. |
-| `coins_earned` | source, amount, sessionTotal | economy event (Source) | session-total bucket | — | — | Faucet balance. Sources: `round`, `pickup`, `examine`, `streak`. |
-| `coins_spent` | sink, amount, balanceAfter | economy event (Sink) | — | — | — | Sink balance. Sinks: `locker`, `seasonal`, `craft`. |
+| `coins_earned` | source, amount, sessionTotal | economy event (Source) | session-total bucket | — | — | Faucet balance. Sources: `round`, `pickup`, `examine`, `revive`, `streak`, `robux`. |
+| `coins_spent` | sink, amount, balanceAfter | economy event (Sink) | — | — | — | Sink balance. Sinks: `locker`, `seasonal`, `craft`, `shop`, `reroll`. |
 | `trade_complete` | valueA, valueB, ratio, itemIds | ratio | value A bucket | value B bucket | ratio bucket | Lopsided ratios flag scams and dupes. |
 | `session_end` | duration, roundsPlayed, coinsEarned, isNew | duration (s) | rounds bucket | coins bucket | is new | Rounds per session is the health metric. |
 | `first_session_exit` | lastScreen, secondsPlayed, roundsPlayed | seconds played | last screen (`INTERMISSION`, `ACTIVE`, `SPECTATING`, …) | rounds bucket | — | Exactly where new players quit. |

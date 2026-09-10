@@ -15,7 +15,7 @@ any day.
 | --- | --- | --- |
 | 0 | **Launch.** Three maps, 24 items, one crate. Watch `first_session_exit` hourly for 48 hours and fix whatever it points at first. | — |
 | 7 | **First balance patch.** Expect the Archive to favour the murderer — widen two aisles rather than nerfing the knife. | Map geometry in `BuildMaps` |
-| 14 | **Season One opens.** The Long Night: four seasonal items, a 600-coin seasonal crate, and a visible countdown. | `LiveOps.SEASONS`; `OpenCrate(plr, "seasonal")` works. Crate button and countdown UI not built. |
+| 14 | **Season One opens.** The Long Night: four seasonal items, a 600-coin seasonal crate, and a visible countdown. | `LiveOps.SEASONS`; Seasonal tab and "retires forever in N days" countdown on the crate screen. Seasonal keys (Robux) open it instead of coins. |
 | 28 | **Trading unlocks.** Held back so the market has scarcity to trade. | `LiveOps.TRADING_UNLOCK_DAY` gates `TradeService` |
 | 45 | **Fourth map.** Community-voted setting, teased two weeks ahead. | Add to `Config.MAPS` and `ServerStorage.Maps` |
 | 60 | **Double coin weekend** (days 60–62). Notify lapsed players; measure returning-player D1 separately. | `LiveOps.COIN_BOOSTS` |

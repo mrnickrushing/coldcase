@@ -38,7 +38,24 @@ return {
     EXAMINE_RANGE = 14,
     EXAMINE_REWARD = 15,
     DRAG_TIME = 2,
-    WITNESS_LOS_TIME = 1.0,
+    WITNESS_LOS_TIME = 1.0, -- seconds of unbroken line of sight for a witness clue
+    WITNESS_WINDOW = 10, -- ...that must end within this many seconds of the death
+    SIGHTLINE_RANGE = 90,
+    SIGHTLINE_SAMPLE = 0.25,
+
+    -- Abilities
+    REVIVE_CHANNEL = 3,
+    REVIVE_MOVE_TOLERANCE = 3, -- studs; moving further breaks the channel
+    REVIVE_COINS = 60,
+    REVIVE_XP = 40,
+    DRAG_WALKSPEED = 8,
+    DRAG_SOUND_INTERVAL = 0.8,
+
+    -- Vision (client-side radius, in studs)
+    VISION_NORMAL = 190,
+    VISION_DARK = 88,
+    VISION_SURGE = 130,
+    FOG_NAMETAG_RANGE = 40,
 
     -- Events
     EVENT_AT_PCT = 0.45,
@@ -59,6 +76,11 @@ return {
     SEASONAL_COST = 600,
     CRAFT_DUPES = 5,
     CRAFT_FEE = 150,
+    DIRECT_BUY_MARKUP = 1.6, -- direct buy is the impatience tax
+    REROLL_COST = 300,
+    DISCOUNT_RANK = 25,
+    DISCOUNT_AMOUNT = 25, -- coins off every crate
+    LAST_CALL_MULT = 2,
     FRIEND_COIN_BONUS = 0.25, -- +25% when a friend is in the server
     STREAK_COINS_PER_DAY = 50,
     STREAK_COINS_MAX = 400,

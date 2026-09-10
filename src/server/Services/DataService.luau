@@ -11,9 +11,11 @@ local TEMPLATE = {
     coins = Config.STARTING_COINS,
     xp = 0,
     rank = 1,
-    inventory = {}, -- { {id="nocturne", uid="...", at=0} }
+    inventory = {}, -- { {id="nocturne", uid="...", at=0, effect="frost"?} }
     equipped = { knife = "ash", gun = "ledger" },
-    passes = {},
+    passes = {}, -- { vip = true }
+    seasonalKeys = 0,
+    purchases = {}, -- [PurchaseId] = os.time(), so a receipt is never granted twice
     stats = { rounds = 0, wins = 0, murdererWins = 0 },
     lastLogin = 0,
     streak = 0,
@@ -73,6 +75,7 @@ function DataService:Load(plr: Player)
         lastScreen = "LOBBY",
     }
     profiles[plr] = profile
+    plr:SetAttribute("Rank", data.rank) -- public: shown in the lobby list
 
     local reward = self:ApplyLoginStreak(data)
     if reward > 0 then

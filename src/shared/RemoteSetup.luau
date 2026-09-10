@@ -18,6 +18,9 @@ local NAMES = {
     "VoteTally",
     "PlayCue",
     "Notify",
+    "AbilityState",
+    "CosmeticChanged",
+    "ShopResult",
     -- client -> server (every one is rate-limited and re-validated)
     "RequestStab",
     "RequestThrow",
@@ -29,6 +32,12 @@ local NAMES = {
     "RequestCrate",
     "RequestTrade",
     "HintSeen",
+    "RequestRevive",
+    "RequestDrag",
+    "RequestCraft",
+    "RequestEquip",
+    "RequestBuy",
+    "RequestReroll",
 }
 
 return function()

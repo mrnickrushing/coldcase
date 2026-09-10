@@ -7,11 +7,12 @@ local EventService = {}
 local active = nil
 local lastFiredId: string? = nil
 
--- Captured once so Clear restores whatever the place was built with
+-- Captured once so Clear restores whatever the place was built with.
+-- Vision radius and fog are drawn per client by VisionController; the server
+-- only changes shared light levels.
 local BASE = {
     Brightness = Lighting.Brightness,
     Ambient = Lighting.Ambient,
-    FogEnd = Lighting.FogEnd,
 }
 
 -- One event per round. Chaos stops being an event when it is the weather.
@@ -79,8 +80,6 @@ function EventService:Fire(event)
                 task.wait(math.random(4, 22) / 100)
             end
         end)
-    elseif event.id == "FOG_BANK" then
-        Lighting.FogEnd = 40
     elseif event.id == "LOCKDOWN" then
         AudioService:Play2D(nil, "lockdown")
         for i, door in lockdownDoors() do
@@ -113,7 +112,6 @@ function EventService:Clear()
     active = nil
     Lighting.Brightness = BASE.Brightness
     Lighting.Ambient = BASE.Ambient
-    Lighting.FogEnd = BASE.FogEnd
     Remotes.EventFired:FireAllClients("CLEAR", 0)
 end
 

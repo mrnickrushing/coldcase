@@ -1,9 +1,12 @@
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
-local Config = require(game.ReplicatedStorage.Shared.Config)
-local Rarities = require(game.ReplicatedStorage.Shared.RarityTable)
-local Catalog = require(game.ReplicatedStorage.Shared.Catalog)
-local LiveOps = require(game.ReplicatedStorage.Shared.LiveOps)
+local Shared = game.ReplicatedStorage.Shared
+local Config = require(Shared.Config)
+local Rarities = require(Shared.RarityTable)
+local Catalog = require(Shared.Catalog)
+local LiveOps = require(Shared.LiveOps)
+local Shop = require(Shared.Shop)
+local Products = require(Shared.Products)
 local Remotes = game.ReplicatedStorage.Remotes
 local DataService = require(script.Parent.DataService)
 local RoleService = require(script.Parent.RoleService)
@@ -13,11 +16,19 @@ local LiveOpsClock = require(script.Parent.LiveOpsClock)
 local EconomyService = {}
 local TIER_ORDER = { "Common", "Uncommon", "Rare", "Legendary", "Godly" }
 
+-- Gameplay faucets that Last Call doubles. Streaks, gifts and Robux purchases
+-- never multiply.
+local LAST_CALL_SOURCES = { round = true, pickup = true, examine = true, revive = true }
+local lastCall = false
+
 -- Pre-bucket the catalog by rarity so a pull is O(1). The Locker and crafting
--- never see seasonal items; each season's crate only sees its own.
+-- never see seasonal or starter items; each season's crate only sees its own.
 local standardPool = {}
 local seasonPools = {}
 for id, item in Catalog do
+    if item.starter then
+        continue
+    end
     local pools = standardPool
     if item.season then
         seasonPools[item.season] = seasonPools[item.season] or {}
@@ -76,9 +87,9 @@ end)
 ---------------------------------------------------------------- Items
 -- The single place an item enters an inventory. Seasonal items only drop
 -- while their season is open; a retired seasonal can never be minted again.
-local function giveItem(data, id: string)
+function EconomyService:GiveItem(data, id: string)
     local item = Catalog[id]
-    if not item then
+    if not item or item.starter then
         return nil
     end
     if item.season then
@@ -119,7 +130,7 @@ end
 local function giveRankGift(plr: Player, data)
     data.onboarding.rankGift = true
     local ids = standardPool[Config.RANK_GIFT_RARITY]
-    local entry = giveItem(data, ids[math.random(#ids)])
+    local entry = EconomyService:GiveItem(data, ids[math.random(#ids)])
     if entry then
         Remotes.CrateResult:FireClient(
             plr,
@@ -133,19 +144,40 @@ local function giveRankGift(plr: Player, data)
 end
 
 ---------------------------------------------------------------- Coins + XP
--- `source` names the faucet for analytics. Gameplay coins get the friend
--- bonus and any live-ops boost; streak rewards are granted in DataService.
-function EconomyService:Grant(plr: Player, coins: number?, xp: number?, source: string?): number
+function EconomyService:SetLastCall(on: boolean)
+    lastCall = on
+end
+
+function EconomyService:CoinMultiplier(plr: Player, data, source: string): number
+    local mult = LiveOps.CoinMultiplier(LiveOpsClock.Day())
+    if self:HasFriendInServer(plr) then
+        mult *= 1 + Config.FRIEND_COIN_BONUS
+    end
+    if data.passes.vip then
+        mult *= Products.PASSES.vip.coinMultiplier
+    end
+    if lastCall and LAST_CALL_SOURCES[source] then
+        mult *= Config.LAST_CALL_MULT
+    end
+    return mult
+end
+
+-- `source` names the faucet for analytics. `raw` grants skip every multiplier
+-- (Robux purchases). Streak rewards are granted in DataService.
+function EconomyService:Grant(
+    plr: Player,
+    coins: number?,
+    xp: number?,
+    source: string?,
+    raw: boolean?
+): number
     local data = DataService:Get(plr)
     if not data then
         return 0
     end
     local granted = 0
     if coins and coins > 0 then
-        local mult = LiveOps.CoinMultiplier(LiveOpsClock.Day())
-        if self:HasFriendInServer(plr) then
-            mult *= 1 + Config.FRIEND_COIN_BONUS
-        end
+        local mult = if raw then 1 else self:CoinMultiplier(plr, data, source or "unknown")
         granted = math.floor(coins * mult + 0.5)
         data.coins += granted
         local session = DataService:GetSession(plr)
@@ -162,9 +194,13 @@ function EconomyService:Grant(plr: Player, coins: number?, xp: number?, source: 
     end
 
     data.xp += xp or 0
+    local startRank = data.rank
     while data.xp >= Config.XP_PER_RANK do
         data.xp -= Config.XP_PER_RANK
         data.rank += 1
+    end
+    if data.rank ~= startRank then
+        plr:SetAttribute("Rank", data.rank)
     end
     if data.rank >= Config.RANK_GIFT_AT and not data.onboarding.rankGift then
         giveRankGift(plr, data)
@@ -195,7 +231,8 @@ function EconomyService:PayOut(
             coins += Config.COINS_SURVIVE
             xp += Config.XP_SURVIVE
         end
-        xp += (clueCounts[plr] or 0) * Config.XP_PER_CLUE
+        local clues = clueCounts[plr] or 0
+        xp += clues * Config.XP_PER_CLUE
 
         data.stats.rounds += 1
         if won then
@@ -211,12 +248,14 @@ function EconomyService:PayOut(
 
         local granted = self:Grant(plr, coins, xp, "round")
         -- Near-miss messaging: honest, and shown only when they cannot afford a crate
+        local cratePrice = Shop.CratePrice(Config.CRATE_COST, data.rank)
         Remotes.RoundReward:FireClient(plr, {
             won = won,
             coins = granted,
             xp = xp,
+            clues = clues,
             balance = data.coins,
-            short = math.max(0, Config.CRATE_COST - data.coins),
+            short = math.max(0, cratePrice - data.coins),
         })
     end
 end
@@ -231,15 +270,20 @@ function EconomyService:OpenCrate(plr: Player, crateId: any, free: boolean?)
         return nil
     end
 
-    local pools, cost
+    local pools, cost, usesKey = nil, 0, false
     if crateId == "seasonal" then
         local season = LiveOps.ActiveSeason(LiveOpsClock.Day())
         if not season then
             return nil
         end
-        pools, cost = seasonPools[season.id], season.crateCost
+        pools = seasonPools[season.id]
+        cost = Shop.CratePrice(season.crateCost, data.rank)
+        -- A seasonal key (Robux) opens the crate instead of coins
+        if not free and data.seasonalKeys > 0 then
+            usesKey, cost = true, 0
+        end
     else
-        pools, cost = standardPool, Config.CRATE_COST
+        pools, cost = standardPool, Shop.CratePrice(Config.CRATE_COST, data.rank)
     end
     if not pools then
         return nil
@@ -248,6 +292,11 @@ function EconomyService:OpenCrate(plr: Player, crateId: any, free: boolean?)
         cost = 0
     end
     if data.coins < cost then
+        Remotes.ShopResult:FireClient(
+            plr,
+            false,
+            ("You are %d coins short."):format(cost - data.coins)
+        )
         return nil
     end
 
@@ -257,21 +306,30 @@ function EconomyService:OpenCrate(plr: Player, crateId: any, free: boolean?)
         return nil
     end
     local ids = pools[tier.name]
-    local entry = giveItem(data, ids[math.random(#ids)])
+    local entry = self:GiveItem(data, ids[math.random(#ids)])
     if not entry then
         return nil
     end
     data.coins -= cost
+    if usesKey then
+        data.seasonalKeys -= 1
+    end
 
     Analytics.CrateOpened(plr, crateId, tier.name, entry.id, data.coins)
     if cost > 0 then
         Analytics.CoinsSpent(plr, crateId, cost, data.coins)
     end
-    Remotes.CrateResult:FireClient(
+    Remotes.CrateResult:FireClient(plr, {
+        id = entry.id,
+        uid = entry.uid,
+        rarity = tier.name,
+        crateId = crateId,
+        free = free == true,
+    })
+    Remotes.DataChanged:FireClient(
         plr,
-        { id = entry.id, uid = entry.uid, rarity = tier.name, free = free == true }
+        { coins = data.coins, inventory = data.inventory, seasonalKeys = data.seasonalKeys }
     )
-    Remotes.DataChanged:FireClient(plr, { coins = data.coins, inventory = data.inventory })
 
     if tier.announce then
         -- Other players seeing a big drop is the cheapest crate advert there is
@@ -299,7 +357,20 @@ function EconomyService:Craft(plr: Player, itemId: any)
             table.insert(matches, i)
         end
     end
-    if #matches < Config.CRAFT_DUPES or data.coins < Config.CRAFT_FEE then
+    if #matches < Config.CRAFT_DUPES then
+        Remotes.ShopResult:FireClient(
+            plr,
+            false,
+            ("Crafting needs %d of the same item."):format(Config.CRAFT_DUPES)
+        )
+        return
+    end
+    if data.coins < Config.CRAFT_FEE then
+        Remotes.ShopResult:FireClient(
+            plr,
+            false,
+            ("You are %d coins short."):format(Config.CRAFT_FEE - data.coins)
+        )
         return
     end
 
@@ -311,6 +382,7 @@ function EconomyService:Craft(plr: Player, itemId: any)
     end
     local pool = nextTier and standardPool[nextTier]
     if not pool then
+        Remotes.ShopResult:FireClient(plr, false, "Nothing ranks above Godly.")
         return
     end
 
@@ -321,7 +393,7 @@ function EconomyService:Craft(plr: Player, itemId: any)
     for i = 1, Config.CRAFT_DUPES do
         table.remove(data.inventory, matches[i])
     end
-    local entry = giveItem(data, pool[math.random(#pool)])
+    local entry = self:GiveItem(data, pool[math.random(#pool)])
     Analytics.CoinsSpent(plr, "craft", Config.CRAFT_FEE, data.coins)
     if entry then
         Remotes.CrateResult:FireClient(
@@ -329,6 +401,7 @@ function EconomyService:Craft(plr: Player, itemId: any)
             { id = entry.id, uid = entry.uid, rarity = nextTier, crafted = true }
         )
     end
+    require(script.Parent.CosmeticService):Reconcile(plr)
     Remotes.DataChanged:FireClient(plr, { coins = data.coins, inventory = data.inventory })
 end
 

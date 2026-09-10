@@ -14,6 +14,7 @@ local ClientState = require(script.Parent.Parent.ClientState)
 local plr = Players.LocalPlayer
 local InputController = {}
 local lastUse: { [string]: number } = {}
+local ability: { text: string, untilTime: number }? = nil
 
 local function isTouch(): boolean
     return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
@@ -34,7 +35,7 @@ local function myPosition(): Vector3?
     if not hum or hum.Health <= 0 then
         return nil
     end
-    return char:GetPivot().Position
+    return (char :: Model):GetPivot().Position
 end
 
 local function inRound(): boolean
@@ -47,7 +48,7 @@ local function nearestTarget(origin: Vector3): Player?
         local char = other.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
         if other ~= plr and hum and hum.Health > 0 then
-            local d = (char:GetPivot().Position - origin).Magnitude
+            local d = ((char :: Model):GetPivot().Position - origin).Magnitude
             if d < bestDist then
                 best, bestDist = other, d
             end
@@ -60,8 +61,9 @@ local function nearestTagged(tag: string, origin: Vector3, range: number): Insta
     local best, bestDist = nil, range
     for _, inst in CollectionService:GetTagged(tag) do
         if inst:IsDescendantOf(workspace) then
-            local pos = inst:IsA("Model") and inst:GetPivot().Position
-                or (inst :: BasePart).Position
+            local pos = if inst:IsA("Model")
+                then inst:GetPivot().Position
+                else (inst :: BasePart).Position
             local d = (pos - origin).Magnitude
             if d < bestDist then
                 best, bestDist = inst, d
@@ -76,7 +78,7 @@ local function aimAt(screenX: number, screenY: number): Vector3
     local ray = cam:ViewportPointToRay(screenX, screenY)
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = { plr.Character }
+    params.FilterDescendantsInstances = { plr.Character :: Model }
     local hit = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
     return hit and hit.Position or (ray.Origin + ray.Direction * 1000)
 end
@@ -143,20 +145,47 @@ local function throw()
     end
 end
 
----------------------------------------------------------------- Bindings
--- Keyboard and gamepad always; on-screen buttons only for the actions the
--- current role can take, sized to the 44px tap minimum.
-local function onBegin(fn)
-    return function(_, inputState)
-        if inputState == Enum.UserInputState.Begin then
-            fn()
-        end
-        return Enum.ContextActionResult.Sink
+local function revive()
+    local pos = myPosition()
+    if ClientState.role ~= "medic" or not (pos and inRound()) then
+        return
+    end
+    local body = nearestTagged("Body", pos, Config.EXAMINE_RANGE)
+    if body and cooled("revive", 1) then
+        Remotes.RequestRevive:FireServer(body)
     end
 end
 
-local function bind(name: string, fn, title: string, position: UDim2, ...: Enum.KeyCode)
-    ContextActionService:BindAction(name, onBegin(fn), true, ...)
+local function dragStart()
+    local pos = myPosition()
+    if not (pos and inRound()) then
+        return
+    end
+    local body = nearestTagged("Body", pos, Config.EXAMINE_RANGE)
+    if body and cooled("drag", 0.3) then
+        Remotes.RequestDrag:FireServer(body, false)
+    end
+end
+
+local function dragStop()
+    Remotes.RequestDrag:FireServer(nil, true)
+end
+
+---------------------------------------------------------------- Bindings
+-- Keyboard and gamepad always; on-screen buttons only for the actions the
+-- current role can take, sized to the 44px tap minimum.
+local function bind(name: string, onBegin, onEnd, title: string, position: UDim2, ...: Enum.KeyCode)
+    ContextActionService:BindAction(name, function(_, inputState)
+        if inputState == Enum.UserInputState.Begin then
+            onBegin()
+        elseif
+            onEnd
+            and (inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel)
+        then
+            onEnd()
+        end
+        return Enum.ContextActionResult.Sink
+    end, true, ...)
     ContextActionService:SetTitle(name, title)
     ContextActionService:SetPosition(name, position)
     local button = ContextActionService:GetButton(name)
@@ -166,9 +195,11 @@ local function bind(name: string, fn, title: string, position: UDim2, ...: Enum.
     end
 end
 
+local ACTIONS = { "CC_Interact", "CC_Fire", "CC_Throw", "CC_Drag", "CC_Revive" }
+
 local function refreshBindings()
     local role = ClientState.role
-    for _, name in { "CC_Interact", "CC_Fire", "CC_Throw" } do
+    for _, name in ACTIONS do
         ContextActionService:UnbindAction(name)
     end
     if not role then
@@ -177,20 +208,41 @@ local function refreshBindings()
     bind(
         "CC_Interact",
         interact,
+        nil,
         "USE",
         UDim2.new(1, -170, 1, -190),
         Enum.KeyCode.E,
         Enum.KeyCode.ButtonX
     )
+    bind(
+        "CC_Drag",
+        dragStart,
+        dragStop,
+        "DRAG",
+        UDim2.new(1, -250, 1, -120),
+        Enum.KeyCode.F,
+        Enum.KeyCode.ButtonB
+    )
     if role == "sheriff" or role == "hero" then
-        bind("CC_Fire", fire, "FIRE", UDim2.new(1, -95, 1, -250), Enum.KeyCode.ButtonR2)
+        bind("CC_Fire", fire, nil, "FIRE", UDim2.new(1, -95, 1, -250), Enum.KeyCode.ButtonR2)
     elseif role == "murderer" then
         bind(
             "CC_Throw",
             throw,
+            nil,
             "THROW",
             UDim2.new(1, -95, 1, -250),
             Enum.KeyCode.Q,
+            Enum.KeyCode.ButtonY
+        )
+    elseif role == "medic" then
+        bind(
+            "CC_Revive",
+            revive,
+            nil,
+            "REVIVE",
+            UDim2.new(1, -95, 1, -250),
+            Enum.KeyCode.R,
             Enum.KeyCode.ButtonY
         )
     end
@@ -203,6 +255,27 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
+---------------------------------------------------------------- Ability feedback
+Remotes.AbilityState.OnClientEvent:Connect(function(kind: string, duration: number)
+    local now = os.clock()
+    if kind == "revive_start" then
+        ability = { text = "Reviving… hold still", untilTime = now + duration }
+    elseif kind == "revive_failed" then
+        ability = { text = "Revive broken — you moved", untilTime = now + 1.5 }
+    elseif kind == "revive_done" then
+        ability = { text = "Revived", untilTime = now + 1.5 }
+    elseif kind == "drag_start" then
+        ability = { text = "Taking hold…", untilTime = now + duration }
+    elseif kind == "dragging" then
+        ability = {
+            text = (isTouch() and "Release DRAG" or "Release F") .. " · dragging",
+            untilTime = math.huge,
+        }
+    elseif kind == "drag_stop" then
+        ability = nil
+    end
+end)
+
 ---------------------------------------------------------------- Context prompt
 task.spawn(function()
     while true do
@@ -210,13 +283,25 @@ task.spawn(function()
         local text = "—"
         local pos = myPosition()
         local role = ClientState.role
-        if pos and role and inRound() then
+        if ability and os.clock() > ability.untilTime then
+            ability = nil
+        end
+        if not inRound() then
+            ability = nil
+        end
+
+        if ability then
+            text = ability.text
+        elseif pos and role and inRound() then
             local touch = isTouch()
             local use = touch and "USE" or "E"
+            local body = nearestTagged("Body", pos, Config.EXAMINE_RANGE)
             if role == "murderer" and nearestTarget(pos) then
                 text = use .. " · stab"
-            elseif nearestTagged("Body", pos, Config.EXAMINE_RANGE) then
-                text = use .. " · examine body"
+            elseif body and role == "medic" then
+                text = ("%s · revive   %s · examine"):format(touch and "REVIVE" or "R", use)
+            elseif body then
+                text = ("%s · examine   %s · drag"):format(use, touch and "DRAG" or "F")
             elseif
                 role == "innocent" and nearestTagged("DroppedPistol", pos, Config.GUN_PICKUP_RANGE)
             then
