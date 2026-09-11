@@ -46,16 +46,16 @@ props are skipped, and weapons fall back to rarity-tinted blockouts.
 
 | Where | What | Used by |
 | --- | --- | --- |
-| `ServerStorage.Cosmetics.knife` | Steel kitchen knife | `CosmeticService`: every knife, rarity shown as an outline |
-| `ServerStorage.Cosmetics.gun` | Six-shooter revolver | `CosmeticService`: every pistol |
+| `ServerStorage.Cosmetics.knife` | Steel kitchen knife | `CosmeticService`: the starter Ash, and any knife without its own model |
+| `ServerStorage.Cosmetics.gun` | Six-shooter revolver | `CosmeticService`: the starter Ledger, and any pistol without its own model |
 | `ServerStorage.Props.Bookshelf` | Victorian bookshelf | Blackwood Manor, City Archive |
 | `ServerStorage.Props.Armchair` | Red velvet armchair | Blackwood Manor |
 | `ServerStorage.Props.GrandfatherClock` | Grandfather clock | Blackwood Manor |
 | `ServerStorage.Props.CrateStack` | Shipping crates | Rusted Pier |
 | `ServerStorage.Props.Barrel` | Oil drum | Rusted Pier |
 | `ServerStorage.Props.FilingCabinet` | Filing cabinet | City Archive |
-| `ServerStorage.Cosmetics.verdict`, `cinder`, `coldsnap`, `vigil` | Per-item knives | `CosmeticService`: those items instead of the generic knife |
-| `ServerStorage.Cosmetics.nightjar`, `thealibi`, `hoarfrost` | Per-item pistols | `CosmeticService`: those items instead of the generic revolver |
+| `ServerStorage.Cosmetics.<id>` for tallow, gutter, ember, hollow, palefox, nocturne, longnight, verdict, cinder, coldsnap, vigil | Per-item knives | `CosmeticService`: each item's own model |
+| `ServerStorage.Cosmetics.<id>` for scrap, brassnine, ivory, copperhead, nightjar, thealibi, hoarfrost | Per-item pistols | `CosmeticService`: each item's own model |
 | `ReplicatedStorage.PetModels.moth` | Pale moth | `PetController`: the Moth pet |
 | `ReplicatedStorage.PetModels.widowspeak` | Cartoon spider | `PetController`: Widow's Peak |
 | `ReplicatedStorage.PetModels.nightwatch` | Brass lantern with a candle light | `PetController`: Nightwatch, dims in Lights Out |

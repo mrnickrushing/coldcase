@@ -200,5 +200,5 @@ Places where the design documents disagree with each other, and what the code do
 - **Emote pass.** Wave, point and laugh are also free Roblox chat emotes (`/e wave`), so the pass
   mostly sells shrug, panic and the over-head label.
 
-Not built yet: models for the remaining 17 weapons (the generic knife and revolver stand in, rarity
-shown as an outline), emote animations for shrug and panic, and hand-made art.
+Not built yet: emote animations for shrug and panic (they show as a label only), and hand-made art
+to replace the generated models.
