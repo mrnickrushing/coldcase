@@ -5,6 +5,7 @@ local ServerStorage = game:GetService("ServerStorage")
 
 -- Remotes, maps and lighting must exist before any service is required
 require(ReplicatedStorage.Shared.RemoteSetup)()
+require(ServerStorage.Build.BuildAssets)() -- models first: BuildMaps dresses maps with them
 require(ServerStorage.Build.BuildMaps)()
 require(ServerStorage.Build.BuildLighting)()
 require(ServerStorage.Build.BuildLobby)()
