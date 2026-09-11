@@ -221,6 +221,22 @@ return function(parent: Instance?)
             text("Countdown", h, "", 14, Theme.SOFT, Theme.MONO, Enum.TextXAlignment.Right)
         countdown.Position = UDim2.new(0, 0, 0, 2)
 
+        -- Play now (NPCs fill a quiet server) or wait for a round of real players
+        local mode = frame(
+            "Mode",
+            h,
+            UDim2.fromOffset(420, Theme.TAP_MIN),
+            UDim2.new(1, -420, 1, -Theme.TAP_MIN),
+            nil,
+            true
+        )
+        list(mode, Enum.FillDirection.Horizontal, 8)
+        for i, spec in { { "PlayNow", "PLAY NOW · NPCS" }, { "Wait", "WAIT FOR PLAYERS" } } do
+            local b = button(spec[1], mode, spec[2], UDim2.new(0.5, -4, 1, 0), RAISED, Theme.SOFT)
+            b.LayoutOrder = i
+            stroke(b)
+        end
+
         local maps = frame("Maps", root, UDim2.new(1, 0, 0, 210), UDim2.new(0, 0, 0, 92), nil, true)
         grid(maps, UDim2.new(1 / 3, -8, 1, 0), 12)
         for i, mapName in Config.MAPS do

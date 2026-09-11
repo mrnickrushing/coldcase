@@ -4,6 +4,7 @@ local LiveOps = require("./src/shared/LiveOps")
 local RateLimiter = require("./src/shared/RateLimiter")
 local FibreBands = require("./src/shared/FibreBands")
 local Progression = require("./src/shared/Progression")
+local Lobby = require("./src/shared/Lobby")
 
 local passed, failed = 0, 0
 
@@ -153,6 +154,35 @@ test("crate discount applies from its rank and never goes negative", function()
     eq(Progression.CratePrice(250, 24, 25, 25), 250)
     eq(Progression.CratePrice(250, 25, 25, 25), 225)
     eq(Progression.CratePrice(10, 99, 25, 25), 0)
+end)
+
+---------------------------------------------------------------- Lobby
+test("enough real players start a full round with no NPCs", function()
+    local plan = Lobby.Plan(4, 0, 4, 6, true)
+    eq(plan.start, true, "start")
+    eq(plan.full, true, "full")
+    eq(plan.npcs, 0, "npcs")
+end)
+
+test("a solo player who plays now gets NPCs to fill the round", function()
+    local plan = Lobby.Plan(1, 1, 4, 6, true)
+    eq(plan.start, true, "start")
+    eq(plan.full, false, "full")
+    eq(plan.npcs, 5, "npcs")
+end)
+
+test("a solo player who chose to wait keeps waiting", function()
+    eq(Lobby.Plan(1, 0, 4, 6, true).start, false)
+end)
+
+test("NPC seats count only the players who chose to play now", function()
+    local plan = Lobby.Plan(3, 1, 4, 6, true)
+    eq(plan.start, true, "start")
+    eq(plan.npcs, 5, "npcs")
+end)
+
+test("with NPCs disabled a quiet server waits", function()
+    eq(Lobby.Plan(2, 2, 4, 6, false).start, false)
 end)
 
 print(("%d passed, %d failed"):format(passed, failed))

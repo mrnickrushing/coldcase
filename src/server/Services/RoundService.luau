@@ -18,6 +18,7 @@ local OnboardingService = require(script.Parent.OnboardingService)
 local SpectatorService = require(script.Parent.SpectatorService)
 local BotService = require(script.Parent.BotService)
 local Participant = require(script.Parent.Participant)
+local Lobby = require(ReplicatedStorage.Shared.Lobby)
 
 local RoundService = {}
 local state, stateEnds = "INTERMISSION", 0
@@ -350,13 +351,23 @@ end
 
 function RoundService:Advance()
     if state == "INTERMISSION" then
-        participants = self:GetEligible()
-        -- A quiet server fills the round with NPCs rather than waiting forever
-        pendingBots = BotService:SeatsFor(#participants)
-        if #participants + pendingBots < minPlayers() then
+        local humans = self:GetEligible()
+        local ready = {}
+        for _, plr in humans do
+            if plr:GetAttribute("WaitForPlayers") ~= true then
+                table.insert(ready, plr)
+            end
+        end
+        -- A quiet server fills the round with NPCs for whoever chose to play
+        -- now; players who chose to wait stay in the lobby for real players
+        local plan =
+            Lobby.Plan(#humans, #ready, minPlayers(), Config.BOT_FILL_TO, Config.BOTS_ENABLED)
+        if not plan.start then
             setState("INTERMISSION", Config.INTERMISSION)
             return
         end
+        participants = if plan.full then humans else ready
+        pendingBots = plan.npcs
         setState("LOADING", Config.LOADING_TIME)
     elseif state == "LOADING" then
         for _, bot in BotService:Spawn(pendingBots) do

@@ -13,6 +13,9 @@ workflow — no manual Studio setup is needed.)
 ## Solo with NPCs — press Play, no attributes
 
 - [ ] Lobby countdown reads "STARTS IN Ns · 5 NPCS JOIN" and the round starts with five NPCs
+- [ ] WAIT FOR PLAYERS highlights, the countdown switches to "WAITING FOR PLAYERS · 1/4", no round starts, and the choice is still set after a rejoin
+- [ ] PLAY NOW · NPCS switches back and the next intermission starts an NPC round
+- [ ] With two players, one waiting: the other plays with NPCs, the waiter stays in the lobby and shows "WAITING" in the player list
 - [ ] NPCs walk the map on paths rather than into walls, and stop when the round ends
 - [ ] An NPC murderer waits at least 12s, then picks off whoever is alone
 - [ ] An NPC sheriff shoots only a killer it saw, or the outlined murderer at Last Call

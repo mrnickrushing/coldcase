@@ -81,14 +81,6 @@ function BotService:BindRound(roundService)
     round = roundService
 end
 
--- How many NPC seats the next round gets for this many humans
-function BotService:SeatsFor(humans: number): number
-    if not Config.BOTS_ENABLED or humans < 1 or humans >= Config.MIN_PLAYERS then
-        return 0
-    end
-    return math.max(0, Config.BOT_FILL_TO - humans)
-end
-
 function BotService:FromCharacter(model: Instance): any
     return byCharacter[model]
 end

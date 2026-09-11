@@ -170,5 +170,11 @@ RemoteGuard.Connect("RequestSpectate", function(plr)
     SpectatorService:Send(plr, RoundService:AliveNames())
 end)
 
+RemoteGuard.Connect("RequestLobbyMode", function(plr, mode)
+    if mode == "wait" or mode == "play" then
+        DataService:SetWaitForPlayers(plr, mode == "wait")
+    end
+end)
+
 RoundService:Start()
 print("[ColdCase] server up")

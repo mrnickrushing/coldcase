@@ -44,7 +44,7 @@ and orb pets.
 | To… | Do this |
 | --- | --- |
 | Save data between sessions | Game Settings → Security → *Enable Studio Access to API Services*. Without it ProfileStore uses its mock store and nothing persists. |
-| Test solo | Press Play: NPCs fill the round to 6 while fewer than 4 people are in (`Config.BOTS_ENABLED`). `MinPlayers = 1` on `ServerStorage` still lowers the minimum in Studio. |
+| Test solo | Press Play: NPCs fill the round to 6 while fewer than 4 people are in (`Config.BOTS_ENABLED`). Each player picks PLAY NOW · NPCS or WAIT FOR PLAYERS in the lobby (saved to their profile, decided by `Shared/Lobby`); waiters sit out NPC rounds. `MinPlayers = 1` on `ServerStorage` still lowers the minimum in Studio. |
 | Preview a live-ops day | Set a number attribute `LiveOpsDay` on `ServerStorage`, e.g. `28` to open trading or `14` for Season One (Studio only). |
 | Run a full round | Test → Clients and Servers → 4 players. |
 | Get the intended lighting | Set `Lighting.Technology` to *Future* in the Properties panel. Scripts cannot set it. |

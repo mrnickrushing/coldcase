@@ -21,6 +21,7 @@ local TEMPLATE = {
     streak = 0,
     onboarding = { freeCrate = false, rankGift = false },
     hintsSeen = {}, -- { move = true, examine = true, coins = true }
+    settings = { waitForPlayers = false }, -- lobby: wait for real players instead of NPCs
 }
 
 local Store = ProfileStore.New("PlayerData_v1", TEMPLATE)
@@ -76,6 +77,7 @@ function DataService:Load(plr: Player)
     }
     profiles[plr] = profile
     plr:SetAttribute("Rank", data.rank) -- public: shown in the lobby list
+    plr:SetAttribute("WaitForPlayers", data.settings.waitForPlayers) -- public: RoundService and the lobby read it
 
     local reward = self:ApplyLoginStreak(data)
     if reward > 0 then
@@ -108,6 +110,16 @@ end
 
 function DataService:GetSession(plr: Player): Session?
     return sessions[plr]
+end
+
+-- The lobby choice: wait for a round of real players, or play now with NPCs
+function DataService:SetWaitForPlayers(plr: Player, on: boolean)
+    local data = self:Get(plr)
+    if not data then
+        return
+    end
+    data.settings.waitForPlayers = on
+    plr:SetAttribute("WaitForPlayers", on)
 end
 
 function DataService:SetScreen(plr: Player, screen: string)

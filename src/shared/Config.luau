@@ -115,6 +115,7 @@ return {
         RequestEmote = 3,
         RequestReport = 2,
         RequestSpectate = 4,
+        RequestLobbyMode = 4,
     },
 
     -- Social: Radio and Emote passes, reports
@@ -126,7 +127,7 @@ return {
 
     -- NPCs fill a quiet server so one person can play (BotService)
     BOTS_ENABLED = true,
-    BOT_FILL_TO = 6, -- humans + NPCs in a round, while humans < MIN_PLAYERS
+    BOT_FILL_TO = 6, -- players who chose Play now + NPCs, while humans < MIN_PLAYERS
     BOT_ROUND_REWARD = 1, -- coins and XP scale in a round with NPCs (1 = full pay)
     BOT_FIRST_HUNT = { 12, 22 }, -- seconds before an NPC murderer first strikes
     BOT_HUNT_PAUSE = { 10, 18 }, -- seconds between an NPC murderer's kills

@@ -45,6 +45,7 @@ local NAMES = {
     "RequestEmote",
     "RequestReport",
     "RequestSpectate",
+    "RequestLobbyMode",
 }
 
 return function()
