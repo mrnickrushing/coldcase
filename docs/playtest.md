@@ -16,7 +16,8 @@ workflow — no manual Studio setup is needed.)
 - [ ] WAIT FOR PLAYERS highlights, the countdown switches to "WAITING FOR PLAYERS · 1/4", no round starts, and the choice is still set after a rejoin
 - [ ] PLAY NOW · NPCS switches back and the next intermission starts an NPC round
 - [ ] With two players, one waiting: the other plays with NPCs, the waiter stays in the lobby and shows "WAITING" in the player list
-- [ ] NPCs walk the map on paths rather than into walls, and stop when the round ends
+- [ ] NPCs walk the map on paths rather than into walls, climb the stairs to other floors, and stop when the round ends
+- [ ] If the NPCs cannot be built, the lobby shows "The NPCs could not join" and no one is dropped into a round alone
 - [ ] An NPC murderer waits at least 12s, then picks off whoever is alone
 - [ ] An NPC sheriff shoots only a killer it saw, or the outlined murderer at Last Call
 - [ ] Stabbing, shooting, spectating and examining work on NPCs; the fibre clue matches their shirt
@@ -99,6 +100,8 @@ Run from a LocalScript or the client command bar.
 
 ## Only after all of the above passes
 
+- [ ] Walk each map floor by floor: every staircase climbs smoothly with no lip at the top, railings stop a stumble into a stairwell, doorways fit a running player
+- [ ] Lockdown shuts some room doors but every room still has a way out
 - [ ] Walk each map: lamps light the rooms and go dark for Lights Out, furniture blocks no route,
       spawn or coin
 - [ ] Listen to all 22 cues in a round; swap any that miss the brief ([assets](assets.md))

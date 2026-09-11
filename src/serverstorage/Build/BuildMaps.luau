@@ -1,339 +1,342 @@
 --[[
-  COLD CASE · map blockout builder
-  Bootstrap runs this automatically when ServerStorage.Maps is missing, so a
-  fresh `rojo build` is playable. It can also be run from the command bar:
+  COLD CASE · map builder
+  Bootstrap runs this when ServerStorage.Maps is missing, so a fresh
+  `rojo build` is playable. From the command bar:
     require(game.ServerStorage.Build.BuildMaps)({ force = true })
-  Generates all three maps as Models in ServerStorage.Maps with walls, floor,
-  tagged SpawnPoints, CoinNodes and LockdownDoors, per-map materials, and
-  lamps tagged MapLight (EventService turns them off for Lights Out), and
-  furniture from ServerStorage.Props along the outer walls when it exists.
-  Coordinates match the Map Blockouts canvas and its OBJ exports.
+  Builds every building in Shared/MapPlan as a Model in ServerStorage.Maps:
+  floors and roofs, walls with doorways, railings round stairwells and
+  balconies, staircases with steps and banisters, moonlit windows, lamps tagged
+  MapLight (Lights Out turns them off), LockdownDoors, SpawnPoints and
+  CoinNodes, then furniture from ServerStorage.Props when it exists.
 ]]
-local MAPS = {
+local ServerStorage = game:GetService("ServerStorage")
+local MapPlan = require(game.ReplicatedStorage.Shared.MapPlan)
+
+local CELL, H = MapPlan.CELL, MapPlan.FLOOR_HEIGHT
+local WALL = 1.4 -- interior wall thickness
+local SHELL = 2 -- exterior wall thickness
+local SLAB = 1
+local DOOR_W, DOOR_H = 9, 10
+local RAIL_H = 3.6 -- waist high: blocks a stumble, not a jump
+local STAIR_W = CELL - 4
+local M = Enum.Material
+local SIDES = { "N", "E", "S", "W" }
+
+-- Per map: shell and wall finishes, then a style per region kind. A style's
+-- `props` stand against walls (one per cell at most, `density` of the time),
+-- `centre` stands in the room's most open cell, `chairs` seats a table, `rug`
+-- lies under the centrepiece, and `againstRail` lets props line railings.
+local THEMES = {
     BlackwoodManor = {
-        floor = Color3.fromHex("3b2a1f"),
-        floorMaterial = Enum.Material.WoodPlanks,
-        wall = Color3.fromHex("5a4038"),
-        wallMaterial = Enum.Material.Plaster,
-        outer = Color3.fromHex("3a3230"),
-        outerMaterial = Enum.Material.Brick,
-        lamp = Color3.fromHex("ffc27a"),
-        props = { "Bookshelf", "Armchair", "GrandfatherClock", "Fireplace" },
-        interior = { "DiningTable", "Sofa", "GrandPiano", "Armchair" },
+        wall = "7a6452",
+        wallMaterial = M.Plaster,
+        shell = "4a3a34",
+        shellMaterial = M.Brick,
+        roof = "2c2a2e",
+        roofMaterial = M.Slate,
         trim = "2a1d15",
+        rail = "3b2a1f",
+        railMaterial = M.Wood,
+        stair = "4a3527",
+        stairMaterial = M.WoodPlanks,
+        lamp = "ffc27a",
         windows = true,
         paintings = true,
-        rugs = { "5a1f24", "1f3a2e", "3a2a4a", "4a3520" },
-        height = 26,
-        walls = {
-            { 0, 0, 960, 14 },
-            { 0, 586, 960, 14 },
-            { 0, 0, 14, 600 },
-            { 946, 0, 14, 600 },
-            { 224, 14, 14, 178 },
-            { 224, 262, 14, 196 },
-            { 380, 120, 206, 14 },
-            { 380, 120, 14, 178 },
-            { 560, 300, 14, 200 },
-            { 560, 300, 246, 14 },
-            { 700, 14, 14, 158 },
-            { 238, 458, 196, 14 },
-            { 760, 440, 14, 146 },
-            { 60, 300, 120, 14 },
-        },
-        spawns = {
-            { 110, 90 },
-            { 330, 70 },
-            { 500, 60 },
-            { 850, 90 },
-            { 120, 520 },
-            { 400, 540 },
-            { 680, 540 },
-            { 880, 480 },
-            { 300, 220 },
-            { 640, 180 },
-        },
-        coins = {
-            { 80, 180 },
-            { 300, 120 },
-            { 470, 240 },
-            { 640, 90 },
-            { 820, 200 },
-            { 160, 400 },
-            { 330, 330 },
-            { 500, 430 },
-            { 700, 300 },
-            { 880, 360 },
-            { 250, 540 },
-            { 430, 480 },
-            { 620, 470 },
-            { 800, 540 },
-            { 140, 260 },
-            { 900, 120 },
-        },
-        doors = {
-            { 224, 192, 14, 70 },
-            { 380, 298, 14, 60 },
-            { 560, 440, 14, 60 },
-            { 700, 172, 14, 60 },
+        styles = {
+            hall = {
+                floor = "4a3527",
+                floorMaterial = M.WoodPlanks,
+                props = { "GrandfatherClock" },
+                density = 0.08,
+            },
+            tunnel = {
+                floor = "55514a",
+                floorMaterial = M.Cobblestone,
+                props = { "Barrel" },
+                density = 0.15,
+            },
+            cellar = {
+                floor = "3d3a35",
+                floorMaterial = M.Slate,
+                props = { "Barrel", "Barrel", "CrateStack" },
+                density = 0.6,
+            },
+            boiler = {
+                floor = "3f3f3f",
+                floorMaterial = M.Concrete,
+                props = { "Barrel", "CrateStack" },
+                density = 0.35,
+            },
+            storage = {
+                floor = "3f3a33",
+                floorMaterial = M.Concrete,
+                props = { "CrateStack", "Barrel" },
+                density = 0.45,
+            },
+            library = {
+                floor = "3b2a1f",
+                floorMaterial = M.WoodPlanks,
+                props = { "Bookshelf" },
+                density = 0.8,
+                centre = "WritingDesk",
+                rug = "5a1f24",
+            },
+            grandhall = {
+                floor = "3a3634",
+                floorMaterial = M.Marble,
+                props = { "GrandfatherClock", "Armchair" },
+                density = 0.12,
+                centre = "Globe",
+                rug = "5a1f24",
+            },
+            dining = {
+                floor = "3b2a1f",
+                floorMaterial = M.WoodPlanks,
+                props = { "Fireplace", "Bookshelf", "GrandfatherClock" },
+                density = 0.3,
+                centre = "DiningTable",
+                chairs = true,
+                rug = "1f3a2e",
+            },
+            parlour = {
+                floor = "3b2a1f",
+                floorMaterial = M.WoodPlanks,
+                props = { "Sofa", "Armchair", "Fireplace" },
+                density = 0.4,
+                centre = "GrandPiano",
+                rug = "3a2a4a",
+            },
+            kitchen = {
+                floor = "6a655d",
+                floorMaterial = M.CeramicTiles,
+                props = { "Barrel", "CrateStack", "FilingCabinet" },
+                density = 0.35,
+                centre = "DiningTable",
+            },
+            study = {
+                floor = "3b2a1f",
+                floorMaterial = M.WoodPlanks,
+                props = { "Bookshelf", "FilingCabinet", "Globe" },
+                density = 0.5,
+                centre = "WritingDesk",
+                rug = "4a3520",
+            },
+            bedroom = {
+                floor = "3b2a1f",
+                floorMaterial = M.WoodPlanks,
+                props = { "Armchair", "Bookshelf", "Fireplace", "GrandfatherClock" },
+                density = 0.35,
+                centre = "Sofa",
+                rug = "3a2a4a",
+            },
+            bathroom = { floor = "8a8a86", floorMaterial = M.CeramicTiles, props = {}, density = 0 },
         },
     },
+
     RustedPier = {
-        floor = Color3.fromHex("4a4640"),
-        floorMaterial = Enum.Material.WoodPlanks,
-        wall = Color3.fromHex("3e4a52"),
-        wallMaterial = Enum.Material.CorrodedMetal,
-        outer = Color3.fromHex("2f3438"),
-        outerMaterial = Enum.Material.Concrete,
-        lamp = Color3.fromHex("ffb35c"),
-        props = { "CrateStack", "Barrel", "LobsterTraps", "RopeCoil" },
-        interior = { "CrateStack", "Barrel", "RopeCoil", "LobsterTraps", "Anchor", "Bollard" },
-        pier = true,
-        lampPosts = true,
-        height = 20,
-        walls = {
-            { 0, 0, 960, 14 },
-            { 0, 586, 960, 14 },
-            { 0, 0, 14, 600 },
-            { 946, 0, 14, 600 },
-            { 140, 120, 180, 16 },
-            { 640, 120, 180, 16 },
-            { 140, 464, 180, 16 },
-            { 640, 464, 180, 16 },
-            { 452, 200, 16, 200 },
-            { 300, 290, 120, 16 },
-            { 540, 290, 120, 16 },
-        },
-        spawns = {
-            { 70, 60 },
-            { 480, 50 },
-            { 900, 60 },
-            { 70, 540 },
-            { 480, 550 },
-            { 900, 540 },
-            { 240, 300 },
-            { 720, 300 },
-            { 400, 170 },
-            { 560, 430 },
-        },
-        coins = {
-            { 200, 170 },
-            { 700, 170 },
-            { 200, 510 },
-            { 700, 510 },
-            { 460, 110 },
-            { 460, 500 },
-            { 80, 300 },
-            { 880, 300 },
-            { 350, 250 },
-            { 610, 250 },
-            { 350, 360 },
-            { 610, 360 },
-            { 130, 420 },
-            { 830, 180 },
-        },
-        doors = {},
-    },
-    CityArchive = {
-        floor = Color3.fromHex("4a4843"),
-        floorMaterial = Enum.Material.CeramicTiles,
-        wall = Color3.fromHex("5a4630"),
-        wallMaterial = Enum.Material.WoodPlanks,
-        outer = Color3.fromHex("55595c"),
-        outerMaterial = Enum.Material.Concrete,
-        lamp = Color3.fromHex("dfe8ff"),
-        props = { "FilingCabinet", "Bookshelf", "CardCatalog" },
-        interior = { "WritingDesk", "CardCatalog", "Globe", "FilingCabinet" },
-        trim = "3a2a1c",
+        wall = "4a5660",
+        wallMaterial = M.CorrodedMetal,
+        shell = "39434a",
+        shellMaterial = M.CorrodedMetal,
+        roof = "2a3035",
+        roofMaterial = M.Metal,
+        rail = "4a3a2a",
+        railMaterial = M.Wood,
+        stair = "4a3f33",
+        stairMaterial = M.WoodPlanks,
+        lamp = "ffb35c",
         windows = true,
-        shelves = true,
-        height = 22,
-        walls = {
-            { 0, 0, 960, 14 },
-            { 0, 586, 960, 14 },
-            { 0, 0, 14, 600 },
-            { 946, 0, 14, 600 },
-            { 120, 80, 16, 180 },
-            { 240, 80, 16, 180 },
-            { 360, 80, 16, 180 },
-            { 480, 80, 16, 180 },
-            { 600, 80, 16, 180 },
-            { 720, 80, 16, 180 },
-            { 840, 80, 16, 180 },
-            { 180, 340, 16, 180 },
-            { 300, 340, 16, 180 },
-            { 420, 340, 16, 180 },
-            { 540, 340, 16, 180 },
-            { 660, 340, 16, 180 },
-            { 780, 340, 16, 180 },
+        water = true,
+        styles = {
+            boardwalk = {
+                floor = "4a3f33",
+                floorMaterial = M.WoodPlanks,
+                props = { "RopeCoil", "LobsterTraps", "Bollard" },
+                density = 0.3,
+                againstRail = true,
+            },
+            boathouse = {
+                floor = "3e3a33",
+                floorMaterial = M.WoodPlanks,
+                props = { "CrateStack", "Barrel", "RopeCoil", "Anchor" },
+                density = 0.45,
+                centre = "LobsterTraps",
+            },
+            deck = {
+                floor = "5a5046",
+                floorMaterial = M.WoodPlanks,
+                props = { "Bollard", "RopeCoil", "LobsterTraps", "Barrel", "Anchor" },
+                density = 0.3,
+                againstRail = true,
+            },
+            warehouse = {
+                floor = "3f3f3c",
+                floorMaterial = M.Concrete,
+                props = { "CrateStack", "Barrel" },
+                density = 0.6,
+                centre = "CrateStack",
+            },
+            office = {
+                floor = "3d3a35",
+                floorMaterial = M.WoodPlanks,
+                props = { "FilingCabinet", "Bookshelf" },
+                density = 0.5,
+                centre = "WritingDesk",
+            },
+            coldstore = {
+                floor = "5c6266",
+                floorMaterial = M.DiamondPlate,
+                props = { "CrateStack", "Barrel" },
+                density = 0.55,
+            },
+            catwalk = { floor = "3a3f44", floorMaterial = M.DiamondPlate, props = {}, density = 0 },
+            roof = {
+                floor = "33393e",
+                floorMaterial = M.Concrete,
+                props = { "Barrel", "CrateStack" },
+                density = 0.2,
+                againstRail = true,
+            },
         },
-        spawns = {
-            { 60, 40 },
-            { 480, 40 },
-            { 900, 40 },
-            { 60, 560 },
-            { 480, 560 },
-            { 900, 560 },
-            { 60, 300 },
-            { 900, 300 },
-            { 300, 300 },
-            { 660, 300 },
-        },
-        coins = {
-            { 180, 120 },
-            { 300, 200 },
-            { 420, 120 },
-            { 540, 200 },
-            { 660, 120 },
-            { 780, 200 },
-            { 240, 400 },
-            { 360, 480 },
-            { 480, 400 },
-            { 600, 480 },
-            { 720, 400 },
-            { 840, 480 },
-            { 60, 180 },
-            { 900, 180 },
-            { 60, 460 },
-            { 900, 460 },
-            { 180, 300 },
-            { 760, 300 },
-        },
-        doors = {
-            { 136, 260, 120, 14 },
-            { 616, 260, 120, 14 },
-            { 196, 320, 120, 14 },
-            { 676, 320, 120, 14 },
+    },
+
+    CityArchive = {
+        wall = "6a5236",
+        wallMaterial = M.WoodPlanks,
+        shell = "5d6164",
+        shellMaterial = M.Concrete,
+        roof = "3a3d40",
+        roofMaterial = M.Concrete,
+        trim = "3a2a1c",
+        rail = "2b2f33",
+        railMaterial = M.Metal,
+        stair = "5a5650",
+        stairMaterial = M.Marble,
+        lamp = "dfe8ff",
+        windows = true,
+        styles = {
+            vault = {
+                floor = "45484a",
+                floorMaterial = M.DiamondPlate,
+                props = { "FilingCabinet", "CardCatalog" },
+                density = 0.65,
+            },
+            corridor = {
+                floor = "4f4d48",
+                floorMaterial = M.Concrete,
+                props = { "FilingCabinet" },
+                density = 0.1,
+            },
+            storage = {
+                floor = "4a4843",
+                floorMaterial = M.Concrete,
+                props = { "CrateStack", "FilingCabinet" },
+                density = 0.5,
+            },
+            office = {
+                floor = "3d3a35",
+                floorMaterial = M.WoodPlanks,
+                props = { "FilingCabinet", "Bookshelf", "Globe" },
+                density = 0.5,
+                centre = "WritingDesk",
+                rug = "2e3e5a",
+            },
+            hall = {
+                floor = "55524c",
+                floorMaterial = M.CeramicTiles,
+                props = { "CardCatalog" },
+                density = 0.08,
+            },
+            reading = {
+                floor = "3b2a1f",
+                floorMaterial = M.WoodPlanks,
+                props = { "Bookshelf" },
+                density = 0.55,
+                centre = "WritingDesk",
+                rug = "2e3e5a",
+            },
+            records = {
+                floor = "55524c",
+                floorMaterial = M.CeramicTiles,
+                props = { "FilingCabinet", "CardCatalog", "Bookshelf" },
+                density = 0.65,
+            },
+            exhibits = {
+                floor = "3a3634",
+                floorMaterial = M.Marble,
+                props = { "Globe", "GrandfatherClock" },
+                density = 0.35,
+                centre = "Globe",
+            },
+            lobby = {
+                floor = "3a3634",
+                floorMaterial = M.Marble,
+                props = { "Armchair", "GrandfatherClock" },
+                density = 0.2,
+                rug = "5a1f24",
+            },
+            maps = {
+                floor = "3b2a1f",
+                floorMaterial = M.WoodPlanks,
+                props = { "CardCatalog", "Globe" },
+                density = 0.5,
+                centre = "DiningTable",
+            },
+            stacks = {
+                floor = "3b2a1f",
+                floorMaterial = M.WoodPlanks,
+                props = { "Bookshelf" },
+                density = 0.45,
+            },
+            lab = {
+                floor = "6a655d",
+                floorMaterial = M.CeramicTiles,
+                props = { "FilingCabinet", "WritingDesk" },
+                density = 0.4,
+                centre = "DiningTable",
+            },
+            carrels = {
+                floor = "3b2a1f",
+                floorMaterial = M.WoodPlanks,
+                props = { "WritingDesk" },
+                density = 0.65,
+            },
         },
     },
 }
 
-local W, D = 960, 600
-local LAMP_SPACING = 120
-local WINDOW_SPACING = 110
-local INTERIOR_MAX = 22 -- furniture pieces placed inside the rooms per map
-local PROP_CLEARANCE = 16 -- studs kept clear around every spawn and coin
-
--- The inner face of each outer wall, in plan coordinates
-local SIDES = {
-    { origin = Vector2.new(14, 14), along = Vector2.new(1, 0), inward = Vector2.new(0, 1) },
-    { origin = Vector2.new(14, 586), along = Vector2.new(1, 0), inward = Vector2.new(0, -1) },
-    { origin = Vector2.new(14, 14), along = Vector2.new(0, 1), inward = Vector2.new(1, 0) },
-    { origin = Vector2.new(946, 14), along = Vector2.new(0, 1), inward = Vector2.new(-1, 0) },
-}
-
-local function part(name, parent, size, pos, colour, material: Enum.Material?)
+local function part(
+    name: string,
+    parent: Instance,
+    size: Vector3,
+    cf: CFrame,
+    colour: Color3,
+    material: Enum.Material?
+): Part
     local p = Instance.new("Part")
     p.Name = name
-    p.Size = size
-    p.Position = pos
-    p.Color = colour
     p.Anchored = true
+    p.Size = size
+    p.CFrame = cf
+    p.Color = colour
+    p.Material = material or M.SmoothPlastic
     p.TopSurface = Enum.SurfaceType.Smooth
     p.BottomSurface = Enum.SurfaceType.Smooth
-    p.Material = material or Enum.Material.SmoothPlastic
     p.Parent = parent
     return p
 end
 
--- Blockout rect (x, y, w, h from the top-left of a 960×600 plan) to a centred
--- part position at height h/2
-local function rectCentre(r, h)
-    return Vector3.new(r[1] + r[3] / 2 - W / 2, h / 2, r[2] + r[4] / 2 - D / 2)
-end
-
-local function insideAny(rects, x: number, z: number, margin: number): boolean
-    for _, r in rects do
-        if
-            x >= r[1] - margin
-            and x <= r[1] + r[3] + margin
-            and z >= r[2] - margin
-            and z <= r[2] + r[4] + margin
-        then
-            return true
-        end
-    end
-    return false
-end
-
--- A prop footprint may not touch an inner wall or a door, and keeps
--- PROP_CLEARANCE from spawns and coins, so furniture never changes a route
-local function blocked(def, x0: number, z0: number, x1: number, z1: number): boolean
-    local m = 4
-    local function overlaps(r)
-        return x0 - m < r[1] + r[3] and x1 + m > r[1] and z0 - m < r[2] + r[4] and z1 + m > r[2]
-    end
-    for i, r in def.walls do
-        if i > 4 and overlaps(r) then
-            return true
-        end
-    end
-    for _, r in def.doors do
-        if overlaps(r) then
-            return true
-        end
-    end
-    for _, points in { def.spawns, def.coins } do
-        for _, p in points do
-            local dx = math.max(x0 - p[1], 0, p[1] - x1)
-            local dz = math.max(z0 - p[2], 0, p[2] - z1)
-            if math.sqrt(dx * dx + dz * dz) < PROP_CLEARANCE then
-                return true
-            end
-        end
-    end
-    return false
-end
-
--- Furniture against the outer walls, backs to the wall. Templates live in
--- ServerStorage.Props (not in the repo): Models whose pivot is the bounding
--- box centre, front facing -Z, width along X. Missing templates are skipped.
-local function dress(model: Model, def, seed: number)
-    local folder = game:GetService("ServerStorage"):FindFirstChild("Props")
-    if not folder or not def.props then
-        return
-    end
-    local rng = Random.new(seed)
-    for _, side in SIDES do
-        local length = if side.along.X ~= 0 then W - 28 else D - 28
-        local t = rng:NextNumber(6, 30)
-        while t < length - 6 do
-            local template = folder:FindFirstChild(def.props[rng:NextInteger(1, #def.props)])
-            if not (template and template:IsA("Model")) then
-                t += 40
-                continue
-            end
-            local size = template:GetExtentsSize()
-            local a = side.origin + side.along * t
-            local b = a + side.along * size.X + side.inward * (size.Z + 0.5)
-            local x0, x1 = math.min(a.X, b.X), math.max(a.X, b.X)
-            local z0, z1 = math.min(a.Y, b.Y), math.max(a.Y, b.Y)
-            if not blocked(def, x0, z0, x1, z1) then
-                local prop = template:Clone()
-                for _, d in prop:GetDescendants() do
-                    if d:IsA("LuaSourceContainer") then
-                        d:Destroy() -- set dressing never runs code
-                    elseif d:IsA("BasePart") then
-                        d.Anchored = true
-                    end
-                end
-                local centre = (a + b) / 2
-                local world = Vector3.new(centre.X - W / 2, size.Y / 2, centre.Y - D / 2)
-                local facing = Vector3.new(side.inward.X, 0, side.inward.Y)
-                prop:PivotTo(CFrame.lookAt(world, world + facing))
-                prop.Parent = model
-            end
-            -- Sparse on purpose: a few pieces read as a room; a wall of them is a mobile frame drop
-            t += size.X + rng:NextNumber(50, 100)
-        end
-    end
-end
-
--- Decoration never collides and is invisible to raycasts, so it can never
--- block a route, a shot or a witness sightline. Hundreds of small pieces
--- cast no shadows, which keeps the shelved archive cheap on mobile.
-local function deco(name, parent, size, pos, colour, material: Enum.Material?)
-    local p = part(name, parent, size, pos, colour, material)
+-- Decoration never collides, casts no shadow and is invisible to raycasts, so
+-- it can never block a route, a shot or a witness sightline
+local function deco(
+    name: string,
+    parent: Instance,
+    size: Vector3,
+    cf: CFrame,
+    colour: Color3,
+    material: Enum.Material?
+): Part
+    local p = part(name, parent, size, cf, colour, material)
     p.CanCollide = false
     p.CanQuery = false
     p.CanTouch = false
@@ -341,458 +344,869 @@ local function deco(name, parent, size, pos, colour, material: Enum.Material?)
     return p
 end
 
--- The two long faces of a wall rect: the plan axis they run along, where the
--- face sits, which way it points, and the span it covers
-local function longFaces(r)
-    if r[4] >= r[3] then
-        return {
-            { along = "z", at = r[1], normal = -1, from = r[2], to = r[2] + r[4] },
-            { along = "z", at = r[1] + r[3], normal = 1, from = r[2], to = r[2] + r[4] },
-        }
-    end
-    return {
-        { along = "x", at = r[2], normal = -1, from = r[1], to = r[1] + r[3] },
-        { along = "x", at = r[2] + r[4], normal = 1, from = r[1], to = r[1] + r[3] },
-    }
+-- World coordinate of grid line `line` across `cells` cells centred on 0
+local function lineAt(line: number, cells: number): number
+    return (line - cells / 2) * CELL
 end
 
--- A world position `out` studs off a face, `t` studs along it, at height y
-local function onFace(face, t: number, out: number, y: number): Vector3
-    if face.along == "z" then
-        return Vector3.new(face.at + face.normal * out - W / 2, y, t - D / 2)
-    end
-    return Vector3.new(t - W / 2, y, face.at + face.normal * out - D / 2)
+-- A box `length` along `along`, `thickness` across it
+local function boxSize(along: Vector3, length: number, height: number, thickness: number): Vector3
+    return if along.X ~= 0
+        then Vector3.new(length, height, thickness)
+        else Vector3.new(thickness, height, length)
 end
 
--- A box `length` along a face and `depth` out from it
-local function faceSize(face, length: number, height: number, depth: number): Vector3
-    return if face.along == "z"
-        then Vector3.new(depth, height, length)
-        else Vector3.new(length, height, depth)
+local function faceToward(v: Vector3): Enum.NormalId
+    if v.X > 0.5 then
+        return Enum.NormalId.Right
+    elseif v.X < -0.5 then
+        return Enum.NormalId.Left
+    elseif v.Z > 0.5 then
+        return Enum.NormalId.Back
+    end
+    return Enum.NormalId.Front
 end
 
--- The face of an outer wall that looks into the map
-local function isInnerFace(face): boolean
-    local edge = if face.along == "x" then D else W
-    return face.at ~= 0 and face.at ~= edge
-end
-
-local FACE_NORMAL = {
-    x = { [1] = Enum.NormalId.Back, [-1] = Enum.NormalId.Front },
-    z = { [1] = Enum.NormalId.Right, [-1] = Enum.NormalId.Left },
-}
-
-local function overlaps(a, b): boolean
-    return a[1] < b[1] + b[3] and a[1] + a[3] > b[1] and a[2] < b[2] + b[4] and a[2] + a[4] > b[2]
-end
-
--- Does a plan rect touch a door or any wall other than `skip`?
-local function touchesStructure(def, rect, skip: number?, outerToo: boolean?): boolean
-    for i, r in def.walls do
-        if i ~= skip and (outerToo or i > 4) and overlaps(rect, r) then
-            return true
-        end
-    end
-    for _, r in def.doors do
-        if overlaps(rect, r) then
-            return true
-        end
-    end
-    return false
-end
-
--- Skirting and a cornice on every wall, so walls read as built, not boxes
-local function trimWalls(model: Model, def, h: number)
-    if not def.trim then
-        return
-    end
-    local wood = Color3.fromHex(def.trim)
-    for i, r in def.walls do
-        local c = rectCentre(r, h)
-        deco(
-            ("Skirting_%02d"):format(i),
-            model,
-            Vector3.new(r[3] + 0.6, 1.2, r[4] + 0.6),
-            Vector3.new(c.X, 0.6, c.Z),
-            wood,
-            Enum.Material.Wood
-        )
-        deco(
-            ("Cornice_%02d"):format(i),
-            model,
-            Vector3.new(r[3] + 1, 0.8, r[4] + 1),
-            Vector3.new(c.X, h + 0.4, c.Z),
-            wood,
-            Enum.Material.Wood
-        )
-    end
-end
-
--- Tall windows along the outer walls, each throwing a wash of moonlight
-local function windows(model: Model, def, h: number)
-    if not def.windows then
-        return
-    end
-    local wood = Color3.fromHex(def.trim or "3a2a1c")
-    local y = h * 0.55
-    for i = 1, 4 do
-        for _, face in longFaces(def.walls[i]) do
-            if not isInnerFace(face) then
+-- Greedy rectangles over the cells `keyOf` gives a key, one per run of equal keys
+local function rectangles(gw: number, gd: number, keyOf: (number, number) -> string?)
+    local used = {}
+    local out = {}
+    for z = 1, gd do
+        for x = 1, gw do
+            local key = keyOf(x, z)
+            if key == nil or used[z * 1000 + x] then
                 continue
             end
-            for t = face.from + 60, face.to - 60, WINDOW_SPACING do
-                local probe = if face.along == "x"
-                    then { t - 8, face.at - 12, 16, 24 }
-                    else { face.at - 12, t - 8, 24, 16 }
-                if touchesStructure(def, probe, i) then
-                    continue -- an inner wall or a door meets the wall here
+            local x1 = x
+            while x1 < gw and not used[z * 1000 + x1 + 1] and keyOf(x1 + 1, z) == key do
+                x1 += 1
+            end
+            local z1 = z
+            while z1 < gd do
+                local fits = true
+                for xx = x, x1 do
+                    if used[(z1 + 1) * 1000 + xx] or keyOf(xx, z1 + 1) ~= key then
+                        fits = false
+                        break
+                    end
                 end
-                local glass = deco(
-                    "Window",
-                    model,
-                    faceSize(face, 8, 9, 0.2),
-                    onFace(face, t, 0.15, y),
-                    Color3.fromHex("6f8fb3"),
-                    Enum.Material.Glass
-                )
-                glass.Transparency = 0.25
-                local light = Instance.new("SurfaceLight")
-                light.Face = FACE_NORMAL[face.along][face.normal]
-                light.Color = Color3.fromHex("a9c7ff")
-                light.Brightness = 1.4
-                light.Range = 28
-                light.Angle = 70
-                light.Parent = glass
-                for _, bar in
-                    {
-                        { 9, 0.6, 0, 4.7 },
-                        { 9, 0.6, 0, -4.7 },
-                        { 0.6, 10, 4.5, 0 },
-                        { 0.6, 10, -4.5, 0 },
-                        { 0.3, 9, 0, 0 },
-                        { 8, 0.3, 0, 0 },
-                    }
-                do
-                    deco(
-                        "WindowFrame",
-                        model,
-                        faceSize(face, bar[1], bar[2], 0.5),
-                        onFace(face, t + bar[3], 0.3, y + bar[4]),
-                        wood,
-                        Enum.Material.Wood
-                    )
+                if not fits then
+                    break
+                end
+                z1 += 1
+            end
+            for zz = z, z1 do
+                for xx = x, x1 do
+                    used[zz * 1000 + xx] = true
                 end
             end
+            table.insert(out, { x0 = x, z0 = z, x1 = x1, z1 = z1, key = key })
+        end
+    end
+    return out
+end
+
+local function rectPart(
+    name: string,
+    model: Model,
+    gw: number,
+    gd: number,
+    r,
+    y: number,
+    colour,
+    material
+)
+    local size = Vector3.new((r.x1 - r.x0 + 1) * CELL, SLAB, (r.z1 - r.z0 + 1) * CELL)
+    local centre = Vector3.new(
+        (lineAt(r.x0 - 1, gw) + lineAt(r.x1, gw)) / 2,
+        y,
+        (lineAt(r.z0 - 1, gd) + lineAt(r.z1, gd)) / 2
+    )
+    return part(name, model, size, CFrame.new(centre), colour, material)
+end
+
+---------------------------------------------------------------- Floors and roofs
+local function slabs(model: Model, plan, analysis, theme): BasePart?
+    local gw, gd, floors = MapPlan.Size(plan)
+    local first: BasePart? = nil
+    for f = 1, floors do
+        local base = (f - 1) * H
+        for _, r in
+            rectangles(gw, gd, function(x, z)
+                local ch = MapPlan.Cell(plan, f, x, z)
+                return if MapPlan.IsWalkable(ch) then plan.regions[ch].style else nil
+            end)
+        do
+            local style = theme.styles[r.key] or theme.styles.hall
+            local p = rectPart(
+                "Floor",
+                model,
+                gw,
+                gd,
+                r,
+                base - SLAB / 2,
+                Color3.fromHex(style.floor),
+                style.floorMaterial
+            )
+            first = first or p
+        end
+        for _, r in
+            rectangles(gw, gd, function(x, z)
+                return if analysis.roof[MapPlan.Key(f, x, z)] then "roof" else nil
+            end)
+        do
+            rectPart(
+                "Roof",
+                model,
+                gw,
+                gd,
+                r,
+                base + H - SLAB / 2,
+                Color3.fromHex(theme.roof),
+                theme.roofMaterial
+            )
+        end
+    end
+    return first
+end
+
+---------------------------------------------------------------- Walls, doorways, railings
+-- An edge's middle at floor level, the axis it runs along, and the axis that
+-- points from its low side (a) to its high side (b)
+local function edgeFrame(plan, e): (Vector3, Vector3, Vector3)
+    local gw, gd = MapPlan.Size(plan)
+    local base = (e.floor - 1) * H
+    if e.axis == "x" then
+        return Vector3.new(lineAt(e.line, gw), base, lineAt(e.index - 0.5, gd)),
+            Vector3.zAxis,
+            Vector3.xAxis
+    end
+    return Vector3.new(lineAt(e.index - 0.5, gw), base, lineAt(e.line, gd)),
+        Vector3.xAxis,
+        Vector3.zAxis
+end
+
+-- Walls facing the outdoors are finished like the shell
+local function look(plan, e): string
+    if e.kind == "railing" then
+        return "railing"
+    elseif e.kind == "exterior" then
+        return "shell"
+    end
+    local ra, rb = plan.regions[e.a], plan.regions[e.b]
+    if (ra and ra.outdoor) or (rb and rb.outdoor) then
+        return "shell"
+    end
+    return "wall"
+end
+
+local function finish(theme, lookName: string): (number, Color3, Enum.Material)
+    if lookName == "shell" then
+        return SHELL, Color3.fromHex(theme.shell), theme.shellMaterial
+    end
+    return WALL, Color3.fromHex(theme.wall), theme.wallMaterial
+end
+
+local function solidWall(
+    model: Model,
+    theme,
+    lookName: string,
+    mid: Vector3,
+    along: Vector3,
+    length: number
+)
+    local t, colour, material = finish(theme, lookName)
+    part(
+        if lookName == "shell" then "Shell" else "Wall",
+        model,
+        boxSize(along, length + t, H, t),
+        CFrame.new(mid + Vector3.new(0, H / 2, 0)),
+        colour,
+        material
+    )
+    if theme.trim then
+        local wood = Color3.fromHex(theme.trim)
+        deco(
+            "Skirting",
+            model,
+            boxSize(along, length, 1, t + 0.4),
+            CFrame.new(mid + Vector3.new(0, 0.5, 0)),
+            wood,
+            M.Wood
+        )
+        deco(
+            "Cornice",
+            model,
+            boxSize(along, length, 0.6, t + 0.6),
+            CFrame.new(mid + Vector3.new(0, H - SLAB - 0.3, 0)),
+            wood,
+            M.Wood
+        )
+    end
+end
+
+local function railing(model: Model, theme, mid: Vector3, along: Vector3, length: number)
+    local colour, material = Color3.fromHex(theme.rail), theme.railMaterial
+    -- An invisible waist-high barrier: stops a stumble, not a jump, a shot or a look
+    local barrier = part(
+        "Railing",
+        model,
+        boxSize(along, length, RAIL_H, 0.5),
+        CFrame.new(mid + Vector3.new(0, RAIL_H / 2, 0)),
+        colour,
+        material
+    )
+    barrier.Transparency = 1
+    barrier.CanQuery = false
+    barrier.CastShadow = false
+    deco(
+        "Handrail",
+        model,
+        boxSize(along, length + 0.4, 0.35, 0.6),
+        CFrame.new(mid + Vector3.new(0, RAIL_H, 0)),
+        colour,
+        material
+    )
+    deco(
+        "Kickrail",
+        model,
+        boxSize(along, length, 0.3, 0.4),
+        CFrame.new(mid + Vector3.new(0, 0.5, 0)),
+        colour,
+        material
+    )
+    local count = math.max(1, math.floor(length / 4))
+    for i = 0, count do
+        local offset = -length / 2 + i * (length / count)
+        deco(
+            "Baluster",
+            model,
+            Vector3.new(0.3, RAIL_H, 0.3),
+            CFrame.new(mid + along * offset + Vector3.new(0, RAIL_H / 2, 0)),
+            colour,
+            material
+        )
+    end
+end
+
+local function doorway(model: Model, plan, theme, e)
+    local centre, along = edgeFrame(plan, e)
+    local t, colour, material = finish(theme, look(plan, e))
+    -- Jambs from the doorway to the cell corner, and a lintel over the gap
+    local from, to = DOOR_W / 2, CELL / 2 + t / 2
+    for _, sign in { -1, 1 } do
+        part(
+            "Wall",
+            model,
+            boxSize(along, to - from, H, t),
+            CFrame.new(centre + along * (sign * (from + to) / 2) + Vector3.new(0, H / 2, 0)),
+            colour,
+            material
+        )
+    end
+    part(
+        "Lintel",
+        model,
+        boxSize(along, DOOR_W, H - DOOR_H, t),
+        CFrame.new(centre + Vector3.new(0, (DOOR_H + H) / 2, 0)),
+        colour,
+        material
+    )
+    local wood = Color3.fromHex(theme.trim or theme.rail)
+    for _, sign in { -1, 1 } do
+        deco(
+            "DoorFrame",
+            model,
+            boxSize(along, 0.6, DOOR_H, t + 0.5),
+            CFrame.new(centre + along * (sign * (DOOR_W / 2 - 0.3)) + Vector3.new(0, DOOR_H / 2, 0)),
+            wood,
+            M.Wood
+        )
+    end
+    deco(
+        "DoorFrame",
+        model,
+        boxSize(along, DOOR_W, 0.6, t + 0.5),
+        CFrame.new(centre + Vector3.new(0, DOOR_H - 0.3, 0)),
+        wood,
+        M.Wood
+    )
+    if e.lockdown then
+        -- EventService swings these shut for a Lockdown
+        local door = part(
+            "Door",
+            model,
+            boxSize(along, DOOR_W, DOOR_H, 0.6),
+            CFrame.new(centre + Vector3.new(0, DOOR_H / 2, 0)),
+            Color3.fromHex("5b3a24"),
+            M.Wood
+        )
+        door.CanCollide = false
+        door.Transparency = 1
+        door:AddTag("LockdownDoor")
+    end
+end
+
+local function edges(model: Model, plan, analysis, theme)
+    local run = nil
+    local function flush()
+        if not run then
+            return
+        end
+        local centre, along = edgeFrame(plan, run.edge)
+        local length = run.count * CELL
+        local mid = centre + along * ((run.count - 1) * CELL / 2)
+        if run.look == "railing" then
+            railing(model, theme, mid, along, length)
+        else
+            solidWall(model, theme, run.look, mid, along, length)
+        end
+        run = nil
+    end
+    for _, e in analysis.edges do
+        if e.kind == "door" then
+            flush()
+            doorway(model, plan, theme, e)
+        elseif e.kind == "open" then
+            flush()
+        else
+            local lookName = look(plan, e)
+            if
+                run
+                and run.look == lookName
+                and run.edge.floor == e.floor
+                and run.edge.axis == e.axis
+                and run.edge.line == e.line
+                and run.last + 1 == e.index
+            then
+                run.count += 1
+                run.last = e.index
+            else
+                flush()
+                run = { edge = e, count = 1, last = e.index, look = lookName }
+            end
+        end
+    end
+    flush()
+end
+
+---------------------------------------------------------------- Windows
+local function windows(model: Model, plan, analysis, theme)
+    if not theme.windows then
+        return
+    end
+    local frame = Color3.fromHex(theme.trim or theme.rail)
+    for _, e in analysis.edges do
+        if e.kind ~= "exterior" or e.floor <= plan.underground or e.index % 2 == 0 then
+            continue
+        end
+        local inside = if MapPlan.IsWalkable(e.a)
+            then -1
+            elseif MapPlan.IsWalkable(e.b) then 1
+            else 0
+        local region = plan.regions[if inside < 0 then e.a else e.b]
+        if inside == 0 or (region and region.outdoor) then
+            continue
+        end
+        local centre, along, across = edgeFrame(plan, e)
+        local inward = across * inside
+        local at = centre + inward * (SHELL / 2 + 0.1) + Vector3.new(0, H * 0.5, 0)
+        local glass = deco(
+            "Window",
+            model,
+            boxSize(along, 8, 8, 0.2),
+            CFrame.new(at),
+            Color3.fromHex("6f8fb3"),
+            M.Glass
+        )
+        glass.Transparency = 0.2
+        local light = Instance.new("SurfaceLight")
+        light.Face = faceToward(inward)
+        light.Color = Color3.fromHex("a9c7ff")
+        light.Brightness = 1.2
+        light.Range = 22
+        light.Angle = 80
+        light.Parent = glass
+        for _, bar in
+            {
+                { 9, 0.6, 0, 4.2 },
+                { 9, 0.6, 0, -4.2 },
+                { 0.6, 9, 4.2, 0 },
+                { 0.6, 9, -4.2, 0 },
+                { 0.3, 8, 0, 0 },
+            }
+        do
+            deco(
+                "WindowFrame",
+                model,
+                boxSize(along, bar[1], bar[2], 0.5),
+                CFrame.new(at + inward * 0.15 + along * bar[3] + Vector3.new(0, bar[4], 0)),
+                frame,
+                M.Wood
+            )
         end
     end
 end
 
-local CANVAS = { "7a4a2e", "3e5a4a", "5a3a4a", "8a7a5a", "2e3e5a", "6a2e2e" }
+---------------------------------------------------------------- Stairs
+local function staircase(model: Model, plan, theme, s)
+    local base = (s.floor - 1) * H
+    local first, last = s.cells[1], s.cells[#s.cells]
+    local ax, _, az = MapPlan.Position(plan, s.floor, first.x, first.z)
+    local bx, _, bz = MapPlan.Position(plan, s.floor, last.x, last.z)
+    local dir = Vector3.new(s.dx, 0, s.dz)
+    local run = s.len * CELL
+    local centre = Vector3.new((ax + bx) / 2, base + H / 2, (az + bz) / 2)
+    local wood = Color3.fromHex(theme.stair)
 
--- Framed paintings on the long faces of inner walls
-local function paintings(model: Model, def, h: number, rng: Random)
-    if not def.paintings then
-        return
+    -- The walkable surface: a wedge rises toward its back face, so its front
+    -- looks back down the stairs
+    local ramp = Instance.new("WedgePart")
+    ramp.Name = "Stairs"
+    ramp.Anchored = true
+    ramp.Size = Vector3.new(STAIR_W, H, run)
+    ramp.CFrame = CFrame.lookAt(centre, centre - dir)
+    ramp.Color = wood
+    ramp.Material = theme.stairMaterial
+    ramp.Parent = model
+
+    -- Treads for the look of a staircase; feet ride the wedge underneath
+    local bottom = Vector3.new(centre.X, base, centre.Z) - dir * (run / 2)
+    local steps = s.len * 10
+    local rise, depth = H / steps, run / steps
+    for i = 1, steps do
+        local at = bottom + dir * ((i - 0.5) * depth) + Vector3.new(0, (i - 0.5) * rise, 0)
+        deco(
+            "Tread",
+            model,
+            Vector3.new(STAIR_W, rise, depth),
+            CFrame.lookAt(at, at + dir),
+            wood,
+            theme.stairMaterial
+        )
     end
-    local gilt = Color3.fromHex("8a6a2e")
-    for i, r in def.walls do
-        if i <= 4 then
-            continue
-        end
-        for _, face in longFaces(r) do
-            if face.to - face.from < 50 then
-                continue
-            end
-            for t = face.from + 25, face.to - 25, 55 do
-                if rng:NextNumber() < 0.35 then
+
+    local slope = dir * run + Vector3.new(0, H, 0)
+    local side = Vector3.new(-s.dz, 0, s.dx)
+    for _, sign in { -1, 1 } do
+        local mid = centre + side * (sign * (STAIR_W / 2 + 0.3)) + Vector3.new(0, RAIL_H / 2, 0)
+        local banister = part(
+            "Banister",
+            model,
+            Vector3.new(0.5, RAIL_H, slope.Magnitude),
+            CFrame.lookAt(mid, mid + slope.Unit),
+            Color3.fromHex(theme.rail),
+            theme.railMaterial
+        )
+        banister.CanQuery = false
+    end
+end
+
+---------------------------------------------------------------- Lamps
+local function lamps(model: Model, plan, analysis, theme)
+    local gw, gd, floors = MapPlan.Size(plan)
+    local colour = Color3.fromHex(theme.lamp)
+    local count = 0
+
+    local function light(lamp: BasePart, range: number)
+        count += 1
+        lamp:AddTag("MapLight")
+        local l = Instance.new("PointLight")
+        l.Color = colour
+        l.Range = range
+        l.Brightness = 1.5
+        l.Shadows = count % 3 == 0 -- a few shadow casters keep phones smooth
+        l.Parent = lamp
+    end
+
+    local function hang(f: number, x: number, z: number, drop: number, range: number)
+        local cx, base, cz = MapPlan.Position(plan, f, x, z)
+        local ceiling = base + H - SLAB
+        local y = ceiling - drop
+        local lamp =
+            deco("Lamp", model, Vector3.new(1.4, 0.6, 1.4), CFrame.new(cx, y, cz), colour, M.Neon)
+        deco(
+            "LampCord",
+            model,
+            Vector3.new(0.15, drop - 0.3, 0.15),
+            CFrame.new(cx, (ceiling + y + 0.3) / 2, cz),
+            Color3.fromHex("1a1a1a"),
+            M.Metal
+        )
+        light(lamp, range)
+    end
+
+    local lit, fallback = {}, {}
+    for f = 1, floors do
+        for z = 1, gd do
+            for x = 1, gw do
+                local ch = MapPlan.Cell(plan, f, x, z)
+                local key = MapPlan.Key(f, x, z)
+                if ch == "^" then
+                    -- Chandeliers down the middle of double-height rooms
+                    if analysis.roof[key] and x % 2 == 0 and z % 2 == 0 then
+                        hang(f, x, z, 3, 44)
+                    end
                     continue
                 end
-                local probe = if face.along == "x"
-                    then { t - 5, face.at - 6, 10, 12 }
-                    else { face.at - 6, t - 5, 12, 10 }
-                if touchesStructure(def, probe, i) then
+                if not MapPlan.IsWalkable(ch) or analysis.ramp[key] then
                     continue
                 end
-                deco(
-                    "PaintingFrame",
-                    model,
-                    faceSize(face, 7, 5.5, 0.3),
-                    onFace(face, t, 0.15, h * 0.5),
-                    gilt,
-                    Enum.Material.Wood
-                )
-                deco(
-                    "Painting",
-                    model,
-                    faceSize(face, 6, 4.5, 0.12),
-                    onFace(face, t, 0.34, h * 0.5),
-                    Color3.fromHex(CANVAS[rng:NextInteger(1, #CANVAS)])
-                )
-            end
-        end
-    end
-end
-
-local BOOKS = { "6b2e2a", "2e4a6b", "4a6b2e", "8a6a2a", "5a3a6a", "2a5a5a", "7a5a3a", "3a3a3a" }
-
--- The archive's inner walls are shelving: planks and rows of book spines
-local function shelves(model: Model, def, rng: Random)
-    if not def.shelves then
-        return
-    end
-    local wood = Color3.fromHex(def.trim or "3a2a1c")
-    for i, r in def.walls do
-        if i <= 4 then
-            continue
-        end
-        for _, face in longFaces(r) do
-            local mid = (face.from + face.to) / 2
-            for row = 1, 3 do
-                local y = 1.5 + (row - 1) * 5.5
-                deco(
-                    "Shelf",
-                    model,
-                    faceSize(face, face.to - face.from - 1, 0.3, 1.4),
-                    onFace(face, mid, 0.7, y),
-                    wood,
-                    Enum.Material.WoodPlanks
-                )
-                local t = face.from + 1
-                while t < face.to - 3 do
-                    local length = math.min(rng:NextNumber(10, 22), face.to - 1 - t)
-                    local height = rng:NextNumber(2.4, 3.8)
-                    deco(
-                        "Books",
-                        model,
-                        faceSize(face, length - 0.4, height, 1.1),
-                        onFace(face, t + length / 2, 0.6, y + 0.15 + height / 2),
-                        Color3.fromHex(BOOKS[rng:NextInteger(1, #BOOKS)]),
-                        Enum.Material.Fabric
-                    )
-                    t += length
+                local region = plan.regions[ch]
+                if region.outdoor then
+                    -- Lamp posts along the railings, every third cell
+                    if (x + z) % 3 ~= 0 then
+                        continue
+                    end
+                    for _, side in SIDES do
+                        if MapPlan.EdgeKind(analysis, f, x, z, side) == "railing" then
+                            local d = MapPlan.DIRS[side]
+                            local cx, base, cz = MapPlan.Position(plan, f, x, z)
+                            local at = Vector3.new(cx, base, cz)
+                                + Vector3.new(d[1], 0, d[2]) * (CELL / 2 - 1.2)
+                            local post = part(
+                                "LampPost",
+                                model,
+                                Vector3.new(0.6, 10, 0.6),
+                                CFrame.new(at + Vector3.new(0, 5, 0)),
+                                Color3.fromHex("2b2f33"),
+                                M.Metal
+                            )
+                            post.CanQuery = false
+                            local lamp = deco(
+                                "Lamp",
+                                model,
+                                Vector3.new(1.4, 0.8, 1.4),
+                                CFrame.new(at + Vector3.new(0, 10.4, 0)),
+                                colour,
+                                M.Neon
+                            )
+                            light(lamp, 36)
+                            break
+                        end
+                    end
+                    continue
+                end
+                local covered = analysis.roof[key]
+                    or MapPlan.IsWalkable(MapPlan.Cell(plan, f + 1, x, z))
+                if not covered then
+                    continue
+                end
+                local group = f .. ch
+                fallback[group] = fallback[group] or { x = x, z = z }
+                if x % 2 == 1 and z % 2 == 1 then
+                    hang(f, x, z, 1.6, 30)
+                    lit[group] = true
                 end
             end
         end
     end
+    -- Every room gets at least one light
+    for group, cell in fallback do
+        if not lit[group] then
+            hang(tonumber(string.match(group, "^%d+")) :: number, cell.x, cell.z, 1.6, 30)
+        end
+    end
 end
 
--- Rugs with a darker border, laid anywhere clear of walls
-local function rugs(model: Model, def, rng: Random)
-    if not def.rugs then
-        return
+---------------------------------------------------------------- Furniture and dressing
+local function dressRooms(
+    model: Model,
+    plan,
+    analysis,
+    theme,
+    reserved: { [string]: boolean },
+    rng: Random
+)
+    local folder = ServerStorage:FindFirstChild("Props")
+    local gw, gd, floors = MapPlan.Size(plan)
+
+    local function template(name: string?): Model?
+        local t = folder and name and folder:FindFirstChild(name)
+        return if t and t:IsA("Model") then t else nil
     end
-    for _ = 1, 14 do
-        local w, d = rng:NextNumber(14, 22), rng:NextNumber(9, 13)
-        local x, z = rng:NextNumber(40, W - 40), rng:NextNumber(40, D - 40)
-        if touchesStructure(def, { x - w / 2 - 3, z - d / 2 - 3, w + 6, d + 6 }, nil, true) then
-            continue
+
+    local function place(t: Model, cf: CFrame)
+        local prop = t:Clone()
+        for _, d in prop:GetDescendants() do
+            if d:IsA("LuaSourceContainer") then
+                d:Destroy() -- set dressing never runs code
+            elseif d:IsA("BasePart") then
+                d.Anchored = true
+            end
         end
-        local colour = Color3.fromHex(def.rugs[rng:NextInteger(1, #def.rugs)])
+        prop:PivotTo(cf)
+        prop.Parent = model
+    end
+
+    local function rug(cf: CFrame, colourHex: string)
+        local colour = Color3.fromHex(colourHex)
         local h, s, v = colour:ToHSV()
         deco(
             "RugBorder",
             model,
-            Vector3.new(w + 1.2, 0.1, d + 1.2),
-            Vector3.new(x - W / 2, 0.05, z - D / 2),
+            Vector3.new(15.2, 0.1, 11.2),
+            cf * CFrame.new(0, 0.05, 0),
             Color3.fromHSV(h, s, v * 0.55),
-            Enum.Material.Fabric
+            M.Fabric
         )
-        deco(
-            "Rug",
-            model,
-            Vector3.new(w, 0.14, d),
-            Vector3.new(x - W / 2, 0.07, z - D / 2),
-            colour,
-            Enum.Material.Fabric
-        )
+        deco("Rug", model, Vector3.new(14, 0.14, 10), cf * CFrame.new(0, 0.07, 0), colour, M.Fabric)
+    end
+
+    -- Pass one: each standable cell's four edges, and each room's most open cell
+    local cells = {}
+    local centreCell = {}
+    for f = 1, floors do
+        for z = 1, gd do
+            for x = 1, gw do
+                local ch = MapPlan.Cell(plan, f, x, z)
+                local key = MapPlan.Key(f, x, z)
+                if not MapPlan.IsWalkable(ch) or analysis.ramp[key] or analysis.approach[key] then
+                    continue
+                end
+                local kinds, passage, rail, openSides = {}, false, false, 0
+                for _, side in SIDES do
+                    local kind = MapPlan.EdgeKind(analysis, f, x, z, side)
+                    kinds[side] = kind
+                    passage = passage or kind == "door" or kind == "open"
+                    rail = rail or kind == "railing"
+                    if kind == "none" then
+                        openSides += 1
+                    end
+                end
+                local info =
+                    { f = f, x = x, z = z, ch = ch, kinds = kinds, passage = passage, rail = rail }
+                table.insert(cells, info)
+                local style = theme.styles[plan.regions[ch].style]
+                if style and style.centre and not passage and not rail and not reserved[key] then
+                    local group = f .. ch
+                    local best = centreCell[group]
+                    if not best or openSides > best.openSides then
+                        centreCell[group] = { info = info, openSides = openSides }
+                    end
+                end
+            end
+        end
+    end
+
+    -- Pass two: centrepieces, pieces against walls, paintings
+    for _, info in cells do
+        local region = plan.regions[info.ch]
+        local style = theme.styles[region.style]
+        if not style then
+            continue
+        end
+        local cx, base, cz = MapPlan.Position(plan, info.f, info.x, info.z)
+        local against: { [string]: boolean } = {}
+
+        local best = centreCell[info.f .. info.ch]
+        local centrepiece = best and best.info == info and template(style.centre)
+        if centrepiece then
+            local size = centrepiece:GetExtentsSize()
+            local turn = CFrame.Angles(0, if rng:NextNumber() < 0.5 then 0 else math.pi / 2, 0)
+            local cf = CFrame.new(cx, base + size.Y / 2, cz) * turn
+            place(centrepiece, cf)
+            if style.rug then
+                rug(CFrame.new(cx, base, cz) * turn, style.rug)
+            end
+            local chair = style.chairs and template("DiningChair")
+            if chair then
+                local chairSize = chair:GetExtentsSize()
+                for _, spot in { { -0.25, 1 }, { 0.25, 1 }, { -0.25, -1 }, { 0.25, -1 } } do
+                    local at = cf:PointToWorldSpace(
+                        Vector3.new(
+                            size.X * spot[1],
+                            0,
+                            spot[2] * (size.Z / 2 + chairSize.Z / 2 + 0.6)
+                        )
+                    )
+                    at = Vector3.new(at.X, base + chairSize.Y / 2, at.Z)
+                    place(chair, CFrame.lookAt(at, Vector3.new(cx, at.Y, cz)))
+                end
+            end
+        elseif
+            not info.passage
+            and (style.againstRail or not info.rail)
+            and #style.props > 0
+            and rng:NextNumber() < (style.density or 0)
+        then
+            -- One piece with its back to a wall (or a railing, outdoors)
+            local order = table.clone(SIDES)
+            for i = #order, 2, -1 do
+                local j = rng:NextInteger(1, i)
+                order[i], order[j] = order[j], order[i]
+            end
+            for _, side in order do
+                local kind = info.kinds[side]
+                if
+                    not (
+                        kind == "wall"
+                        or kind == "exterior"
+                        or (style.againstRail and kind == "railing")
+                    )
+                then
+                    continue
+                end
+                local t = template(style.props[rng:NextInteger(1, #style.props)])
+                if t then
+                    local size = t:GetExtentsSize()
+                    local d = MapPlan.DIRS[side]
+                    local out = Vector3.new(d[1], 0, d[2])
+                    local along = Vector3.new(-d[2], 0, d[1])
+                    local thickness = if kind == "exterior"
+                        then SHELL
+                        elseif kind == "railing" then 0.6
+                        else WALL
+                    local slack = math.max(0, CELL / 2 - size.X / 2 - 2)
+                    local at = Vector3.new(cx, base + size.Y / 2, cz)
+                        + out * (CELL / 2 - thickness / 2 - size.Z / 2 - 0.3)
+                        + along * rng:NextNumber(-slack, slack)
+                    place(t, CFrame.lookAt(at, at - out))
+                    against[side] = true
+                end
+                break
+            end
+        end
+
+        -- Framed paintings on the bare inside walls of rooms
+        if theme.paintings and not region.hall and not region.outdoor then
+            for _, side in SIDES do
+                if info.kinds[side] ~= "wall" or against[side] or rng:NextNumber() > 0.3 then
+                    continue
+                end
+                local d = MapPlan.DIRS[side]
+                local out = Vector3.new(d[1], 0, d[2])
+                local along = Vector3.new(-d[2], 0, d[1])
+                local at = Vector3.new(cx, base + 7.5, cz) + out * (CELL / 2 - WALL / 2 - 0.2)
+                deco(
+                    "PaintingFrame",
+                    model,
+                    boxSize(along, 7, 5.5, 0.3),
+                    CFrame.new(at),
+                    Color3.fromHex("8a6a2e"),
+                    M.Wood
+                )
+                local canvas = { "7a4a2e", "3e5a4a", "5a3a4a", "8a7a5a", "2e3e5a", "6a2e2e" }
+                deco(
+                    "Painting",
+                    model,
+                    boxSize(along, 6, 4.5, 0.12),
+                    CFrame.new(at - out * 0.2),
+                    Color3.fromHex(canvas[rng:NextInteger(1, #canvas)])
+                )
+            end
+        end
     end
 end
 
--- Rusted Pier: open water around the deck, pilings and a railing along the
--- edge. The outer walls stay as invisible barriers.
-local function pierDressing(model: Model, def)
-    if not def.pier then
-        return
-    end
+---------------------------------------------------------------- Waterfront
+-- Rusted Pier stands on pilings over open water
+local function waterfront(model: Model, plan)
+    local gw, gd = MapPlan.Size(plan)
     local water = deco(
         "Water",
         model,
-        Vector3.new(W + 800, 1, D + 800),
-        Vector3.new(0, -5, 0),
+        Vector3.new(gw * CELL + 1000, 1, gd * CELL + 1000),
+        CFrame.new(0, -4, 0),
         Color3.fromHex("163246"),
-        Enum.Material.Glass
+        M.Glass
     )
-    water.Transparency = 0.15
-    water.Reflectance = 0.2
-    local wood = Color3.fromHex("4a3a2a")
-    for i = 1, 4 do
-        for _, face in longFaces(def.walls[i]) do
-            if not isInnerFace(face) then
-                continue
-            end
-            local t = face.from + 2
-            while t <= face.to - 2 do
-                deco(
-                    "Piling",
-                    model,
-                    Vector3.new(0.7, 12, 0.7),
-                    onFace(face, t, 0.5, -2),
-                    wood,
-                    Enum.Material.Wood
-                )
-                t += 12
-            end
-            local mid = (face.from + face.to) / 2
-            local length = face.to - face.from - 4
-            deco(
-                "Rail",
-                model,
-                faceSize(face, length, 0.35, 0.35),
-                onFace(face, mid, 0.5, 3.8),
-                wood,
-                Enum.Material.Wood
-            )
-            deco(
-                "Rail",
-                model,
-                faceSize(face, length, 0.3, 0.3),
-                onFace(face, mid, 0.5, 2),
-                wood,
-                Enum.Material.Wood
-            )
-        end
-    end
-end
+    water.Transparency = 0.1
+    water.Reflectance = 0.25
 
-local function placeProp(model: Model, template: Model, cf: CFrame)
-    local prop = template:Clone()
-    for _, d in prop:GetDescendants() do
-        if d:IsA("LuaSourceContainer") then
-            d:Destroy() -- set dressing never runs code
-        elseif d:IsA("BasePart") then
-            d.Anchored = true
-        end
-    end
-    prop:PivotTo(cf)
-    prop.Parent = model
-end
-
--- Furniture inside the rooms: a jittered grid of spots, each clear of walls,
--- doors, spawns, coins and other furniture. A dining table brings its chairs.
-local function furnish(model: Model, def, seed: number)
-    local folder = game:GetService("ServerStorage"):FindFirstChild("Props")
-    if not folder or not def.interior then
-        return
-    end
-    local rng = Random.new(seed)
-    local placed: { { x: number, z: number, r: number } } = {}
-    local count = 0
-    for gx = 50, W - 50, 70 do
-        for gz = 50, D - 50, 70 do
-            if count >= INTERIOR_MAX or rng:NextNumber() > 0.55 then
-                continue
-            end
-            local name = def.interior[rng:NextInteger(1, #def.interior)]
-            local template = folder:FindFirstChild(name)
-            if not (template and template:IsA("Model")) then
-                continue
-            end
-            local size = template:GetExtentsSize()
-            local turned = rng:NextInteger(0, 1) == 1
-            local chairs = name == "DiningTable" and 3 or 0 -- room for chairs around it
-            local sx = (if turned then size.Z else size.X) + chairs * 2
-            local sz = (if turned then size.X else size.Z) + chairs * 2
-            local x, z = gx + rng:NextNumber(-15, 15), gz + rng:NextNumber(-15, 15)
-            local x0, z0, x1, z1 = x - sx / 2, z - sz / 2, x + sx / 2, z + sz / 2
-            if
-                touchesStructure(def, { x0 - 8, z0 - 8, sx + 16, sz + 16 }, nil, true)
-                or blocked(def, x0, z0, x1, z1)
-            then
-                continue
-            end
-            local radius = math.max(sx, sz) / 2
-            local crowded = false
-            for _, other in placed do
-                if math.sqrt((other.x - x) ^ 2 + (other.z - z) ^ 2) < radius + other.r + 10 then
-                    crowded = true
-                    break
-                end
-            end
-            if crowded then
-                continue
-            end
-            table.insert(placed, { x = x, z = z, r = radius })
-            count += 1
-
-            local yaw = (if turned then 90 else 0) + rng:NextInteger(0, 1) * 180
-            local cf = CFrame.new(x - W / 2, size.Y / 2, z - D / 2)
-                * CFrame.Angles(0, math.rad(yaw), 0)
-            placeProp(model, template, cf)
-
-            local chair = folder:FindFirstChild("DiningChair")
-            if name == "DiningTable" and chair and chair:IsA("Model") then
-                local chairSize = chair:GetExtentsSize()
-                for _, spot in { { -0.25, 1 }, { 0.25, 1 }, { -0.25, -1 }, { 0.25, -1 } } do
-                    local offset = Vector3.new(
-                        size.X * spot[1],
-                        0,
-                        spot[2] * (size.Z / 2 + chairSize.Z / 2 + 0.6)
-                    )
-                    local at = cf:PointToWorldSpace(offset)
-                    at = Vector3.new(at.X, chairSize.Y / 2, at.Z)
-                    local centre = Vector3.new(cf.Position.X, at.Y, cf.Position.Z)
-                    placeProp(model, chair, CFrame.lookAt(at, centre))
+    -- Corners of the boardwalk get short pilings; corners under the deck where
+    -- no boardwalk stands get tall ones
+    local posts: { [string]: boolean } = {}
+    for z = 1, gd do
+        for x = 1, gw do
+            local low = MapPlan.IsWalkable(MapPlan.Cell(plan, 1, x, z))
+            local high = MapPlan.Cell(plan, 2, x, z) ~= "."
+            if low or high then
+                for _, c in { { x - 1, z - 1 }, { x, z - 1 }, { x - 1, z }, { x, z } } do
+                    local id = c[1] .. ":" .. c[2]
+                    posts[id] = (posts[id] or false) or low
                 end
             end
         end
     end
+    local wood = Color3.fromHex("3a2f24")
+    for id, short in posts do
+        local cx, cz = string.match(id, "^(%-?%d+):(%-?%d+)$")
+        local top = if short then -SLAB else H - SLAB
+        local bottom = -12
+        deco(
+            "Piling",
+            model,
+            Vector3.new(1.2, top - bottom, 1.2),
+            CFrame.new(
+                lineAt(tonumber(cx) :: number, gw),
+                (top + bottom) / 2,
+                lineAt(tonumber(cz) :: number, gd)
+            ),
+            wood,
+            M.Wood
+        )
+    end
 end
 
--- Pools of light on a grid, skipping anywhere a wall stands. Never solid to a
--- raycast, so they cannot block a shot or a witness sightline.
-local function lamps(model: Model, def, h: number)
-    for x = LAMP_SPACING / 2, W, LAMP_SPACING do
-        for z = LAMP_SPACING / 2, D, LAMP_SPACING do
-            if insideAny(def.walls, x, z, 6) then
-                continue
-            end
-            local pos = Vector3.new(x - W / 2, h - 3, z - D / 2)
-            if def.lampPosts then
-                local post = part(
-                    ("LampPost_%d_%d"):format(x, z),
-                    model,
-                    Vector3.new(0.6, h - 3, 0.6),
-                    Vector3.new(pos.X, (h - 3) / 2, pos.Z),
-                    Color3.fromHex("2b2f33"),
-                    Enum.Material.Metal
-                )
-                post.CanQuery = false
-            end
-            local lamp = part(
-                ("Lamp_%d_%d"):format(x, z),
-                model,
-                Vector3.new(1.4, 0.7, 1.4),
-                pos,
-                def.lamp,
-                Enum.Material.Neon
-            )
-            lamp.CanCollide = false
-            lamp.CanQuery = false
-            lamp.CanTouch = false
-            lamp.CastShadow = false
-            lamp:AddTag("MapLight")
-            local light = Instance.new("PointLight")
-            light.Color = def.lamp
-            light.Range = 60
-            light.Brightness = 1.6
-            light.Shadows = true
-            light.Parent = lamp
-        end
+---------------------------------------------------------------- Build
+local function build(mapName: string, plan, theme): Model
+    local model = Instance.new("Model")
+    model.Name = mapName
+    local analysis = MapPlan.Analyse(plan)
+    for _, problem in analysis.problems do
+        warn(("[ColdCase] %s plan: %s"):format(mapName, problem))
     end
+
+    model.PrimaryPart = slabs(model, plan, analysis, theme)
+    edges(model, plan, analysis, theme)
+    windows(model, plan, analysis, theme)
+    for _, s in analysis.stairs do
+        staircase(model, plan, theme, s)
+    end
+    lamps(model, plan, analysis, theme)
+    if theme.water then
+        waterfront(model, plan)
+    end
+
+    local points = MapPlan.Points(plan, analysis)
+    local reserved = {}
+    for i, c in points.spawns do
+        reserved[MapPlan.Key(c.f, c.x, c.z)] = true
+        local x, y, z = MapPlan.Position(plan, c.f, c.x, c.z)
+        local p = part(
+            ("Spawn_%02d"):format(i),
+            model,
+            Vector3.new(8, 0.4, 8),
+            CFrame.new(x, y + 0.2, z),
+            Color3.fromHex("37bcf0")
+        )
+        p.CanCollide = false
+        p.Transparency = 0.55
+        p:AddTag("SpawnPoint")
+    end
+    for i, c in points.coins do
+        reserved[MapPlan.Key(c.f, c.x, c.z)] = true
+        local x, y, z = MapPlan.Position(plan, c.f, c.x, c.z)
+        local p = part(
+            ("Coin_%02d"):format(i),
+            model,
+            Vector3.new(2, 2, 0.4),
+            CFrame.new(x, y + 3, z),
+            Color3.fromHex("f2a63b"),
+            M.Neon
+        )
+        p.CanCollide = false
+        p.CanQuery = false
+        p:SetAttribute("NodeId", i)
+        p:AddTag("CoinNode")
+    end
+
+    dressRooms(model, plan, analysis, theme, reserved, Random.new(#mapName * 7919))
+    return model
 end
 
 return function(opts: { force: boolean? }?)
-    local ServerStorage = game:GetService("ServerStorage")
     local force = opts and opts.force
 
     local folder = ServerStorage:FindFirstChild("Maps")
@@ -805,89 +1219,12 @@ return function(opts: { force: boolean? }?)
     folder = Instance.new("Folder")
     folder.Name = "Maps"
 
-    for mapName, def in MAPS do
-        local model = Instance.new("Model")
-        model.Name = mapName
-        model.Parent = folder
-        local h = def.height
-
-        local floor = part(
-            "Floor_Base",
-            model,
-            Vector3.new(W, 2, D),
-            Vector3.new(0, -1, 0),
-            def.floor,
-            def.floorMaterial
-        )
-        model.PrimaryPart = floor
-
-        for i, r in def.walls do
-            -- The first four walls are always the outer shell
-            local outer = i <= 4
-            local wall = part(
-                ("Wall_%02d"):format(i),
-                model,
-                Vector3.new(r[3], h, r[4]),
-                rectCentre(r, h),
-                outer and def.outer or def.wall,
-                outer and def.outerMaterial or def.wallMaterial
-            )
-            if outer and def.pier then
-                wall.Transparency = 1 -- the pier's edge is a railing over open water
-                wall.CastShadow = false
-            end
-        end
-        local rng = Random.new(#mapName * 104729)
-        trimWalls(model, def, h)
-        windows(model, def, h)
-        paintings(model, def, h, rng)
-        shelves(model, def, rng)
-        rugs(model, def, rng)
-        pierDressing(model, def)
-        lamps(model, def, h)
-        dress(model, def, #mapName * 7919)
-        furnish(model, def, #mapName * 15485863)
-
-        for i, r in def.doors do
-            local door = part(
-                ("Door_%02d"):format(i),
-                model,
-                Vector3.new(r[3], h, r[4]),
-                rectCentre(r, h),
-                Color3.fromHex("5b3a24"),
-                Enum.Material.Wood
-            )
-            door.CanCollide = false
-            door.Transparency = 1
-            door:AddTag("LockdownDoor")
-        end
-
-        for i, s in def.spawns do
-            local p = part(
-                ("Spawn_%02d"):format(i),
-                model,
-                Vector3.new(8, 0.4, 8),
-                Vector3.new(s[1] - W / 2, 0.2, s[2] - D / 2),
-                Color3.fromHex("37bcf0")
-            )
-            p.CanCollide = false
-            p.Transparency = 0.55
-            p:AddTag("SpawnPoint")
-        end
-
-        for i, c in def.coins do
-            local p = part(
-                ("Coin_%02d"):format(i),
-                model,
-                Vector3.new(2, 2, 0.4),
-                Vector3.new(c[1] - W / 2, 3, c[2] - D / 2),
-                Color3.fromHex("f2a63b")
-            )
-            p.CanCollide = false
-            p.CanQuery = false
-            p.Material = Enum.Material.Neon
-            p:SetAttribute("NodeId", i)
-            p:AddTag("CoinNode")
+    for mapName, plan in MapPlan.MAPS do
+        local theme = THEMES[mapName]
+        if theme then
+            build(mapName, plan, theme).Parent = folder
+        else
+            warn("[ColdCase] no theme for map " .. mapName)
         end
     end
 
@@ -898,7 +1235,7 @@ return function(opts: { force: boolean? }?)
             "Torso",
             body,
             Vector3.new(4, 1, 2),
-            Vector3.new(0, 0.5, 0),
+            CFrame.new(0, 0.5, 0),
             Color3.fromHex("8c3330")
         )
         torso.CanCollide = false

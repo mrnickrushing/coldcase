@@ -70,14 +70,10 @@ stripped when they are cloned.
 
 ## Images
 
-| Asset id | What | Used by |
-| --- | --- | --- |
-| 129394148205070 | Blackwood Manor floor plan | Lobby vote card (`Config.MAP_IMAGES`) |
-| 109064086969317 | Rusted Pier floor plan | Lobby vote card |
-| 76726369092912 | City Archive floor plan | Lobby vote card |
-
-Rendered from the blockout data in `BuildMaps` (walls, lockdown doors dashed, spawns in cyan, coins in
-amber) and uploaded to the owner's account. Regenerate them if a map's layout changes.
+The lobby vote cards draw each map's floors live from `Shared/MapPlan` (rooms, halls, outdoor decks
+and stairs in amber), so they always match the layout. The old uploaded floor-plan images
+(129394148205070, 109064086969317, 76726369092912) show the retired single-floor blockouts and are no
+longer used.
 
 ## Built in code
 

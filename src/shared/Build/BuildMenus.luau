@@ -15,6 +15,7 @@
 local Theme = require(script.Parent.Parent.Theme)
 local Config = require(script.Parent.Parent.Config)
 local Rarities = require(script.Parent.Parent.RarityTable)
+local MapPlan = require(script.Parent.Parent.MapPlan)
 
 local BG = Theme.GROUND
 local PANEL = Theme.PANEL
@@ -208,6 +209,62 @@ local function header(parent: Instance, kicker: string, title: string)
     return h
 end
 
+local PLAN_CELL = 8 -- px per map cell on a vote card
+local PLAN_ROOM = Color3.fromHex("4a5260")
+local PLAN_HALL = Color3.fromHex("2f3640")
+local PLAN_OUTDOOR = Color3.fromHex("2f5a55")
+local PLAN_OPEN = Color3.fromHex("1c2129")
+
+-- Every floor of a map side by side, lowest first, with the stairs in amber
+local function drawPlan(parent: Frame, plan)
+    local gw, gd, floors = MapPlan.Size(plan)
+    local ramp = MapPlan.Analyse(plan).ramp
+    local holder = frame("Plan", parent, UDim2.fromScale(1, 1), nil, nil, true)
+    local layout = Instance.new("UIListLayout")
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent = holder
+    for f = 1, floors do
+        local level = frame(
+            "Floor" .. f,
+            holder,
+            UDim2.fromOffset(gw * PLAN_CELL, gd * PLAN_CELL),
+            nil,
+            nil,
+            true
+        )
+        level.LayoutOrder = f
+        for z = 1, gd do
+            for x = 1, gw do
+                local ch = MapPlan.Cell(plan, f, x, z)
+                if ch == "." then
+                    continue
+                end
+                local colour = PLAN_OPEN
+                if ramp[MapPlan.Key(f, x, z)] then
+                    colour = Theme.AMBER
+                elseif MapPlan.IsWalkable(ch) then
+                    local region = plan.regions[ch]
+                    colour = if region.outdoor
+                        then PLAN_OUTDOOR
+                        elseif region.hall then PLAN_HALL
+                        else PLAN_ROOM
+                end
+                local cell = Instance.new("Frame")
+                cell.Name = "Cell"
+                cell.BorderSizePixel = 0
+                cell.BackgroundColor3 = colour
+                cell.Size = UDim2.fromOffset(PLAN_CELL - 1, PLAN_CELL - 1)
+                cell.Position = UDim2.fromOffset((x - 1) * PLAN_CELL, (z - 1) * PLAN_CELL)
+                cell.Parent = level
+            end
+        end
+    end
+end
+
 return function(parent: Instance?)
     parent = parent or game:GetService("StarterGui")
     local out = {}
@@ -245,18 +302,9 @@ return function(parent: Instance?)
             card.LayoutOrder = i
             stroke(card)
             local preview = frame("Preview", card, UDim2.new(1, 0, 0, 104), nil, RAISED)
-            local image = (Config.MAP_IMAGES :: { [string]: string })[mapName]
-            if image and image ~= "" then
-                local plan = Instance.new("ImageLabel")
-                plan.Name = "Plan"
-                plan.BackgroundTransparency = 1
-                plan.Size = UDim2.fromScale(1, 1)
-                plan.Image = image
-                plan.ScaleType = Enum.ScaleType.Crop
-                plan.Parent = preview
-                local corner = Instance.new("UICorner")
-                corner.CornerRadius = UDim.new(0, 6)
-                corner.Parent = plan
+            local plan = MapPlan.MAPS[mapName]
+            if plan then
+                drawPlan(preview, plan)
             end
             local body =
                 frame("Body", card, UDim2.new(1, 0, 1, -104), UDim2.new(0, 0, 0, 104), nil, true)

@@ -5,6 +5,7 @@ local RateLimiter = require("./src/shared/RateLimiter")
 local FibreBands = require("./src/shared/FibreBands")
 local Progression = require("./src/shared/Progression")
 local Lobby = require("./src/shared/Lobby")
+local MapPlan = require("./src/shared/MapPlan")
 
 local passed, failed = 0, 0
 
@@ -184,6 +185,47 @@ end)
 test("with NPCs disabled a quiet server waits", function()
     eq(Lobby.Plan(2, 2, 4, 6, false).start, false)
 end)
+
+---------------------------------------------------------------- MapPlan
+for name, plan in MapPlan.MAPS do
+    test(name .. " plan has no problems", function()
+        local analysis = MapPlan.Analyse(plan)
+        eq(#analysis.problems, 0, table.concat(analysis.problems, "; "))
+    end)
+
+    test(name .. " every standable cell can be reached", function()
+        local analysis = MapPlan.Analyse(plan)
+        local reached, total, missing = MapPlan.Reachable(plan, analysis)
+        eq(reached, total, "unreachable " .. table.concat(missing, ", "))
+    end)
+
+    test(name .. " a Lockdown shuts doors but seals no one in", function()
+        local analysis = MapPlan.Analyse(plan)
+        local shut = 0
+        for _, edge in analysis.edges do
+            if edge.lockdown then
+                shut += 1
+            end
+        end
+        assert(shut > 0, "no Lockdown doors")
+        local reached, total, missing = MapPlan.Reachable(plan, analysis, true)
+        eq(reached, total, "sealed in " .. table.concat(missing, ", "))
+    end)
+
+    test(name .. " spawns and coins reach every floor", function()
+        local analysis = MapPlan.Analyse(plan)
+        local points = MapPlan.Points(plan, analysis)
+        eq(#points.spawns, MapPlan.SPAWNS, "spawns")
+        eq(#points.coins, MapPlan.COINS, "coins")
+        for f = 1, #plan.floors do
+            local onFloor = false
+            for _, c in points.coins do
+                onFloor = onFloor or c.f == f
+            end
+            eq(onFloor, true, "a coin on floor " .. f)
+        end
+    end)
+end
 
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then

@@ -370,10 +370,26 @@ function RoundService:Advance()
         pendingBots = plan.npcs
         setState("LOADING", Config.LOADING_TIME)
     elseif state == "LOADING" then
-        for _, bot in BotService:Spawn(pendingBots) do
+        local wanted = pendingBots
+        for _, bot in BotService:Spawn(wanted) do
             table.insert(participants, bot)
         end
         pendingBots = 0
+        -- Never drop someone into a round alone: if the NPCs could not be
+        -- built, go back to the lobby and try again next intermission
+        if wanted > 0 and #participants < minPlayers() then
+            warn(
+                ("[ColdCase] only %d of %d players and NPCs ready"):format(
+                    #participants,
+                    minPlayers()
+                )
+            )
+            BotService:Clear()
+            participants = {}
+            Remotes.Notify:FireAllClients("The NPCs could not join. Trying again next round.")
+            setState("INTERMISSION", Config.INTERMISSION)
+            return
+        end
         self:LoadVotedMap()
         local present = {}
         for _, plr in participants do

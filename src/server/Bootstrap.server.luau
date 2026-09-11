@@ -176,5 +176,6 @@ RemoteGuard.Connect("RequestLobbyMode", function(plr, mode)
     end
 end)
 
+require(Services.BotService):Prepare() -- builds the NPC rig before the first round
 RoundService:Start()
 print("[ColdCase] server up")

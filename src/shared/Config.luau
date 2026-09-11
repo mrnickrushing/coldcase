@@ -10,7 +10,7 @@ return {
     ROUND_LENGTH = 120,
     ROUND_LENGTH_LARGE = 150, -- 12+ players
     MIN_PLAYERS = 4,
-    SPAWN_MIN_SEP = 130,
+    SPAWN_MIN_SEP = 60,
     WEAPON_GRACE = 4, -- no kills for the first 4 seconds
 
     -- Role scaling
@@ -139,11 +139,5 @@ return {
     -- Analytics
     HEATMAP_CELL = 80, -- studs per death-position grid cell
 
-    MAPS = { "BlackwoodManor", "RustedPier", "CityArchive" },
-    -- Lobby vote card images: floor plans rendered from the blockouts
-    MAP_IMAGES = {
-        BlackwoodManor = "rbxassetid://129394148205070",
-        RustedPier = "rbxassetid://109064086969317",
-        CityArchive = "rbxassetid://76726369092912",
-    },
+    MAPS = { "BlackwoodManor", "RustedPier", "CityArchive" }, -- layouts live in Shared/MapPlan
 }

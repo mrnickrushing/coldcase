@@ -81,6 +81,103 @@ function BotService:BindRound(roundService)
     round = roundService
 end
 
+---------------------------------------------------------------- The rig
+-- One plain R15 rig, built once and cloned for every NPC. Building it loads
+-- assets and can fail on a busy live server, so it retries, and as a last
+-- resort copies a player's body stripped of everything that makes it theirs.
+local rigTemplate: Model? = nil
+
+local function copyOfPlayer(): Model?
+    for _, plr in Players:GetPlayers() do
+        local char = plr.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local was = char.Archivable
+            char.Archivable = true
+            local copy = char:Clone()
+            char.Archivable = was
+            if copy then
+                for _, d in copy:GetDescendants() do
+                    if
+                        d:IsA("LuaSourceContainer")
+                        or d:IsA("Accessory")
+                        or d:IsA("Clothing")
+                        or d:IsA("ShirtGraphic")
+                        or d:IsA("Decal")
+                        or d:IsA("Tool")
+                        or d:IsA("ForceField")
+                    then
+                        d:Destroy()
+                    end
+                end
+                return copy
+            end
+        end
+    end
+    return nil
+end
+
+local function rig(): Model?
+    if rigTemplate then
+        return rigTemplate
+    end
+    for attempt = 1, 3 do
+        local ok, model = pcall(
+            Players.CreateHumanoidModelFromDescription,
+            Players,
+            Instance.new("HumanoidDescription"),
+            Enum.HumanoidRigType.R15
+        )
+        if ok and model then
+            rigTemplate = model
+            break
+        end
+        warn(("[ColdCase] NPC rig, attempt %d: %s"):format(attempt, tostring(model)))
+        task.wait(attempt)
+    end
+    rigTemplate = rigTemplate or copyOfPlayer()
+    local template = rigTemplate
+    if template then
+        local animateScript = template:FindFirstChild("Animate")
+        if animateScript then
+            animateScript:Destroy() -- a LocalScript; the server animates NPCs instead
+        end
+    end
+    return template
+end
+
+-- Bootstrap warms the rig on server start, so the first round never waits on it
+function BotService:Prepare()
+    task.spawn(rig)
+end
+
+local function colour(char: Model, shirt: Color3, skin: Color3, legs: Color3)
+    local body = char:FindFirstChildOfClass("BodyColors")
+    if body then
+        body.HeadColor3 = skin
+        body.TorsoColor3 = shirt
+        body.LeftArmColor3 = shirt
+        body.RightArmColor3 = shirt
+        body.LeftLegColor3 = legs
+        body.RightLegColor3 = legs
+    end
+    for _, part in char:GetDescendants() do
+        if part:IsA("BasePart") then
+            local name = part.Name
+            if name == "Head" then
+                part.Color = skin
+            elseif
+                string.find(name, "Torso")
+                or string.find(name, "Arm")
+                or string.find(name, "Hand")
+            then
+                part.Color = shirt
+            elseif string.find(name, "Leg") or string.find(name, "Foot") then
+                part.Color = legs
+            end
+        end
+    end
+end
+
 function BotService:FromCharacter(model: Instance): any
     return byCharacter[model]
 end
@@ -146,36 +243,30 @@ function BotService:Spawn(count: number): { any }
         then spawnPart.Position
         else Vector3.new(0, 2, -900)
 
+    local template = rig()
+    if not template then
+        warn("[ColdCase] no NPC rig could be built")
+        return made
+    end
+
     for i = 1, count do
-        local description = Instance.new("HumanoidDescription")
-        local shirt, skin, legs =
-            Color3.fromHex(pick(SHIRTS)), Color3.fromHex(pick(SKIN)), Color3.fromHex(pick(TROUSERS))
-        description.TorsoColor = shirt
-        description.LeftArmColor = shirt
-        description.RightArmColor = shirt
-        description.HeadColor = skin
-        description.LeftLegColor = legs
-        description.RightLegColor = legs
-        local ok, char = pcall(
-            Players.CreateHumanoidModelFromDescription,
-            Players,
-            description,
-            Enum.HumanoidRigType.R15
-        )
-        if not ok or not char then
-            warn("[ColdCase] could not build an NPC: " .. tostring(char))
+        local char = template:Clone()
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum then
             continue
         end
+        colour(
+            char,
+            Color3.fromHex(pick(SHIRTS)),
+            Color3.fromHex(pick(SKIN)),
+            Color3.fromHex(pick(TROUSERS))
+        )
 
         -- "(NPC)" cannot appear in a Roblox username, so names never collide
         local name = (names[i] or ("Guest" .. i)) .. " (NPC)"
         char.Name = name
-        local hum = char:FindFirstChildOfClass("Humanoid") :: Humanoid
         hum.DisplayName = name
-        local animateScript = char:FindFirstChild("Animate")
-        if animateScript then
-            animateScript:Destroy() -- a LocalScript; the server animates NPCs instead
-        end
+        hum.Health = hum.MaxHealth
         char:SetAttribute("BotName", name)
         char:AddTag("BotCharacter")
         char:PivotTo(CFrame.new(origin + Vector3.new((i - count / 2) * 4, 4, 8)))
@@ -294,14 +385,20 @@ local function steer(bot, goal: Vector3, speed: number)
         end)
         if ok and path.Status == Enum.PathStatus.Success then
             brain.path, brain.step = path:GetWaypoints(), 2
+            brain.lost = nil
         else
+            -- Walking straight at a goal on another floor gets nowhere
             brain.path, brain.step = { { Position = goal } }, 1
+            brain.lost = goal
         end
     end
     local waypoint = brain.path[brain.step]
     while waypoint do
         local flat = Vector3.new(waypoint.Position.X, root.Position.Y, waypoint.Position.Z)
-        if (flat - root.Position).Magnitude >= 3 then
+        if
+            (flat - root.Position).Magnitude >= 3
+            or math.abs(waypoint.Position.Y - root.Position.Y) > 6
+        then
             break
         end
         brain.step += 1
@@ -328,11 +425,11 @@ local function wander(bot, now: number)
         return
     end
     local target = brain.wanderTo
-    if
-        not target
-        or (Vector3.new(target.X, root.Position.Y, target.Z) - root.Position).Magnitude < 5
-        or now > (brain.wanderUntil or 0)
-    then
+    -- Arrived means the same floor too: a spot straight overhead is not reached
+    local arrived = target ~= nil
+        and (Vector3.new(target.X, root.Position.Y, target.Z) - root.Position).Magnitude < 5
+        and math.abs(target.Y - root.Position.Y) < 6
+    if not target or arrived or brain.lost == target or now > (brain.wanderUntil or 0) then
         if target then
             brain.wanderTo = nil
             brain.lingerUntil = now + 1 + math.random() * 3

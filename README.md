@@ -7,7 +7,7 @@ one murderer, one sheriff, and a room full of people who have no idea which is w
 **bodies remember**. Every kill writes real evidence — the direction of the wound, a fibre from the
 killer's coat, a time of death — and reading it fast is how innocents win instead of guessing.
 
-**Status:** grey-box vertical slice, feature-complete in code. Three blockout maps, the full round
+**Status:** grey-box vertical slice, feature-complete in code. Three multi-floor maps, the full round
 loop, evidence, medic revive and body drag, Last Call, spectating, economy with crates, crafting,
 direct buys and Robux products including the Radio and Emote passes, player reports, NPCs that fill a
 quiet server, every menu screen, and the Production Handbook systems. First art pass: per-map materials, lamps, night
@@ -99,6 +99,8 @@ src/
     LiveOps.luau             90-day calendar: seasons, trading unlock, boosts (unit tested)
     RateLimiter.luau         remote rate limiter (unit tested)
     RemoteSetup.luau         creates ReplicatedStorage.Remotes
+    MapPlan.luau             the three buildings, floor by floor, and their rules (unit tested)
+    Lobby.luau               who plays the next round: play now with NPCs or wait (unit tested)
     CosmeticFx.luau          particle looks for Effect items and knife effects
     Build/                   BuildHud, BuildMenus, BuildNotices, ItemCard
   server/                    → ServerScriptService
@@ -110,7 +112,7 @@ src/
                              RemoteGuard, LiveOpsClock, PlayerPolicy, SpectatorService,
                              SocialService, BotService, Participant
   serverstorage/Build/       → ServerStorage.Build
-    BuildMaps.luau           maps from the blockout data: materials, lamps, furniture
+    BuildMaps.luau           builds each MapPlan: floors, walls, doorways, stairs, lamps, furniture
     BuildLighting.luau       night sky, colour grade, bloom (no Atmosphere: vision uses fog)
     BuildLobby.luau          the lobby room: walls, lamps, case board, furniture
   client/                    → StarterPlayerScripts
