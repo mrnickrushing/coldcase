@@ -21,6 +21,10 @@ local PROPS = {
     { "FilingCabinet", 57.5, -26.5, -Vector3.xAxis },
     { "Armchair", -56, 30, Vector3.xAxis },
     { "Armchair", -56, 38, Vector3.xAxis },
+    { "Fireplace", 0, 58, -Vector3.zAxis },
+    { "Sofa", 0, 44, Vector3.zAxis },
+    { "WritingDesk", 46, 18, -Vector3.xAxis },
+    { "Globe", 50, 32, -Vector3.xAxis },
 }
 
 local function block(
@@ -133,13 +137,32 @@ return function()
         lamp.CastShadow = false
         local light = Instance.new("PointLight")
         light.Color = LAMP
-        light.Range = 40
-        light.Brightness = 1.4
+        light.Range = 48
+        light.Brightness = 2
         light.Shadows = true
         light.Parent = lamp
     end
 
     caseBoard(dressing, Vector3.new(top.X, top.Y + 9, top.Z - half + 0.3))
+
+    -- A rug in front of the fireplace
+    for _, layer in
+        {
+            { Vector3.new(26, 0.1, 16), 0.05, Color3.fromHex("3a1418") },
+            { Vector3.new(24.8, 0.14, 14.8), 0.07, Color3.fromHex("5a1f24") },
+        }
+    do
+        local rug = block(
+            "Rug",
+            dressing,
+            layer[1],
+            Vector3.new(top.X, top.Y + layer[2], top.Z + 46),
+            layer[3],
+            Enum.Material.Fabric
+        )
+        rug.CanCollide = false
+        rug.CanQuery = false
+    end
 
     local templates = ServerStorage:FindFirstChild("Props")
     for _, spec in PROPS do

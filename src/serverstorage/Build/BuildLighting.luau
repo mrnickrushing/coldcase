@@ -26,22 +26,24 @@ return function()
         end
     end
 
+    -- A bright moonlit night: readable rooms, deep shadows, never a black box.
+    -- Lights Out (EventService) drops brightness and ambient from here.
     Lighting.ClockTime = 0.5
-    Lighting.Brightness = 1.5
-    Lighting.Ambient = Color3.fromRGB(40, 44, 54)
-    Lighting.OutdoorAmbient = Color3.fromRGB(58, 64, 80)
-    Lighting.EnvironmentDiffuseScale = 0.35
-    Lighting.EnvironmentSpecularScale = 0.6
+    Lighting.Brightness = 2.6
+    Lighting.Ambient = Color3.fromRGB(78, 84, 100)
+    Lighting.OutdoorAmbient = Color3.fromRGB(104, 112, 134)
+    Lighting.EnvironmentDiffuseScale = 0.6
+    Lighting.EnvironmentSpecularScale = 0.7
     Lighting.GlobalShadows = true
-    Lighting.ExposureCompensation = 0.25
+    Lighting.ExposureCompensation = 0.45
 
     local sky = ensure("Sky", "NightSky") :: Sky
     sky.StarCount = 3000
     sky.MoonAngularSize = 9
 
     local grade = ensure("ColorCorrectionEffect", "Grade") :: ColorCorrectionEffect
-    grade.Saturation = -0.15
-    grade.Contrast = 0.12
+    grade.Saturation = -0.05
+    grade.Contrast = 0.08
     grade.TintColor = Color3.fromRGB(232, 238, 255)
 
     local bloom = ensure("BloomEffect", "Glow") :: BloomEffect

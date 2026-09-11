@@ -116,6 +116,15 @@ return {
         },
     },
     props = {
+        Anchor = {
+            {
+                mesh = "rbxassetid://87953592929340",
+                texture = "rbxassetid://140311026644992",
+                size = { 5.2, 7.166, 1.139 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
         Armchair = {
             {
                 mesh = "rbxassetid://103467173016998",
@@ -134,11 +143,29 @@ return {
                 rot = { 0, 0, 0 },
             },
         },
+        Bollard = {
+            {
+                mesh = "rbxassetid://112005433202084",
+                texture = "rbxassetid://120061702938543",
+                size = { 3.6, 2.585, 1.357 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
         Bookshelf = {
             {
                 mesh = "rbxassetid://106837837535993",
                 texture = "rbxassetid://115252584072521",
                 size = { 5.82, 8.569, 2.5 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        CardCatalog = {
+            {
+                mesh = "rbxassetid://81502207570669",
+                texture = "rbxassetid://99073321844485",
+                size = { 3.523, 6, 2.053 },
                 offset = { 0, 0, 0 },
                 rot = { 0, 0, 0 },
             },
@@ -152,6 +179,24 @@ return {
                 rot = { 0, 0, 0 },
             },
         },
+        DiningChair = {
+            {
+                mesh = "rbxassetid://124726580082152",
+                texture = "rbxassetid://70451604468626",
+                size = { 1.886, 4.41, 2.2 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        DiningTable = {
+            {
+                mesh = "rbxassetid://107155759963458",
+                texture = "rbxassetid://86281546539406",
+                size = { 7.601, 3.5, 4.181 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
         FilingCabinet = {
             {
                 mesh = "rbxassetid://73281108668968",
@@ -161,11 +206,74 @@ return {
                 rot = { 0, 0, 0 },
             },
         },
+        Fireplace = {
+            {
+                mesh = "rbxassetid://70483067887992",
+                texture = "rbxassetid://103792877460129",
+                size = { 6.67, 10.178, 3.9 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        Globe = {
+            {
+                mesh = "rbxassetid://70940447597940",
+                texture = "rbxassetid://138337555138035",
+                size = { 2.485, 4.5, 2.215 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        GrandPiano = {
+            {
+                mesh = "rbxassetid://113757172663055",
+                texture = "rbxassetid://117760481093595",
+                size = { 6.304, 7, 7.134 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
         GrandfatherClock = {
             {
                 mesh = "rbxassetid://138911538445347",
                 texture = "rbxassetid://96289013050309",
                 size = { 2.039, 7.544, 1.6 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        LobsterTraps = {
+            {
+                mesh = "rbxassetid://105127299725558",
+                texture = "rbxassetid://113671801025258",
+                size = { 3.679, 4, 2.577 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        RopeCoil = {
+            {
+                mesh = "rbxassetid://70903728877654",
+                texture = "rbxassetid://110386620385551",
+                size = { 3.182, 1.5, 3.278 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        Sofa = {
+            {
+                mesh = "rbxassetid://130895510519413",
+                texture = "rbxassetid://104031401316478",
+                size = { 9.159, 3.771, 4.375 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        WritingDesk = {
+            {
+                mesh = "rbxassetid://129332194573127",
+                texture = "rbxassetid://110957675256373",
+                size = { 4.029, 4.5, 2.496 },
                 offset = { 0, 0, 0 },
                 rot = { 0, 0, 0 },
             },

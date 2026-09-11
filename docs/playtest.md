@@ -17,7 +17,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] An NPC murderer waits at least 12s, then picks off whoever is alone
 - [ ] An NPC sheriff shoots only a killer it saw, or the outlined murderer at Last Call
 - [ ] Stabbing, shooting, spectating and examining work on NPCs; the fibre clue matches their shirt
-- [ ] Round rewards are halved with NPCs, and the NPCs are gone once everyone is back in the lobby
+- [ ] Round rewards are paid in full with NPCs, and the NPCs are gone once everyone is back in the lobby
 
 ## First playtest — Test → Clients and Servers, 4 players
 

@@ -20,7 +20,8 @@ local ClientState = require(script.Parent.Parent.ClientState)
 local plr = Players.LocalPlayer
 local VisionController = {}
 
-local DARK = Color3.fromHex("05070a")
+local DARK = Color3.fromHex("05070a") -- Lights Out: the room really goes black
+local NIGHT = Color3.fromHex("1c2533") -- every other moment: moonlit haze, not a void
 local FOG_GREY = Color3.fromHex("6f7883")
 local BASE = { start = Lighting.FogStart, finish = Lighting.FogEnd, colour = Lighting.FogColor }
 
@@ -98,8 +99,11 @@ RunService.RenderStepped:Connect(function(dt)
         else
             radius += (target - radius) * math.min(1, dt * 4)
         end
-        Lighting.FogColor = event == "FOG_BANK" and FOG_GREY or DARK
-        Lighting.FogStart = radius * 0.45
+        Lighting.FogColor = if event == "FOG_BANK"
+            then FOG_GREY
+            elseif event == "LIGHTS_OUT" then DARK
+            else NIGHT
+        Lighting.FogStart = radius * 0.6
         Lighting.FogEnd = radius
         applied = true
     elseif applied then

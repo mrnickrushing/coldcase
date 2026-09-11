@@ -127,7 +127,7 @@ return {
     -- NPCs fill a quiet server so one person can play (BotService)
     BOTS_ENABLED = true,
     BOT_FILL_TO = 6, -- humans + NPCs in a round, while humans < MIN_PLAYERS
-    BOT_ROUND_REWARD = 0.5, -- coins and XP scale in a round with NPCs: not a farm
+    BOT_ROUND_REWARD = 1, -- coins and XP scale in a round with NPCs (1 = full pay)
     BOT_FIRST_HUNT = { 12, 22 }, -- seconds before an NPC murderer first strikes
     BOT_HUNT_PAUSE = { 10, 18 }, -- seconds between an NPC murderer's kills
     BOT_REACTION = { 0.9, 1.6 }, -- seconds before an NPC sheriff fires on a killer

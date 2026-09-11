@@ -218,8 +218,8 @@ Places where the design documents disagree with each other, and what the code do
   `Config.WEAPON_DRAW_TIME` on each stab, throw or shot instead.
 - **Emote pass.** Wave, point and laugh are also free Roblox chat emotes (`/e wave`), so the pass
   mostly sells shrug, panic and the over-head label.
-- **NPC rounds pay half.** Coins and XP scale by `Config.BOT_ROUND_REWARD` (0.5) in any round with
-  NPCs, so an empty server is not a coin farm. Raise it if solo play feels unrewarding.
+- **NPC rounds pay in full.** `Config.BOT_ROUND_REWARD` is 1. Lower it if solo rounds against NPCs
+  turn into a coin farm.
 
 Not built yet: emote animations for shrug and panic (they show as a label only), and hand-made art
 to replace the generated models.
