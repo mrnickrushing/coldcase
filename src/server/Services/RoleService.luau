@@ -3,6 +3,7 @@ local Config = require(game.ReplicatedStorage.Shared.Config)
 local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
 local CosmeticService = require(script.Parent.CosmeticService)
+local Participant = require(script.Parent.Participant)
 local Remotes = game.ReplicatedStorage.Remotes
 
 local RoleService = {}
@@ -85,6 +86,10 @@ function RoleService:Assign(participants: { Player })
     end
 
     for _, plr in participants do
+        self:Arm(plr)
+        if Participant.IsBot(plr) then
+            continue -- an NPC has no client, no history and no profile
+        end
         if roles[plr] == "murderer" then
             sinceMurderer[plr] = 0
         else
@@ -96,7 +101,6 @@ function RoleService:Assign(participants: { Player })
 
         local data = DataService:Get(plr)
         Analytics.RoleAssigned(plr, roles[plr], data and data.rank or 0, isFirstRound(plr))
-        self:Arm(plr)
     end
 end
 
@@ -120,7 +124,9 @@ function RoleService:MakeHero(plr: Player): boolean
         return false
     end
     roles[plr] = "hero"
-    Remotes.RoleAssigned:FireClient(plr, "hero")
+    if not Participant.IsBot(plr) then
+        Remotes.RoleAssigned:FireClient(plr, "hero")
+    end
     self:Arm(plr)
     return true
 end
@@ -137,8 +143,12 @@ function RoleService:RevealSnitch()
         end
     end
     if snitch and murderer then
-        Remotes.RoleAssigned:FireClient(snitch, "snitch", murderer.Name)
-        Remotes.RoleAssigned:FireClient(murderer, "murderer", snitch.Name)
+        if not Participant.IsBot(snitch) then
+            Remotes.RoleAssigned:FireClient(snitch, "snitch", murderer.Name)
+        end
+        if not Participant.IsBot(murderer) then
+            Remotes.RoleAssigned:FireClient(murderer, "murderer", snitch.Name)
+        end
     end
 end
 

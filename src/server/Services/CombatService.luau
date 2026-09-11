@@ -49,12 +49,17 @@ local function liveCharacter(plr: Player): Model?
     return plr.Character
 end
 
-local function playerFromPart(part: Instance): Player?
+-- The player or NPC whose character this part belongs to
+local function playerFromPart(part: Instance): any
     local model = part:FindFirstAncestorOfClass("Model")
     while model do
         local plr = Players:GetPlayerFromCharacter(model)
         if plr then
             return plr
+        end
+        local bot = round and round:BotFromCharacter(model)
+        if bot then
+            return bot
         end
         model = model:FindFirstAncestorOfClass("Model")
     end

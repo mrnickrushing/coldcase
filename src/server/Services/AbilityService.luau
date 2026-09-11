@@ -7,6 +7,7 @@ local RoleService = require(script.Parent.RoleService)
 local EvidenceService = require(script.Parent.EvidenceService)
 local EconomyService = require(script.Parent.EconomyService)
 local AudioService = require(script.Parent.AudioService)
+local Participant = require(script.Parent.Participant)
 
 local AbilityService = {}
 local round: any = nil -- RoundService, handed over by BindRound
@@ -49,6 +50,7 @@ function AbilityService:RequestRevive(plr: Player, model: Instance)
     local victim = body.victimPlayer
     if
         not (victim and victim.Parent == Players and round:IsParticipant(victim))
+        or Participant.IsBot(victim) -- an NPC has no player to bring back
         or not near(plr, model)
     then
         return

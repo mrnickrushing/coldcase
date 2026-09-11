@@ -216,6 +216,11 @@ function EconomyService:PayOut(
     survivors: { [Player]: boolean },
     clueCounts
 )
+    local Participant = require(script.Parent.Participant)
+    local withBots = false
+    for _, p in participants do
+        withBots = withBots or Participant.IsBot(p)
+    end
     for _, plr in participants do
         local data = DataService:Get(plr)
         if not data then
@@ -246,6 +251,11 @@ function EconomyService:PayOut(
             session.rounds += 1
         end
 
+        if withBots then
+            -- Rounds against NPCs pay less, so an empty server is not a coin farm
+            coins = math.floor(coins * Config.BOT_ROUND_REWARD)
+            xp = math.floor(xp * Config.BOT_ROUND_REWARD)
+        end
         local granted = self:Grant(plr, coins, xp, "round")
         -- Near-miss messaging: honest, and shown only when they cannot afford a crate
         local cratePrice = Shop.CratePrice(Config.CRATE_COST, data.rank)

@@ -42,16 +42,26 @@ local function inRound(): boolean
     return ClientState.GetRoundState() == "ACTIVE" and ClientState.role ~= nil
 end
 
-local function nearestTarget(origin: Vector3): Player?
+-- A Player, or an NPC's character model (the server resolves either)
+local function nearestTarget(origin: Vector3): Instance?
     local best, bestDist = nil, Config.KNIFE_RANGE
-    for _, other in Players:GetPlayers() do
-        local char = other.Character
+    local function consider(target: Instance, char: Model?)
         local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if other ~= plr and hum and hum.Health > 0 then
+        if hum and hum.Health > 0 then
             local d = ((char :: Model):GetPivot().Position - origin).Magnitude
             if d < bestDist then
-                best, bestDist = other, d
+                best, bestDist = target, d
             end
+        end
+    end
+    for _, other in Players:GetPlayers() do
+        if other ~= plr then
+            consider(other, other.Character)
+        end
+    end
+    for _, model in CollectionService:GetTagged("BotCharacter") do
+        if model:IsA("Model") then
+            consider(model, model)
         end
     end
     return best

@@ -1,6 +1,7 @@
 -- StarterPlayerScripts/Controllers/SpectatorController
 -- Dead players watch the living instead of their own body. The server sends
 -- who is left; the camera is ours.
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -96,9 +97,20 @@ local function focus()
         return
     end
     index = ((index - 1) % #targets) + 1
-    local target = Players:FindFirstChild(targets[index]) :: Player?
-    who.Text = string.upper(target and target.DisplayName or targets[index])
-    local hum = target and target.Character and target.Character:FindFirstChildOfClass("Humanoid")
+    local name = targets[index]
+    local target = Players:FindFirstChild(name)
+    local char: Model? = if target and target:IsA("Player") then target.Character else nil
+    if not char then
+        -- NPCs are not Players; find their character by name
+        for _, model in CollectionService:GetTagged("BotCharacter") do
+            if model:IsA("Model") and model:GetAttribute("BotName") == name then
+                char = model
+                break
+            end
+        end
+    end
+    who.Text = string.upper(if target and target:IsA("Player") then target.DisplayName else name)
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
     local camera = workspace.CurrentCamera
     if hum and camera then
         camera.CameraType = Enum.CameraType.Custom

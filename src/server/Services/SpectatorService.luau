@@ -4,12 +4,13 @@
 -- HUD shows the count and bodies drop in view), so the list gives nothing away.
 local Players = game:GetService("Players")
 local Remotes = game.ReplicatedStorage.Remotes
+local Participant = require(script.Parent.Participant)
 
 local SpectatorService = {}
 local watching: { [Player]: boolean } = {}
 
 function SpectatorService:Enter(plr: Player, targets: { string })
-    if plr.Parent ~= Players then
+    if Participant.IsBot(plr) or plr.Parent ~= Players then
         return
     end
     watching[plr] = true

@@ -10,6 +10,15 @@ workflow — no manual Studio setup is needed.)
       does not persist between sessions)
 - [ ] Output shows `[ColdCase] server up`
 
+## Solo with NPCs — press Play, no attributes
+
+- [ ] Lobby countdown reads "STARTS IN Ns · 5 NPCS JOIN" and the round starts with five NPCs
+- [ ] NPCs walk the map on paths rather than into walls, and stop when the round ends
+- [ ] An NPC murderer waits at least 12s, then picks off whoever is alone
+- [ ] An NPC sheriff shoots only a killer it saw, or the outlined murderer at Last Call
+- [ ] Stabbing, shooting, spectating and examining work on NPCs; the fibre clue matches their shirt
+- [ ] Round rewards are halved with NPCs, and the NPCs are gone once everyone is back in the lobby
+
 ## First playtest — Test → Clients and Servers, 4 players
 
 - [ ] Map vote panel is open on arrival; votes update for everyone

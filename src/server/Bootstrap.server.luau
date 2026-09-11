@@ -51,8 +51,17 @@ end)
 -- type-checked here, and re-validated inside the service. Handlers forward
 -- only the arguments they expect, never `...`.
 RemoteGuard.Connect("RequestStab", function(plr, target)
-    if typeof(target) == "Instance" and target:IsA("Player") then
+    if typeof(target) ~= "Instance" then
+        return
+    end
+    if target:IsA("Player") then
         CombatService:RequestStab(plr, target)
+    elseif target:IsA("Model") then
+        -- NPCs are targeted by their character model
+        local bot = RoundService:BotFromCharacter(target)
+        if bot then
+            CombatService:RequestStab(plr, bot)
+        end
     end
 end)
 

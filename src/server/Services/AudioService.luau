@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local SoundCues = require(game.ReplicatedStorage.Shared.SoundCues)
 local Remotes = game.ReplicatedStorage.Remotes
+local Participant = require(script.Parent.Participant)
 
 local AudioService = {}
 local RANGE_SLACK = 1.1
@@ -29,6 +30,9 @@ end
 
 function AudioService:Play2D(plr: Player?, cueId: string, pitch: number?)
     if plr then
+        if Participant.IsBot(plr) then
+            return
+        end
         Remotes.PlayCue:FireClient(plr, cueId, nil, pitch)
     else
         Remotes.PlayCue:FireAllClients(cueId, nil, pitch)

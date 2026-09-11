@@ -6,6 +6,7 @@
 -- The radius is real distance fog (Lighting.FogStart/FogEnd, set locally),
 -- so anything past it is actually hidden. Note: an Atmosphere in Lighting
 -- disables legacy fog, so the place must not have one.
+local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -112,11 +113,22 @@ RunService.RenderStepped:Connect(function(dt)
     local subject = camera and camera.CameraSubject
     local focus = if subject and subject:IsA("Humanoid") then subject.Parent else myChar
     local myPos = if focus and focus:IsA("Model") then focus:GetPivot().Position else nil
+    local others: { { name: string, char: Model } } = {}
     for _, other in Players:GetPlayers() do
-        local char = other.Character
-        if other == plr or not char then
-            continue
+        if other ~= plr and other.Character then
+            table.insert(others, { name = other.Name, char = other.Character })
         end
+    end
+    for _, model in CollectionService:GetTagged("BotCharacter") do
+        if model:IsA("Model") then
+            table.insert(
+                others,
+                { name = model:GetAttribute("BotName") or model.Name, char = model }
+            )
+        end
+    end
+    for _, other in others do
+        local char = other.char
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then
             if active and myPos then
@@ -133,7 +145,7 @@ RunService.RenderStepped:Connect(function(dt)
                 hum.NameDisplayDistance = 100
             end
         end
-        outline(char, active and lastCallNames[other.Name] == true)
+        outline(char, active and lastCallNames[other.name] == true)
     end
 end)
 

@@ -242,11 +242,17 @@ RunService.Heartbeat:Connect(function(dt)
         math.ceil((ReplicatedStorage:GetAttribute("RoundEnds") or 0) - workspace:GetServerTimeNow())
     )
     local count = #Players:GetPlayers()
+    -- Mirrors BotService:SeatsFor: NPCs fill the round while the server is quiet
+    local npcs = (Config.BOTS_ENABLED and count >= 1 and count < Config.MIN_PLAYERS)
+            and math.max(0, Config.BOT_FILL_TO - count)
+        or 0
     local label
     if ClientState.GetRoundState() ~= "INTERMISSION" then
         label = ("ROUND IN PROGRESS · %ds"):format(left)
-    elseif count < Config.MIN_PLAYERS then
+    elseif count + npcs < Config.MIN_PLAYERS then
         label = ("WAITING FOR PLAYERS · %d/%d"):format(count, Config.MIN_PLAYERS)
+    elseif npcs > 0 then
+        label = ("STARTS IN %ds · %d NPCS JOIN"):format(left, npcs)
     else
         label = ("STARTS IN %ds"):format(left)
     end

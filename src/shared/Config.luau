@@ -124,6 +124,17 @@ return {
     EMOTES = { "wave", "point", "shrug", "laugh", "panic" },
     REPORT_REASONS = { "exploiting", "harassment", "other" },
 
+    -- NPCs fill a quiet server so one person can play (BotService)
+    BOTS_ENABLED = true,
+    BOT_FILL_TO = 6, -- humans + NPCs in a round, while humans < MIN_PLAYERS
+    BOT_ROUND_REWARD = 0.5, -- coins and XP scale in a round with NPCs: not a farm
+    BOT_FIRST_HUNT = { 12, 22 }, -- seconds before an NPC murderer first strikes
+    BOT_HUNT_PAUSE = { 10, 18 }, -- seconds between an NPC murderer's kills
+    BOT_REACTION = { 0.9, 1.6 }, -- seconds before an NPC sheriff fires on a killer
+    BOT_SIGHT = 70, -- studs an NPC can witness a kill from
+    BOT_STROLL_SPEED = 11, -- NPCs walk; they only run to chase or flee
+    BOT_CHASE_GIVE_UP = 12, -- seconds an NPC murderer chases one target
+
     -- Analytics
     HEATMAP_CELL = 80, -- studs per death-position grid cell
 

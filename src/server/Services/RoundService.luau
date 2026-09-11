@@ -16,10 +16,13 @@ local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
 local OnboardingService = require(script.Parent.OnboardingService)
 local SpectatorService = require(script.Parent.SpectatorService)
+local BotService = require(script.Parent.BotService)
+local Participant = require(script.Parent.Participant)
 
 local RoundService = {}
 local state, stateEnds = "INTERMISSION", 0
-local participants: { Player } = {}
+local participants: { Player } = {} -- Players and NPCs (see Participant)
+local pendingBots = 0
 local votes: { [Player]: string } = {}
 local alive: { [Player]: boolean } = {}
 local diedConnections: { RBXScriptConnection } = {}
@@ -106,6 +109,14 @@ end
 
 function RoundService:AliveNames(): { string }
     return aliveNames()
+end
+
+function RoundService:AliveParticipants(): { any }
+    return aliveList()
+end
+
+function RoundService:BotFromCharacter(model: Instance): any
+    return BotService:FromCharacter(model)
 end
 
 function RoundService:GetEligible(): { Player }
@@ -236,14 +247,16 @@ function RoundService:MarkDead(plr: Player, killer: Player?, method: string)
     end
     local pos = plr.Character and plr.Character:GetPivot().Position or Vector3.zero
     local elapsed = os.clock() - activeStart
-    Analytics.PlayerDeath(
-        plr,
-        RoleService:Get(plr) or "unknown",
-        killerRole,
-        elapsed,
-        currentMapName,
-        pos
-    )
+    if not Participant.IsBot(plr) then
+        Analytics.PlayerDeath(
+            plr,
+            RoleService:Get(plr) or "unknown",
+            killerRole,
+            elapsed,
+            currentMapName,
+            pos
+        )
+    end
     if killer then
         table.insert(
             timeline,
@@ -259,13 +272,20 @@ function RoundService:MarkDead(plr: Player, killer: Player?, method: string)
         if method ~= "left" then
             SpectatorService:Enter(plr, names)
         end
+        BotService:OnDeath(plr, killer, method, pos)
     end
     self:CheckWinConditions()
 end
 
 -- A medic brought them back. Their role is unchanged.
 function RoundService:Revive(plr: Player): boolean
-    if state ~= "ACTIVE" or alive[plr] or not self:IsParticipant(plr) or not plr.Character then
+    if
+        state ~= "ACTIVE"
+        or alive[plr]
+        or Participant.IsBot(plr)
+        or not self:IsParticipant(plr)
+        or not plr.Character
+    then
         return false
     end
     alive[plr] = true
@@ -331,12 +351,18 @@ end
 function RoundService:Advance()
     if state == "INTERMISSION" then
         participants = self:GetEligible()
-        if #participants < minPlayers() then
+        -- A quiet server fills the round with NPCs rather than waiting forever
+        pendingBots = BotService:SeatsFor(#participants)
+        if #participants + pendingBots < minPlayers() then
             setState("INTERMISSION", Config.INTERMISSION)
             return
         end
         setState("LOADING", Config.LOADING_TIME)
     elseif state == "LOADING" then
+        for _, bot in BotService:Spawn(pendingBots) do
+            table.insert(participants, bot)
+        end
+        pendingBots = 0
         self:LoadVotedMap()
         local present = {}
         for _, plr in participants do
@@ -370,6 +396,7 @@ function RoundService:Advance()
         activeStart = os.clock()
         OnboardingService:NoteRoundStart(participants)
         setState("ACTIVE", roundLength)
+        BotService:StartRound()
     elseif state == "ACTIVE" then
         self:Resolve("innocents", "time")
     elseif state == "RESOLUTION" then
@@ -410,7 +437,7 @@ function RoundService:Resolve(winner: string, reason: string)
     Remotes.RoundOver:FireAllClients(winner, reason, RoleService:GetPublicReveal(), timeline)
 
     for _, plr in participants do
-        if plr.Parent == Players then
+        if plr.Parent == Players and not Participant.IsBot(plr) then
             Analytics.RoundComplete(
                 plr,
                 currentMapName,
@@ -443,10 +470,11 @@ function RoundService:ReturnToLobby()
         round:Destroy()
     end
     for _, plr in participants do
-        if plr.Parent == Players then
+        if plr.Parent == Players and not Participant.IsBot(plr) then
             task.spawn(plr.LoadCharacter, plr)
         end
     end
+    BotService:Clear()
     participants = {}
 end
 
@@ -470,5 +498,6 @@ CombatService:BindRound(RoundService)
 EvidenceService:BindRound(RoundService)
 CoinService:BindRound(RoundService)
 AbilityService:BindRound(RoundService)
+BotService:BindRound(RoundService)
 
 return RoundService

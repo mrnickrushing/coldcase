@@ -9,8 +9,8 @@ killer's coat, a time of death — and reading it fast is how innocents win inst
 
 **Status:** grey-box vertical slice, feature-complete in code. Three blockout maps, the full round
 loop, evidence, medic revive and body drag, Last Call, spectating, economy with crates, crafting,
-direct buys and Robux products including the Radio and Emote passes, player reports, every menu
-screen, and the Production Handbook systems. First art pass: per-map materials, lamps, night
+direct buys and Robux products including the Radio and Emote passes, player reports, NPCs that fill a
+quiet server, every menu screen, and the Production Handbook systems. First art pass: per-map materials, lamps, night
 lighting, a dressed lobby, all 22 sound cues, effect particles, and generated weapon, furniture and
 pet models (see [docs/assets.md](docs/assets.md)).
 
@@ -44,7 +44,7 @@ and orb pets.
 | To… | Do this |
 | --- | --- |
 | Save data between sessions | Game Settings → Security → *Enable Studio Access to API Services*. Without it ProfileStore uses its mock store and nothing persists. |
-| Test solo | Set a number attribute `MinPlayers = 1` on `ServerStorage` (Studio only). |
+| Test solo | Press Play: NPCs fill the round to 6 while fewer than 4 people are in (`Config.BOTS_ENABLED`). `MinPlayers = 1` on `ServerStorage` still lowers the minimum in Studio. |
 | Preview a live-ops day | Set a number attribute `LiveOpsDay` on `ServerStorage`, e.g. `28` to open trading or `14` for Season One (Studio only). |
 | Run a full round | Test → Clients and Servers → 4 players. |
 | Get the intended lighting | Set `Lighting.Technology` to *Future* in the Properties panel. Scripts cannot set it. |
@@ -108,7 +108,7 @@ src/
                              CosmeticService, MonetizationService, CoinService, TradeService,
                              DataService, OnboardingService, AudioService, Analytics,
                              RemoteGuard, LiveOpsClock, PlayerPolicy, SpectatorService,
-                             SocialService
+                             SocialService, BotService, Participant
   serverstorage/Build/       → ServerStorage.Build
     BuildMaps.luau           maps from the blockout data: materials, lamps, furniture
     BuildLighting.luau       night sky, colour grade, bloom (no Atmosphere: vision uses fog)
@@ -157,6 +157,9 @@ Rules the code follows, and new code should too:
   starters and any seasonal item outside its season. A retired seasonal can never be minted again.
 - **All deaths and revives go through `RoundService`** (`MarkDead`, `Revive`), so win conditions,
   the kill timeline and analytics see every one.
+- **A participant may be an NPC.** `BotService` NPCs are tables carrying the Player fields round code
+  reads. Check `Participant.IsBot` before sending to a client, touching a profile or logging analytics.
+  NPCs act only through the same server functions a player's remotes reach.
 - **Robux receipts are idempotent.** Each `PurchaseId` is recorded in the profile and granted once.
 - **Regional policy is respected** (`PlayerPolicy`). Where `ArePaidRandomItemsRestricted` is true,
   paid crates, seasonal keys, crafting and effect re-rolls are refused; where
@@ -215,6 +218,8 @@ Places where the design documents disagree with each other, and what the code do
   `Config.WEAPON_DRAW_TIME` on each stab, throw or shot instead.
 - **Emote pass.** Wave, point and laugh are also free Roblox chat emotes (`/e wave`), so the pass
   mostly sells shrug, panic and the over-head label.
+- **NPC rounds pay half.** Coins and XP scale by `Config.BOT_ROUND_REWARD` (0.5) in any round with
+  NPCs, so an empty server is not a coin farm. Raise it if solo play feels unrewarding.
 
 Not built yet: emote animations for shrug and panic (they show as a label only), and hand-made art
 to replace the generated models.
