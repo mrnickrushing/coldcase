@@ -52,6 +52,22 @@ and orb pets.
 
 See [docs/playtest.md](docs/playtest.md) for the vertical-slice checklist and exploit sweep.
 
+**Publishing without Studio**
+
+`rojo build` makes a complete place: the generated models are rebuilt from their mesh ids on server
+start (`BuildAssets`, `AssetManifest`). With an Open Cloud key that has *universe-places: write* for this
+experience in `ROBLOX_API_KEY`:
+
+```bash
+rojo build -o build/ColdCase.rbxlx
+curl -sS -X POST \
+  "https://apis.roblox.com/universes/v1/10765931973/places/131836757915254/versions?versionType=Published" \
+  -H "x-api-key: $ROBLOX_API_KEY" -H "Content-Type: application/xml" \
+  --data-binary @build/ColdCase.rbxlx
+```
+
+A successful publish answers `{"versionNumber": N}`. Publishing from Studio (Alt+P) works too.
+
 ## Controls
 
 | Action | Keyboard / mouse | Touch | Who |
