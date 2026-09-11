@@ -337,8 +337,8 @@ return function(parent: Instance?)
         local store =
             frame("Store", root, UDim2.new(1, 0, 0, 40), UDim2.new(0, 0, 0, 548), nil, true)
         list(store, Enum.FillDirection.Horizontal, 8)
-        for i, key in { "vip", "coins2500", "seasonalKey" } do
-            local b = button(key, store, "", UDim2.new(0, 220, 1, 0), RAISED, Theme.SOFT)
+        for i, key in { "vip", "radio", "emotes", "coins2500", "seasonalKey" } do
+            local b = button(key, store, "", UDim2.new(1 / 5, -7, 1, 0), RAISED, Theme.SOFT)
             b.LayoutOrder = i
             b.Visible = false
             stroke(b, Color3.fromHex("2b323c"))

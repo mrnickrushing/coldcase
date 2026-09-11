@@ -5,8 +5,8 @@
 return {
     PASSES = {
         vip = { id = 1976480741, name = "VIP", price = 399, coinMultiplier = 1.25 },
-        -- Radio and Emote perks live in SocialService. Both passes are on sale on
-        -- Creator Hub; the lobby store only lists VIP.
+        -- Radio and Emote perks live in SocialService. Every pass here is on sale
+        -- on Creator Hub and in the lobby store.
         radio = { id = 1975550715, name = "Radio", price = 149 },
         emotes = { id = 1979660285, name = "Emote bundle", price = 99 },
     },

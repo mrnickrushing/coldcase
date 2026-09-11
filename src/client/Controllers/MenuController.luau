@@ -179,6 +179,8 @@ ReplicatedStorage:GetAttributeChangedSignal("TradingOpen"):Connect(renderPlayers
 
 local STORE = {
     vip = { def = Products.PASSES.vip, pass = true },
+    radio = { def = Products.PASSES.radio, pass = true },
+    emotes = { def = Products.PASSES.emotes, pass = true },
     coins2500 = { def = Products.PRODUCTS.coins2500 },
     seasonalKey = { def = Products.PRODUCTS.seasonalKey },
 }
