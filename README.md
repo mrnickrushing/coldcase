@@ -11,7 +11,8 @@ killer's coat, a time of death — and reading it fast is how innocents win inst
 loop, evidence, medic revive and body drag, Last Call, spectating, economy with crates, crafting,
 direct buys and Robux products including the Radio and Emote passes, player reports, every menu
 screen, and the Production Handbook systems. First art pass: per-map materials, lamps, night
-lighting, all 22 sound cues, and generated weapon and furniture models (see [docs/assets.md](docs/assets.md)).
+lighting, a dressed lobby, all 22 sound cues, effect particles, and generated weapon, furniture and
+pet models (see [docs/assets.md](docs/assets.md)).
 
 Design lives in Claude Design (project *Murder Mystery 2 Game Design*): the **Design Bible**,
 **Production Handbook**, **Map Blockouts**, the interactive prototype, and a `studio/` folder of
@@ -33,9 +34,10 @@ rojo build -o build/ColdCase.rbxlx
 
 Nothing needs to be placed by hand, and no command-bar steps are needed. On server start
 `Bootstrap` creates every RemoteEvent, builds the three grey-box maps into `ServerStorage.Maps` and a
-`BodyTemplate`; each client builds its own HUD, menus and notices. The generated weapon and
-furniture models live only in the place file (`ServerStorage.Cosmetics`, `ServerStorage.Props`); without
-them the game still runs with blockout weapons and bare walls.
+`BodyTemplate`; each client builds its own HUD, menus and notices. The generated weapon,
+furniture and pet models live only in the place file (`ServerStorage.Cosmetics`, `ServerStorage.Props`,
+`ReplicatedStorage.PetModels`); without them the game still runs with blockout weapons, bare walls
+and orb pets.
 
 **Playtesting in Studio**
 
@@ -81,6 +83,7 @@ src/
     LiveOps.luau             90-day calendar: seasons, trading unlock, boosts (unit tested)
     RateLimiter.luau         remote rate limiter (unit tested)
     RemoteSetup.luau         creates ReplicatedStorage.Remotes
+    CosmeticFx.luau          particle looks for Effect items and knife effects
     Build/                   BuildHud, BuildMenus, BuildNotices, ItemCard
   server/                    → ServerScriptService
     Bootstrap.server.luau    the only server entry point; wires every remote
@@ -93,12 +96,13 @@ src/
   serverstorage/Build/       → ServerStorage.Build
     BuildMaps.luau           maps from the blockout data: materials, lamps, furniture
     BuildLighting.luau       night sky, colour grade, bloom (no Atmosphere: vision uses fog)
+    BuildLobby.luau          the lobby room: walls, lamps, case board, furniture
   client/                    → StarterPlayerScripts
     ClientBootstrap.client.luau
     ClientState.luau         this client's role, data, prompt and screen
     Controllers/             HudController, MenuController, TradeController, InputController,
                              VisionController, NoticeController, SoundController, CoinController,
-                             SpectatorController, SocialController
+                             SpectatorController, SocialController, PetController
 vendor/ProfileStore.luau     MadStudio ProfileStore (Apache-2.0)
 tests/                       Lune unit tests for pure modules
 docs/                        store page and store art, assets, analytics, live-ops, playtest
@@ -196,5 +200,5 @@ Places where the design documents disagree with each other, and what the code do
   mostly sells shrug, panic and the over-head label.
 
 Not built yet: kill-cam, per-item weapon models (one knife and one revolver stand in for all 24
-items, rarity shown as an outline), effects and pets, map preview images, a dressed lobby, and
+items, rarity shown as an outline), emote animations for shrug and panic, map preview images, and
 hand-made art.

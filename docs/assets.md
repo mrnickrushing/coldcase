@@ -54,6 +54,12 @@ props are skipped, and weapons fall back to rarity-tinted blockouts.
 | `ServerStorage.Props.CrateStack` | Shipping crates | Rusted Pier |
 | `ServerStorage.Props.Barrel` | Oil drum | Rusted Pier |
 | `ServerStorage.Props.FilingCabinet` | Filing cabinet | City Archive |
+| `ReplicatedStorage.PetModels.moth` | Pale moth | `PetController`: the Moth pet |
+| `ReplicatedStorage.PetModels.widowspeak` | Cartoon spider | `PetController`: Widow's Peak |
+| `ReplicatedStorage.PetModels.nightwatch` | Brass lantern with a candle light | `PetController`: Nightwatch, dims in Lights Out |
+
+Pets live in ReplicatedStorage because every client draws them; a pet without a model is a small
+rarity-coloured orb.
 
 To add a per-item weapon, put a Tool named after the catalog id (e.g. `Cosmetics.coldsnap`) with a
 `Handle`. To add furniture, put a Model in `ServerStorage.Props` (pivot at its bounding-box centre,
@@ -63,4 +69,6 @@ stripped when they are cloned.
 ## Built in code
 
 Materials, lamps and furniture placement live in `src/serverstorage/Build/BuildMaps.luau`. The night
-sky, colour grade and bloom live in `BuildLighting.luau`. Store art lives in [store-art](store-art/README.md).
+sky, colour grade and bloom live in `BuildLighting.luau`, and the lobby room in `BuildLobby.luau`.
+Effect items and knife effects are particles defined in `src/shared/CosmeticFx.luau`, using Roblox's
+built-in particle textures. Store art lives in [store-art](store-art/README.md).

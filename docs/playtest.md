@@ -90,6 +90,9 @@ Run from a LocalScript or the client command bar.
       spawn or coin
 - [ ] Listen to all 22 cues in a round; swap any that miss the brief ([assets](assets.md))
 - [ ] Weapons sit right in the hand when drawn
+- [ ] Equip an Effect item: particles at the feet, dark in Lights Out; a knife with an effect shows it
+      when drawn
+- [ ] Equip a pet: it follows at the shoulder, hides when its owner dies, Nightwatch dims in Lights Out
 - [ ] Store page assets ([store-page.md](store-page.md))
 - [ ] 30-stranger closed test
 

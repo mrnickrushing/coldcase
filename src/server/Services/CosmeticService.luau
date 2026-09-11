@@ -5,6 +5,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Catalog = require(game.ReplicatedStorage.Shared.Catalog)
 local Theme = require(game.ReplicatedStorage.Shared.Theme)
 local ItemCard = require(game.ReplicatedStorage.Shared.Build.ItemCard)
+local CosmeticFx = require(game.ReplicatedStorage.Shared.CosmeticFx)
 local Remotes = game.ReplicatedStorage.Remotes
 local DataService = require(script.Parent.DataService)
 
@@ -52,6 +53,9 @@ function CosmeticService:Equip(plr: Player, ref: string)
 
     data.equipped[slot] = id
     Remotes.DataChanged:FireClient(plr, { equipped = data.equipped })
+    if slot == "effect" or slot == "pet" then
+        self:ApplyWorn(plr)
+    end
     -- Broadcast so other clients can swap the visible model once models exist
     Remotes.CosmeticChanged:FireAllClients(plr, slot, id)
 end
@@ -71,7 +75,45 @@ function CosmeticService:Reconcile(plr: Player)
     end
     if changed then
         Remotes.DataChanged:FireClient(plr, { equipped = data.equipped })
+        self:ApplyWorn(plr)
     end
+end
+
+-- What a player wears outside the weapon slots: the Effect aura at the feet
+-- (replicates to everyone) and the Pet id as a Player attribute, which each
+-- client's PetController draws locally
+function CosmeticService:ApplyWorn(plr: Player)
+    local data = DataService:Get(plr)
+    if not data then
+        return
+    end
+    plr:SetAttribute("Pet", data.equipped.pet)
+    local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        return
+    end
+    local old = root:FindFirstChild("CosmeticAura")
+    if old then
+        old:Destroy()
+    end
+    local look = data.equipped.effect and CosmeticFx.AURA[data.equipped.effect]
+    if look then
+        local attachment = Instance.new("Attachment")
+        attachment.Name = "CosmeticAura"
+        attachment.Position = Vector3.new(0, -2.8, 0)
+        CosmeticFx.Emitter(look).Parent = attachment
+        attachment.Parent = root
+    end
+end
+
+-- The effect rolled onto the equipped knife, if any copy of it has one
+local function knifeEffect(data, id: string): string?
+    for _, item in data.inventory do
+        if item.id == id and item.effect and item.effect ~= "none" then
+            return item.effect
+        end
+    end
+    return nil
 end
 
 ---------------------------------------------------------------- Weapons
@@ -145,6 +187,12 @@ function CosmeticService:GiveWeapon(plr: Player, slot: string)
     tool.CanBeDropped = false
     tool.ManualActivationOnly = true
     tool:SetAttribute("Weapon", slot)
+    local effect = slot == "knife" and data and knifeEffect(data, id)
+    local look = effect and CosmeticFx.KNIFE[effect]
+    local handle = tool:FindFirstChild("Handle")
+    if look and handle then
+        CosmeticFx.Emitter(look).Parent = handle
+    end
     for _, d in tool:GetDescendants() do
         if d:IsA("LuaSourceContainer") then
             d:Destroy() -- a weapon model never runs code
@@ -181,6 +229,13 @@ function CosmeticService:ClearWeapons(plr: Player)
         tool:Destroy()
     end
 end
+
+DataService.Loaded.Event:Connect(function(plr: Player)
+    CosmeticService:ApplyWorn(plr)
+    plr.CharacterAdded:Connect(function()
+        task.defer(CosmeticService.ApplyWorn, CosmeticService, plr)
+    end)
+end)
 
 Players.PlayerRemoving:Connect(function(plr)
     drawToken[plr] = nil

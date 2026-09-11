@@ -7,6 +7,7 @@ local ServerStorage = game:GetService("ServerStorage")
 require(ReplicatedStorage.Shared.RemoteSetup)()
 require(ServerStorage.Build.BuildMaps)()
 require(ServerStorage.Build.BuildLighting)()
+require(ServerStorage.Build.BuildLobby)()
 
 local Services = script.Parent.Services
 local RemoteGuard = require(Services.RemoteGuard)
