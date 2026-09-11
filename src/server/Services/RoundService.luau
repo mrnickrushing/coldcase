@@ -27,7 +27,8 @@ local eventFired, snitchRevealed, lastCallFired = false, false, false
 local currentMapName, mapIsIndoor = "none", true
 local activeStart, roundLength = 0, Config.ROUND_LENGTH
 -- Public only after the round resolves: { at, killer?, victim, method }
-local timeline: { { at: number, killer: string?, victim: string, method: string } } = {}
+local timeline: { { at: number, killer: string?, victim: string, method: string, pos: Vector3? } } =
+    {}
 RoundService.clueCounts = {} :: { [Player]: number }
 
 local function setState(new: string, duration: number)
@@ -246,7 +247,7 @@ function RoundService:MarkDead(plr: Player, killer: Player?, method: string)
     if killer then
         table.insert(
             timeline,
-            { at = elapsed, killer = killer.Name, victim = plr.Name, method = method }
+            { at = elapsed, killer = killer.Name, victim = plr.Name, method = method, pos = pos }
         )
     end
     AbilityService:StopDrag(plr)

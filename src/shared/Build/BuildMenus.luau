@@ -228,7 +228,20 @@ return function(parent: Instance?)
             card:SetAttribute("MapName", mapName)
             card.LayoutOrder = i
             stroke(card)
-            frame("Preview", card, UDim2.new(1, 0, 0, 104), nil, RAISED) -- drop a ViewportFrame or ImageLabel here
+            local preview = frame("Preview", card, UDim2.new(1, 0, 0, 104), nil, RAISED)
+            local image = (Config.MAP_IMAGES :: { [string]: string })[mapName]
+            if image and image ~= "" then
+                local plan = Instance.new("ImageLabel")
+                plan.Name = "Plan"
+                plan.BackgroundTransparency = 1
+                plan.Size = UDim2.fromScale(1, 1)
+                plan.Image = image
+                plan.ScaleType = Enum.ScaleType.Crop
+                plan.Parent = preview
+                local corner = Instance.new("UICorner")
+                corner.CornerRadius = UDim.new(0, 6)
+                corner.Parent = plan
+            end
             local body =
                 frame("Body", card, UDim2.new(1, 0, 1, -104), UDim2.new(0, 0, 0, 104), nil, true)
             pad(body, 12)

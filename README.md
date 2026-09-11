@@ -102,7 +102,8 @@ src/
     ClientState.luau         this client's role, data, prompt and screen
     Controllers/             HudController, MenuController, TradeController, InputController,
                              VisionController, NoticeController, SoundController, CoinController,
-                             SpectatorController, SocialController, PetController
+                             SpectatorController, SocialController, PetController,
+                             KillCamController
 vendor/ProfileStore.luau     MadStudio ProfileStore (Apache-2.0)
 tests/                       Lune unit tests for pure modules
 docs/                        store page and store art, assets, analytics, live-ops, playtest
@@ -199,6 +200,5 @@ Places where the design documents disagree with each other, and what the code do
 - **Emote pass.** Wave, point and laugh are also free Roblox chat emotes (`/e wave`), so the pass
   mostly sells shrug, panic and the over-head label.
 
-Not built yet: kill-cam, per-item weapon models (one knife and one revolver stand in for all 24
-items, rarity shown as an outline), emote animations for shrug and panic, map preview images, and
-hand-made art.
+Not built yet: models for the remaining 17 weapons (the generic knife and revolver stand in, rarity
+shown as an outline), emote animations for shrug and panic, and hand-made art.

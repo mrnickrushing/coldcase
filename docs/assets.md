@@ -54,6 +54,8 @@ props are skipped, and weapons fall back to rarity-tinted blockouts.
 | `ServerStorage.Props.CrateStack` | Shipping crates | Rusted Pier |
 | `ServerStorage.Props.Barrel` | Oil drum | Rusted Pier |
 | `ServerStorage.Props.FilingCabinet` | Filing cabinet | City Archive |
+| `ServerStorage.Cosmetics.verdict`, `cinder`, `coldsnap`, `vigil` | Per-item knives | `CosmeticService`: those items instead of the generic knife |
+| `ServerStorage.Cosmetics.nightjar`, `thealibi`, `hoarfrost` | Per-item pistols | `CosmeticService`: those items instead of the generic revolver |
 | `ReplicatedStorage.PetModels.moth` | Pale moth | `PetController`: the Moth pet |
 | `ReplicatedStorage.PetModels.widowspeak` | Cartoon spider | `PetController`: Widow's Peak |
 | `ReplicatedStorage.PetModels.nightwatch` | Brass lantern with a candle light | `PetController`: Nightwatch, dims in Lights Out |
@@ -65,6 +67,17 @@ To add a per-item weapon, put a Tool named after the catalog id (e.g. `Cosmetics
 `Handle`. To add furniture, put a Model in `ServerStorage.Props` (pivot at its bounding-box centre,
 front facing −Z) and add its name to that map's `props` list in `BuildMaps`. Scripts inside either are
 stripped when they are cloned.
+
+## Images
+
+| Asset id | What | Used by |
+| --- | --- | --- |
+| 129394148205070 | Blackwood Manor floor plan | Lobby vote card (`Config.MAP_IMAGES`) |
+| 109064086969317 | Rusted Pier floor plan | Lobby vote card |
+| 76726369092912 | City Archive floor plan | Lobby vote card |
+
+Rendered from the blockout data in `BuildMaps` (walls, lockdown doors dashed, spawns in cyan, coins in
+amber) and uploaded to the owner's account. Regenerate them if a map's layout changes.
 
 ## Built in code
 

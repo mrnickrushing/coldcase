@@ -260,6 +260,15 @@ local BLURB = {
     time = "Time ran out. The survivors make it to dawn.",
 }
 local lastReward = nil
+local pendingResults = false
+
+-- KillCamController holds the screen for a few seconds before the verdict
+ClientState.On("killcam", function(on)
+    if not on and pendingResults then
+        pendingResults = false
+        show("results")
+    end
+end)
 
 local function renderReward()
     local r = lastReward
@@ -395,7 +404,13 @@ Remotes.RoundOver.OnClientEvent:Connect(function(winner: string, reason: string,
     end
 
     renderReward()
-    show("results")
+    task.defer(function()
+        if ClientState.killcam then
+            pendingResults = true
+        else
+            show("results")
+        end
+    end)
 end)
 
 ---------------------------------------------------------------- Crate

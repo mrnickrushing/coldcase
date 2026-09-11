@@ -17,6 +17,7 @@ local ClientState = {
     prompt = "—",
     screen = nil :: string?,
     spectating = false,
+    killcam = false,
 }
 
 local listeners: { [string]: { (any) -> () } } = {}

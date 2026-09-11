@@ -27,6 +27,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] Walking over a coin collects it once; coins land on the HUD
 - [ ] Event fires at the 45% mark, once, banner fades in and out, lighting restores after
 - [ ] Round ends on murderer death, wipe, or timeout; results card names the murderer
+- [ ] When a murderer killed, the round ends on a 2.5s kill-cam circling the last kill, then results
 - [ ] Results show "You were N coins short." when the balance is under 250
 - [ ] Locker shows `coins / 250` and reads NEED N MORE until affordable
 - [ ] Everyone returns to the lobby; coins and XP survive a rejoin (with API access on)

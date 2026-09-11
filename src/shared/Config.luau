@@ -5,6 +5,7 @@ return {
     LOADING_TIME = 3,
     REVEAL_TIME = 4,
     RESOLUTION_TIME = 6,
+    KILLCAM_TIME = 2.5, -- of RESOLUTION_TIME, before the results screen
     ROUND_LENGTH_SMALL = 90, -- fewer than 8 players
     ROUND_LENGTH = 120,
     ROUND_LENGTH_LARGE = 150, -- 12+ players
@@ -127,4 +128,10 @@ return {
     HEATMAP_CELL = 80, -- studs per death-position grid cell
 
     MAPS = { "BlackwoodManor", "RustedPier", "CityArchive" },
+    -- Lobby vote card images: floor plans rendered from the blockouts
+    MAP_IMAGES = {
+        BlackwoodManor = "rbxassetid://129394148205070",
+        RustedPier = "rbxassetid://109064086969317",
+        CityArchive = "rbxassetid://76726369092912",
+    },
 }
