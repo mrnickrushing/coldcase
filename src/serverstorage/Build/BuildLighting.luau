@@ -31,8 +31,8 @@ return function()
     -- Lights Out (EventService) drops brightness and ambient from here.
     Lighting.ClockTime = 15
     Lighting.Brightness = 2.1
-    Lighting.Ambient = Color3.fromRGB(120, 122, 128)
-    Lighting.OutdoorAmbient = Color3.fromRGB(150, 155, 165)
+    Lighting.Ambient = Color3.fromRGB(96, 100, 110)
+    Lighting.OutdoorAmbient = Color3.fromRGB(128, 134, 148)
     Lighting.EnvironmentDiffuseScale = 0.35
     Lighting.EnvironmentSpecularScale = 0.8
     Lighting.GlobalShadows = true
