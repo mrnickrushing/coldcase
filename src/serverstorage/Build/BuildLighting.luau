@@ -33,10 +33,10 @@ return function()
     Lighting.Brightness = 2.1
     Lighting.Ambient = Color3.fromRGB(120, 122, 128)
     Lighting.OutdoorAmbient = Color3.fromRGB(150, 155, 165)
-    Lighting.EnvironmentDiffuseScale = 0.6
+    Lighting.EnvironmentDiffuseScale = 0.35
     Lighting.EnvironmentSpecularScale = 0.8
     Lighting.GlobalShadows = true
-    Lighting.ExposureCompensation = 0
+    Lighting.ExposureCompensation = -0.1
 
     local sky = ensure("Sky", "DaySky") :: Sky
     sky.StarCount = 0
