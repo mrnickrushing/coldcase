@@ -573,6 +573,51 @@ local function slabs(model: Model, plan, analysis, theme): BasePart?
     return first
 end
 
+-- A big floor lit flat by the sun reads as a blank sheet, whatever colour it
+-- is painted. A darker inlay inside each room, and a seam along the cell grid,
+-- give the eye something to measure the space by.
+local function floorDetail(model: Model, plan, analysis, theme)
+    local gw, gd, floors = MapPlan.Size(plan)
+    for f = 1, floors do
+        local base = (f - 1) * MapPlan.FLOOR_HEIGHT
+        for z = 1, gd do
+            for x = 1, gw do
+                local ch = MapPlan.Cell(plan, f, x, z)
+                if not MapPlan.IsWalkable(ch) or analysis.ramp[MapPlan.Key(f, x, z)] then
+                    continue
+                end
+                local style = theme.styles[plan.regions[ch].style]
+                if not style then
+                    continue
+                end
+                local shade = Color3.fromHex(style.floor)
+                local h, s, v = shade:ToHSV()
+                local cx, _, cz = MapPlan.Position(plan, f, x, z)
+                -- A seam on the cell's own edges, drawn just proud of the floor
+                for _, seam in { { CELL, 0.6, 0, CELL / 2 }, { 0.6, CELL, CELL / 2, 0 } } do
+                    deco(
+                        "FloorSeam",
+                        model,
+                        Vector3.new(seam[1], 0.08, seam[2]),
+                        CFrame.new(cx + seam[3], base + 0.04, cz + seam[4]),
+                        Color3.fromHSV(h, s, math.max(0, v * 0.78)),
+                        M.SmoothPlastic
+                    )
+                end
+                -- An inlaid panel in the middle of the cell
+                deco(
+                    "FloorInlay",
+                    model,
+                    Vector3.new(CELL - 7, 0.06, CELL - 7),
+                    CFrame.new(cx, base + 0.03, cz),
+                    Color3.fromHSV(h, math.min(1, s * 1.25), math.max(0, v * 0.88)),
+                    M.SmoothPlastic
+                )
+            end
+        end
+    end
+end
+
 ---------------------------------------------------------------- Walls, doorways, railings
 -- An edge's middle at floor level, the axis it runs along, and the axis that
 -- points from its low side (a) to its high side (b)
@@ -1338,6 +1383,7 @@ local function build(mapName: string, plan, theme): Model
 
     model.PrimaryPart = slabs(model, plan, analysis, theme)
     edges(model, plan, analysis, theme)
+    floorDetail(model, plan, analysis, theme)
     skins(model, plan, analysis, theme)
     windows(model, plan, analysis, theme)
     for _, s in analysis.stairs do
