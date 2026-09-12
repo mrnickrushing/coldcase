@@ -35,6 +35,10 @@ local THEMES = {
         roof = "2c2a2e",
         roofMaterial = M.Slate,
         trim = "2a1d15",
+        dado = "3a2a1c",
+        liner = true,
+        ceiling = "9a9186",
+        ceilingMaterial = M.Plaster,
         rail = "3b2a1f",
         railMaterial = M.Wood,
         stair = "4a3527",
@@ -140,6 +144,7 @@ local THEMES = {
         shellMaterial = M.CorrodedMetal,
         roof = "2a3035",
         roofMaterial = M.Metal,
+        liner = true,
         rail = "4a3a2a",
         railMaterial = M.Wood,
         stair = "4a3f33",
@@ -208,6 +213,10 @@ local THEMES = {
         roof = "3a3d40",
         roofMaterial = M.Concrete,
         trim = "3a2a1c",
+        dado = "4a3524",
+        liner = true,
+        ceiling = "8d9095",
+        ceilingMaterial = M.Plaster,
         rail = "2b2f33",
         railMaterial = M.Metal,
         stair = "5a5650",
@@ -414,9 +423,10 @@ local function rectPart(
     r,
     y: number,
     colour,
-    material
+    material,
+    thickness: number?
 )
-    local size = Vector3.new((r.x1 - r.x0 + 1) * CELL, SLAB, (r.z1 - r.z0 + 1) * CELL)
+    local size = Vector3.new((r.x1 - r.x0 + 1) * CELL, thickness or SLAB, (r.z1 - r.z0 + 1) * CELL)
     local centre = Vector3.new(
         (lineAt(r.x0 - 1, gw) + lineAt(r.x1, gw)) / 2,
         y,
@@ -465,6 +475,34 @@ local function slabs(model: Model, plan, analysis, theme): BasePart?
                 Color3.fromHex(theme.roof),
                 theme.roofMaterial
             )
+        end
+        if theme.ceiling then
+            for _, r in
+                rectangles(gw, gd, function(x, z)
+                    local ch = MapPlan.Cell(plan, f, x, z)
+                    if not MapPlan.IsWalkable(ch) or plan.regions[ch].outdoor then
+                        return nil
+                    end
+                    local covered = analysis.roof[MapPlan.Key(f, x, z)]
+                        or MapPlan.IsWalkable(MapPlan.Cell(plan, f + 1, x, z))
+                    return if covered then "ceiling" else nil
+                end)
+            do
+                local ceiling = rectPart(
+                    "Ceiling",
+                    model,
+                    gw,
+                    gd,
+                    r,
+                    base + H - SLAB - 0.15,
+                    Color3.fromHex(theme.ceiling),
+                    theme.ceilingMaterial,
+                    0.3
+                )
+                ceiling.CanCollide = false
+                ceiling.CanQuery = false
+                ceiling.CastShadow = false
+            end
         end
     end
     return first
@@ -526,10 +564,12 @@ local function solidWall(
     )
     if theme.trim then
         local wood = Color3.fromHex(theme.trim)
+        -- Thicker on the shell, so the trim stands proud of the wall lining
+        local band = t + (if lookName == "shell" and theme.liner then 1 else 0.4)
         deco(
             "Skirting",
             model,
-            boxSize(along, length, 1, t + 0.4),
+            boxSize(along, length, 1, band),
             CFrame.new(mid + Vector3.new(0, 0.5, 0)),
             wood,
             M.Wood
@@ -537,11 +577,21 @@ local function solidWall(
         deco(
             "Cornice",
             model,
-            boxSize(along, length, 0.6, t + 0.6),
-            CFrame.new(mid + Vector3.new(0, H - SLAB - 0.3, 0)),
+            boxSize(along, length, 0.6, band + 0.2),
+            CFrame.new(mid + Vector3.new(0, H - SLAB - 0.45, 0)),
             wood,
             M.Wood
         )
+        if theme.dado then
+            deco(
+                "DadoRail",
+                model,
+                boxSize(along, length, 0.5, band),
+                CFrame.new(mid + Vector3.new(0, 4.2, 0)),
+                Color3.fromHex(theme.dado),
+                M.Wood
+            )
+        end
     end
 end
 
@@ -690,6 +740,31 @@ local function edges(model: Model, plan, analysis, theme)
     flush()
 end
 
+-- Rooms are finished inside: plaster or panelling over the shell, so nobody
+-- stands in a drawing room looking at bare brick
+local function liners(model: Model, plan, analysis, theme)
+    if not theme.liner then
+        return
+    end
+    local colour, material = Color3.fromHex(theme.wall), theme.wallMaterial
+    for _, e in analysis.edges do
+        if e.kind ~= "exterior" or e.floor <= plan.underground then
+            continue
+        end
+        local inside = if MapPlan.IsWalkable(e.a)
+            then -1
+            elseif MapPlan.IsWalkable(e.b) then 1
+            else 0
+        local region = plan.regions[if inside < 0 then e.a else e.b]
+        if inside == 0 or (region and region.outdoor) then
+            continue
+        end
+        local centre, along, across = edgeFrame(plan, e)
+        local at = centre + across * inside * (SHELL / 2 + 0.15) + Vector3.new(0, (H - SLAB) / 2, 0)
+        deco("Liner", model, boxSize(along, CELL, H - SLAB, 0.3), CFrame.new(at), colour, material)
+    end
+end
+
 ---------------------------------------------------------------- Windows
 local function windows(model: Model, plan, analysis, theme)
     if not theme.windows then
@@ -710,7 +785,7 @@ local function windows(model: Model, plan, analysis, theme)
         end
         local centre, along, across = edgeFrame(plan, e)
         local inward = across * inside
-        local at = centre + inward * (SHELL / 2 + 0.1) + Vector3.new(0, H * 0.5, 0)
+        local at = centre + inward * (SHELL / 2 + 0.45) + Vector3.new(0, H * 0.5, 0)
         local glass = deco(
             "Window",
             model,
@@ -1025,7 +1100,7 @@ local function dressRooms(
             not info.passage
             and (style.againstRail or not info.rail)
             and #style.props > 0
-            and rng:NextNumber() < (style.density or 0)
+            and rng:NextNumber() < math.min(0.9, (style.density or 0) * 1.25)
         then
             -- One piece with its back to a wall (or a railing, outdoors)
             local order = table.clone(SIDES)
@@ -1157,6 +1232,7 @@ local function build(mapName: string, plan, theme): Model
 
     model.PrimaryPart = slabs(model, plan, analysis, theme)
     edges(model, plan, analysis, theme)
+    liners(model, plan, analysis, theme)
     windows(model, plan, analysis, theme)
     for _, s in analysis.stairs do
         staircase(model, plan, theme, s)
