@@ -8,8 +8,8 @@ local ServerStorage = game:GetService("ServerStorage")
 local Theme = require(game.ReplicatedStorage.Shared.Theme)
 
 local HEIGHT = 18
-local BRICK = Color3.fromHex("3a3230")
-local LAMP = Color3.fromHex("ffc27a")
+local BRICK = Color3.fromHex("c2855c")
+local LAMP = Color3.fromHex("ffe3b0")
 
 -- { template, x, z, facing } relative to the floor centre; the front of the
 -- prop looks along `facing`
@@ -99,7 +99,7 @@ return function()
     dressing.Name = "Dressing"
 
     floor.Material = Enum.Material.WoodPlanks
-    floor.Color = Color3.fromHex("3b2a1f")
+    floor.Color = Color3.fromHex("a9855c")
     local top = floor.Position + Vector3.new(0, floor.Size.Y / 2, 0)
     local half = floor.Size.X / 2
 
@@ -148,8 +148,8 @@ return function()
     -- A rug in front of the fireplace
     for _, layer in
         {
-            { Vector3.new(26, 0.1, 16), 0.05, Color3.fromHex("3a1418") },
-            { Vector3.new(24.8, 0.14, 14.8), 0.07, Color3.fromHex("5a1f24") },
+            { Vector3.new(26, 0.1, 16), 0.05, Color3.fromHex("8a2a2a") },
+            { Vector3.new(24.8, 0.14, 14.8), 0.07, Color3.fromHex("b03a3a") },
         }
     do
         local rug = block(

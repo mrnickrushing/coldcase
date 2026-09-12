@@ -54,7 +54,7 @@ return {
     DRAG_SOUND_INTERVAL = 0.8,
 
     -- Vision (client-side radius, in studs)
-    VISION_NORMAL = 190,
+    VISION_NORMAL = 260,
     VISION_DARK = 88,
     VISION_SURGE = 130,
     FOG_NAMETAG_RANGE = 40,

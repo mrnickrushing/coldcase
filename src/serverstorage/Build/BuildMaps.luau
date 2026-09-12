@@ -28,287 +28,352 @@ local SIDES = { "N", "E", "S", "W" }
 -- lies under the centrepiece, and `againstRail` lets props line railings.
 local THEMES = {
     BlackwoodManor = {
-        wall = "7a6452",
-        wallMaterial = M.Plaster,
-        shell = "4a3a34",
+        wall = "d8c9a8",
+        wallMaterial = M.SmoothPlastic,
+        shell = "b5714c",
         shellMaterial = M.Brick,
-        roof = "2c2a2e",
+        roof = "5a4740",
         roofMaterial = M.Slate,
-        trim = "2a1d15",
-        dado = "3a2a1c",
+        trim = "f0eadc",
+        dado = "8a5a3a",
         liner = true,
-        ceiling = "9a9186",
-        ceilingMaterial = M.Plaster,
-        rail = "3b2a1f",
+        ceiling = "f2efe6",
+        ceilingMaterial = M.SmoothPlastic,
+        rail = "8a5a3a",
         railMaterial = M.Wood,
-        stair = "4a3527",
+        stair = "a9855c",
         stairMaterial = M.WoodPlanks,
-        lamp = "ffc27a",
+        lamp = "ffe0a8",
         windows = true,
         paintings = true,
         styles = {
             hall = {
-                floor = "4a3527",
+                wall = "d8c9a8",
+                floor = "8a5a3a",
                 floorMaterial = M.WoodPlanks,
-                props = { "GrandfatherClock" },
-                density = 0.08,
+                props = { "GrandfatherClock", "Plant" },
+                density = 0.12,
             },
             tunnel = {
-                floor = "55514a",
+                wall = "a89f92",
+                floor = "9a958c",
                 floorMaterial = M.Cobblestone,
                 props = { "Barrel" },
-                density = 0.15,
+                density = 0.2,
             },
             cellar = {
-                floor = "3d3a35",
+                wall = "b09a7a",
+                floor = "8a8070",
                 floorMaterial = M.Slate,
+                clutter = 0.45,
                 props = { "Barrel", "Barrel", "CrateStack" },
                 density = 0.6,
             },
             boiler = {
-                floor = "3f3f3f",
+                wall = "9aa3ab",
+                floor = "8c8c8c",
                 floorMaterial = M.Concrete,
                 props = { "Barrel", "CrateStack" },
-                density = 0.35,
+                density = 0.4,
             },
             storage = {
-                floor = "3f3a33",
+                wall = "c0a878",
+                floor = "8a7a62",
                 floorMaterial = M.Concrete,
+                clutter = 0.45,
                 props = { "CrateStack", "Barrel" },
-                density = 0.45,
+                density = 0.5,
             },
             library = {
-                floor = "3b2a1f",
+                wall = "8a4f36",
+                floor = "9a6a44",
                 floorMaterial = M.WoodPlanks,
-                props = { "Bookshelf" },
+                props = { "Bookshelf", "Plant" },
                 density = 0.8,
                 centre = "WritingDesk",
-                rug = "5a1f24",
+                rug = "b03a3a",
             },
             grandhall = {
-                floor = "3a3634",
+                wall = "efe2c4",
+                floor = "d8cfc0",
                 floorMaterial = M.Marble,
-                props = { "GrandfatherClock", "Armchair" },
-                density = 0.12,
+                props = { "GrandfatherClock", "Armchair", "Plant" },
+                density = 0.15,
                 centre = "Globe",
-                rug = "5a1f24",
+                rug = "b03a3a",
             },
             dining = {
-                floor = "3b2a1f",
+                wall = "a85a55",
+                floor = "9a6a44",
                 floorMaterial = M.WoodPlanks,
                 props = { "Fireplace", "Bookshelf", "GrandfatherClock" },
-                density = 0.3,
+                density = 0.35,
                 centre = "DiningTable",
                 chairs = true,
-                rug = "1f3a2e",
+                rug = "2f7a5a",
             },
             parlour = {
-                floor = "3b2a1f",
+                wall = "6f9a84",
+                floor = "9a6a44",
                 floorMaterial = M.WoodPlanks,
-                props = { "Sofa", "Armchair", "Fireplace" },
-                density = 0.4,
+                props = {
+                    "Sofa",
+                    "Armchair",
+                    "Fireplace",
+                    "SofaRed",
+                    "Television",
+                    "Plant",
+                    "Arcade",
+                },
+                density = 0.45,
                 centre = "GrandPiano",
-                rug = "3a2a4a",
+                rug = "7a4aa0",
             },
             kitchen = {
-                floor = "6a655d",
+                wall = "cfd8d8",
+                floor = "d2d2ca",
                 floorMaterial = M.CeramicTiles,
-                props = { "Barrel", "CrateStack", "FilingCabinet" },
-                density = 0.35,
+                props = { "Barrel", "CrateStack", "FilingCabinet", "KitchenCounter", "Fridge" },
+                density = 0.4,
                 centre = "DiningTable",
             },
             study = {
-                floor = "3b2a1f",
+                wall = "5f83a0",
+                floor = "9a6a44",
                 floorMaterial = M.WoodPlanks,
-                props = { "Bookshelf", "FilingCabinet", "Globe" },
-                density = 0.5,
+                props = { "Bookshelf", "FilingCabinet", "Globe", "Plant" },
+                density = 0.55,
                 centre = "WritingDesk",
-                rug = "4a3520",
+                rug = "c8901f",
             },
             bedroom = {
-                floor = "3b2a1f",
+                wall = "c8a0b8",
+                floor = "9a6a44",
                 floorMaterial = M.WoodPlanks,
-                props = { "Armchair", "Bookshelf", "Fireplace", "GrandfatherClock" },
-                density = 0.35,
-                centre = "Sofa",
-                rug = "3a2a4a",
+                props = { "Armchair", "Bookshelf", "Fireplace", "GrandfatherClock", "Bed", "Plant" },
+                density = 0.4,
+                centre = "Bed",
+                rug = "3f6fb0",
             },
-            bathroom = { floor = "8a8a86", floorMaterial = M.CeramicTiles, props = {}, density = 0 },
+            bathroom = {
+                wall = "bfe0e8",
+                floor = "eef4f6",
+                floorMaterial = M.CeramicTiles,
+                props = {},
+                density = 0,
+            },
         },
     },
 
     RustedPier = {
-        wall = "4a5660",
-        wallMaterial = M.CorrodedMetal,
-        shell = "39434a",
-        shellMaterial = M.CorrodedMetal,
-        roof = "2a3035",
+        wall = "9fb3bd",
+        wallMaterial = M.SmoothPlastic,
+        shell = "5f8fa8",
+        shellMaterial = M.Metal,
+        roof = "3f5f70",
         roofMaterial = M.Metal,
+        trim = "e8f0f4",
         liner = true,
-        rail = "4a3a2a",
+        rail = "b0703a",
         railMaterial = M.Wood,
-        stair = "4a3f33",
+        stair = "b08b5e",
         stairMaterial = M.WoodPlanks,
-        lamp = "ffb35c",
+        lamp = "ffd27a",
         windows = true,
         water = true,
         styles = {
             boardwalk = {
-                floor = "4a3f33",
+                floor = "a07a4a",
                 floorMaterial = M.WoodPlanks,
                 props = { "RopeCoil", "LobsterTraps", "Bollard" },
-                density = 0.3,
+                density = 0.35,
                 againstRail = true,
             },
             boathouse = {
-                floor = "3e3a33",
+                wall = "7fa8c0",
+                floor = "a9855c",
                 floorMaterial = M.WoodPlanks,
+                clutter = 0.45,
                 props = { "CrateStack", "Barrel", "RopeCoil", "Anchor" },
-                density = 0.45,
+                density = 0.5,
                 centre = "LobsterTraps",
             },
             deck = {
-                floor = "5a5046",
+                floor = "b0854f",
                 floorMaterial = M.WoodPlanks,
                 props = { "Bollard", "RopeCoil", "LobsterTraps", "Barrel", "Anchor" },
-                density = 0.3,
+                density = 0.35,
                 againstRail = true,
             },
             warehouse = {
-                floor = "3f3f3c",
+                wall = "9fb3bd",
+                floor = "6f7278",
                 floorMaterial = M.Concrete,
+                clutter = 0.55,
                 props = { "CrateStack", "Barrel" },
                 density = 0.6,
                 centre = "CrateStack",
             },
             office = {
-                floor = "3d3a35",
+                wall = "e0d8a8",
+                floor = "a9855c",
                 floorMaterial = M.WoodPlanks,
-                props = { "FilingCabinet", "Bookshelf" },
-                density = 0.5,
+                props = {
+                    "FilingCabinet",
+                    "Bookshelf",
+                    "VendingMachine",
+                    "Fridge",
+                    "Arcade",
+                    "Plant",
+                },
+                density = 0.55,
                 centre = "WritingDesk",
             },
             coldstore = {
-                floor = "5c6266",
+                wall = "cfe4ec",
+                floor = "c0cdd4",
                 floorMaterial = M.DiamondPlate,
-                props = { "CrateStack", "Barrel" },
+                props = { "CrateStack", "Barrel", "Fridge" },
                 density = 0.55,
             },
-            catwalk = { floor = "3a3f44", floorMaterial = M.DiamondPlate, props = {}, density = 0 },
+            catwalk = {
+                wall = "9fb3bd",
+                floor = "8fa0aa",
+                floorMaterial = M.DiamondPlate,
+                props = {},
+                density = 0,
+            },
             roof = {
-                floor = "33393e",
+                floor = "93a3ad",
                 floorMaterial = M.Concrete,
                 props = { "Barrel", "CrateStack" },
-                density = 0.2,
+                density = 0.25,
                 againstRail = true,
             },
         },
     },
 
     CityArchive = {
-        wall = "6a5236",
-        wallMaterial = M.WoodPlanks,
-        shell = "5d6164",
+        wall = "e0d8c0",
+        wallMaterial = M.SmoothPlastic,
+        shell = "cfc7b4",
         shellMaterial = M.Concrete,
-        roof = "3a3d40",
+        roof = "6a6f74",
         roofMaterial = M.Concrete,
-        trim = "3a2a1c",
-        dado = "4a3524",
+        trim = "f4f0e4",
+        dado = "8a6a44",
         liner = true,
-        ceiling = "8d9095",
-        ceilingMaterial = M.Plaster,
-        rail = "2b2f33",
+        ceiling = "f4f2ea",
+        ceilingMaterial = M.SmoothPlastic,
+        rail = "9aa4ac",
         railMaterial = M.Metal,
-        stair = "5a5650",
+        stair = "d8d2c4",
         stairMaterial = M.Marble,
-        lamp = "dfe8ff",
+        lamp = "ffeccf",
         windows = true,
         styles = {
             vault = {
-                floor = "45484a",
+                wall = "b9c2c8",
+                floor = "a8b0b6",
                 floorMaterial = M.DiamondPlate,
+                clutter = 0.3,
                 props = { "FilingCabinet", "CardCatalog" },
                 density = 0.65,
             },
             corridor = {
-                floor = "4f4d48",
+                wall = "e0d8c0",
+                floor = "b8b1a2",
                 floorMaterial = M.Concrete,
                 props = { "FilingCabinet" },
-                density = 0.1,
+                density = 0.12,
             },
             storage = {
-                floor = "4a4843",
+                wall = "c8bfa8",
+                floor = "b0a894",
                 floorMaterial = M.Concrete,
                 props = { "CrateStack", "FilingCabinet" },
                 density = 0.5,
             },
             office = {
-                floor = "3d3a35",
+                wall = "cfe0d0",
+                floor = "a9855c",
                 floorMaterial = M.WoodPlanks,
-                props = { "FilingCabinet", "Bookshelf", "Globe" },
-                density = 0.5,
-                centre = "WritingDesk",
-                rug = "2e3e5a",
-            },
-            hall = {
-                floor = "55524c",
-                floorMaterial = M.CeramicTiles,
-                props = { "CardCatalog" },
-                density = 0.08,
-            },
-            reading = {
-                floor = "3b2a1f",
-                floorMaterial = M.WoodPlanks,
-                props = { "Bookshelf" },
+                props = { "FilingCabinet", "Bookshelf", "Globe", "Plant" },
                 density = 0.55,
                 centre = "WritingDesk",
-                rug = "2e3e5a",
+                rug = "2f5fa0",
+            },
+            hall = {
+                wall = "e6dcc4",
+                floor = "c2bcae",
+                floorMaterial = M.CeramicTiles,
+                props = { "CardCatalog", "Plant", "VendingMachine" },
+                density = 0.1,
+            },
+            reading = {
+                wall = "9a6a44",
+                floor = "a9855c",
+                floorMaterial = M.WoodPlanks,
+                props = { "Bookshelf", "Plant" },
+                density = 0.6,
+                centre = "WritingDesk",
+                rug = "2f5fa0",
             },
             records = {
-                floor = "55524c",
+                wall = "d8d0b8",
+                floor = "b8b1a2",
                 floorMaterial = M.CeramicTiles,
+                clutter = 0.3,
                 props = { "FilingCabinet", "CardCatalog", "Bookshelf" },
                 density = 0.65,
             },
             exhibits = {
-                floor = "3a3634",
+                wall = "cfd8e4",
+                floor = "e4e0d6",
                 floorMaterial = M.Marble,
                 props = { "Globe", "GrandfatherClock" },
-                density = 0.35,
+                density = 0.4,
                 centre = "Globe",
             },
             lobby = {
-                floor = "3a3634",
+                wall = "efe6d0",
+                floor = "e8e2d6",
                 floorMaterial = M.Marble,
-                props = { "Armchair", "GrandfatherClock" },
-                density = 0.2,
-                rug = "5a1f24",
+                props = { "Armchair", "GrandfatherClock", "SofaRed", "Plant", "VendingMachine" },
+                centre = "SofaRed",
+                density = 0.25,
+                rug = "b03a3a",
             },
             maps = {
-                floor = "3b2a1f",
+                wall = "c8d8c0",
+                floor = "a9855c",
                 floorMaterial = M.WoodPlanks,
                 props = { "CardCatalog", "Globe" },
-                density = 0.5,
+                density = 0.55,
                 centre = "DiningTable",
             },
             stacks = {
-                floor = "3b2a1f",
+                wall = "a97a4a",
+                floor = "a9855c",
                 floorMaterial = M.WoodPlanks,
+                clutter = 0.35,
                 props = { "Bookshelf" },
-                density = 0.45,
+                density = 0.5,
             },
             lab = {
-                floor = "6a655d",
+                wall = "d8e8e0",
+                floor = "eef2f0",
                 floorMaterial = M.CeramicTiles,
-                props = { "FilingCabinet", "WritingDesk" },
-                density = 0.4,
+                props = { "FilingCabinet", "WritingDesk", "KitchenCounter" },
+                density = 0.45,
                 centre = "DiningTable",
             },
             carrels = {
-                floor = "3b2a1f",
+                wall = "c0b088",
+                floor = "a9855c",
                 floorMaterial = M.WoodPlanks,
                 props = { "WritingDesk" },
-                density = 0.65,
+                density = 0.7,
             },
         },
     },
@@ -740,28 +805,37 @@ local function edges(model: Model, plan, analysis, theme)
     flush()
 end
 
--- Rooms are finished inside: plaster or panelling over the shell, so nobody
--- stands in a drawing room looking at bare brick
-local function liners(model: Model, plan, analysis, theme)
+-- Every room paints its own walls: a coloured skin on each face, so a room
+-- reads as a room and neighbouring rooms never share a colour by accident
+local function skins(model: Model, plan, analysis, theme)
     if not theme.liner then
         return
     end
-    local colour, material = Color3.fromHex(theme.wall), theme.wallMaterial
     for _, e in analysis.edges do
-        if e.kind ~= "exterior" or e.floor <= plan.underground then
-            continue
-        end
-        local inside = if MapPlan.IsWalkable(e.a)
-            then -1
-            elseif MapPlan.IsWalkable(e.b) then 1
-            else 0
-        local region = plan.regions[if inside < 0 then e.a else e.b]
-        if inside == 0 or (region and region.outdoor) then
+        if e.kind ~= "exterior" and e.kind ~= "wall" then
             continue
         end
         local centre, along, across = edgeFrame(plan, e)
-        local at = centre + across * inside * (SHELL / 2 + 0.15) + Vector3.new(0, (H - SLAB) / 2, 0)
-        deco("Liner", model, boxSize(along, CELL, H - SLAB, 0.3), CFrame.new(at), colour, material)
+        for _, side in { { ch = e.a, face = -1 }, { ch = e.b, face = 1 } } do
+            local region = plan.regions[side.ch]
+            if not MapPlan.IsWalkable(side.ch) or (region and region.outdoor) then
+                continue
+            end
+            local style = theme.styles[region.style]
+            local colour = Color3.fromHex((style and style.wall) or theme.wall)
+            local thickness = if e.kind == "exterior" then SHELL else WALL
+            local at = centre
+                + across * side.face * (thickness / 2 + 0.15)
+                + Vector3.new(0, (H - SLAB) / 2, 0)
+            deco(
+                "WallSkin",
+                model,
+                boxSize(along, CELL, H - SLAB, 0.3),
+                CFrame.new(at),
+                colour,
+                (style and style.wallMaterial) or theme.wallMaterial
+            )
+        end
     end
 end
 
@@ -1046,8 +1120,16 @@ local function dressRooms(
                         openSides += 1
                     end
                 end
-                local info =
-                    { f = f, x = x, z = z, ch = ch, kinds = kinds, passage = passage, rail = rail }
+                local info = {
+                    f = f,
+                    x = x,
+                    z = z,
+                    ch = ch,
+                    kinds = kinds,
+                    passage = passage,
+                    rail = rail,
+                    openSides = openSides,
+                }
                 table.insert(cells, info)
                 local style = theme.styles[plan.regions[ch].style]
                 if style and style.centre and not passage and not rail and not reserved[key] then
@@ -1140,6 +1222,30 @@ local function dressRooms(
             end
         end
 
+        -- A working room is full: crates and stock stand out on the floor too,
+        -- but only in cells open on all four sides, so every piece can be
+        -- walked around
+        if
+            style.clutter
+            and not centrepiece
+            and info.openSides == 4
+            and next(against) == nil
+            and not reserved[MapPlan.Key(info.f, info.x, info.z)]
+            and #style.props > 0
+            and rng:NextNumber() < style.clutter
+        then
+            local piece = template(style.props[rng:NextInteger(1, #style.props)])
+            if piece then
+                local size = piece:GetExtentsSize()
+                local at = Vector3.new(
+                    cx + rng:NextNumber(-3.5, 3.5),
+                    base + size.Y / 2,
+                    cz + rng:NextNumber(-3.5, 3.5)
+                )
+                place(piece, CFrame.new(at) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+            end
+        end
+
         -- Framed paintings on the bare inside walls of rooms
         if theme.paintings and not region.hall and not region.outdoor then
             for _, side in SIDES do
@@ -1180,11 +1286,11 @@ local function waterfront(model: Model, plan)
         model,
         Vector3.new(gw * CELL + 1000, 1, gd * CELL + 1000),
         CFrame.new(0, -4, 0),
-        Color3.fromHex("163246"),
+        Color3.fromHex("2f86c4"),
         M.Glass
     )
-    water.Transparency = 0.1
-    water.Reflectance = 0.25
+    water.Transparency = 0.28
+    water.Reflectance = 0.15
 
     -- Corners of the boardwalk get short pilings; corners under the deck where
     -- no boardwalk stands get tall ones
@@ -1232,7 +1338,7 @@ local function build(mapName: string, plan, theme): Model
 
     model.PrimaryPart = slabs(model, plan, analysis, theme)
     edges(model, plan, analysis, theme)
-    liners(model, plan, analysis, theme)
+    skins(model, plan, analysis, theme)
     windows(model, plan, analysis, theme)
     for _, s in analysis.stairs do
         staircase(model, plan, theme, s)

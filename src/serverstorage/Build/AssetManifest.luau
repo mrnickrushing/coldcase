@@ -116,6 +116,78 @@ return {
         },
     },
     props = {
+        Arcade = {
+            {
+                mesh = "rbxassetid://75644288111699",
+                texture = "rbxassetid://97724069988079",
+                size = { 4.152, 5.75, 3.6 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        Bed = {
+            {
+                mesh = "rbxassetid://133168580542351",
+                texture = "rbxassetid://72987987399468",
+                size = { 4.354, 3.64, 6.761 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        Fridge = {
+            {
+                mesh = "rbxassetid://96189130846574",
+                texture = "rbxassetid://111237659133998",
+                size = { 3.784, 6.023, 3.64 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        KitchenCounter = {
+            {
+                mesh = "rbxassetid://93222515445109",
+                texture = "rbxassetid://105309894009260",
+                size = { 5.892, 4.13, 2.88 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        Plant = {
+            {
+                mesh = "rbxassetid://94832069745947",
+                texture = "rbxassetid://135058173165674",
+                size = { 3.12, 5.142, 2.706 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        SofaRed = {
+            {
+                mesh = "rbxassetid://78037400018845",
+                texture = "rbxassetid://133152419617955",
+                size = { 7.315, 3.75, 3.606 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        Television = {
+            {
+                mesh = "rbxassetid://129309935866534",
+                texture = "rbxassetid://127703656257339",
+                size = { 5.141, 4.385, 1.92 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
+        VendingMachine = {
+            {
+                mesh = "rbxassetid://127956295487071",
+                texture = "rbxassetid://117083845430330",
+                size = { 3.286, 6.527, 2.86 },
+                offset = { 0, 0, 0 },
+                rot = { 0, 0, 0 },
+            },
+        },
         Anchor = {
             {
                 mesh = "rbxassetid://87953592929340",
