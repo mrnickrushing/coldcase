@@ -1178,8 +1178,10 @@ local function build(mapName: string, plan, theme): Model
             CFrame.new(x, y + 0.2, z),
             Color3.fromHex("37bcf0")
         )
+        -- A marker, not scenery: invisible, and never in the way of a shot
         p.CanCollide = false
-        p.Transparency = 0.55
+        p.CanQuery = false
+        p.Transparency = 1
         p:AddTag("SpawnPoint")
     end
     for i, c in points.coins do

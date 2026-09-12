@@ -108,6 +108,10 @@ function RoundService:IsParticipant(plr: Player): boolean
     return table.find(participants, plr) ~= nil
 end
 
+function RoundService:MapName(): string
+    return currentMapName
+end
+
 function RoundService:AliveNames(): { string }
     return aliveNames()
 end

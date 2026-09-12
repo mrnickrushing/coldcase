@@ -7,6 +7,7 @@
 local PathfindingService = game:GetService("PathfindingService")
 local Players = game:GetService("Players")
 local Config = require(game.ReplicatedStorage.Shared.Config)
+local MapPlan = require(game.ReplicatedStorage.Shared.MapPlan)
 local RoleService = require(script.Parent.RoleService)
 local CombatService = require(script.Parent.CombatService)
 
@@ -15,6 +16,7 @@ local round: any = nil -- RoundService, handed over by BindRound
 local bots: { any } = {}
 local byCharacter: { [Instance]: any } = {}
 local points: { Vector3 } = {}
+local plan, planAnalysis = nil, nil -- the map being played, for room-to-room routing
 local RUN_SPEED = 16 -- a player's walk speed; NPCs match it only when running
 
 local NAMES = {
@@ -359,6 +361,33 @@ local function collectPoints()
     end
 end
 
+-- Roblox pathfinding gives up over long distances in a building this dense,
+-- so an NPC crosses it a few rooms at a time: the plan says which cells lead
+-- to the goal, and the NPC heads for one a short way along that route.
+local function leg(root: BasePart, goal: Vector3): Vector3
+    if not (plan and planAnalysis) then
+        return goal
+    end
+    local here = root.Position
+    local f1, x1, z1 = MapPlan.CellAt(plan, here.X, here.Y, here.Z)
+    local f2, x2, z2 = MapPlan.CellAt(plan, goal.X, goal.Y, goal.Z)
+    if f1 == f2 and math.abs(x1 - x2) <= 2 and math.abs(z1 - z2) <= 2 then
+        return goal -- close enough to walk straight at it
+    end
+    local route = MapPlan.Route(
+        plan,
+        planAnalysis,
+        { f = f1, x = x1, z = z1 },
+        { f = f2, x = x2, z = z2 }
+    )
+    if not route or #route == 0 then
+        return goal
+    end
+    local step = route[math.min(#route, 3)]
+    local x, y, z = MapPlan.Position(plan, step.f, step.x, step.z)
+    return Vector3.new(x, y + 3, z)
+end
+
 -- Walks toward `goal` along a computed path, recomputing when the goal moves
 -- or the path goes stale
 local function steer(bot, goal: Vector3, speed: number)
@@ -371,8 +400,9 @@ local function steer(bot, goal: Vector3, speed: number)
         hum.WalkSpeed = speed
     end
     local now = os.clock()
-    if not brain.path or (brain.goal - goal).Magnitude > 8 or now - brain.pathAt > 2.5 then
-        brain.goal, brain.pathAt = goal, now
+    local here = leg(root, goal)
+    if not brain.path or (brain.goal - here).Magnitude > 8 or now - brain.pathAt > 2.5 then
+        brain.goal, brain.pathAt = here, now
         brain.pathObject = brain.pathObject
             or PathfindingService:CreatePath({
                 AgentRadius = 2,
@@ -381,14 +411,14 @@ local function steer(bot, goal: Vector3, speed: number)
             })
         local path = brain.pathObject
         local ok = pcall(function()
-            path:ComputeAsync(root.Position, goal)
+            path:ComputeAsync(root.Position, here)
         end)
         if ok and path.Status == Enum.PathStatus.Success then
             brain.path, brain.step = path:GetWaypoints(), 2
             brain.lost = nil
         else
             -- Walking straight at a goal on another floor gets nowhere
-            brain.path, brain.step = { { Position = goal } }, 1
+            brain.path, brain.step = { { Position = here } }, 1
             brain.lost = goal
         end
     end
@@ -404,7 +434,7 @@ local function steer(bot, goal: Vector3, speed: number)
         brain.step += 1
         waypoint = brain.path[brain.step]
     end
-    hum:MoveTo(if waypoint then waypoint.Position else goal)
+    hum:MoveTo(if waypoint then waypoint.Position else here)
 end
 
 local function stop(bot)
@@ -586,6 +616,8 @@ end
 
 function BotService:StartRound()
     collectPoints()
+    plan = round and MapPlan.MAPS[round:MapName()] or nil
+    planAnalysis = plan and MapPlan.Analyse(plan) or nil
     for _, bot in bots do
         bot.brain = {}
         task.spawn(function()

@@ -621,79 +621,119 @@ function MapPlan.Standable(plan: Plan, analysis: Analysis): { { f: number, x: nu
     return out
 end
 
--- How many standable cells can be reached from the first one, walking through
--- open floor and doorways and climbing stairs, with Lockdown doors shut when
--- `lockdown` is set. Returns reached, total and the keys of any cell left out.
+-- Where a walk can step from a cell: through open floor and doorways, and up
+-- or down a staircase
+local function stairLinks(analysis: Analysis): { [string]: { string } }
+    local links: { [string]: { string } } = {}
+    for _, s in analysis.stairs do
+        local a = MapPlan.Key(s.floor, s.approach.x, s.approach.z)
+        local b = MapPlan.Key(s.floor + 1, s.arrival.x, s.arrival.z)
+        links[a] = links[a] or {}
+        links[b] = links[b] or {}
+        table.insert(links[a], b)
+        table.insert(links[b], a)
+    end
+    return links
+end
+
+local function keyToCell(key: string)
+    local f, x, z = string.match(key, "(%d+):(%d+):(%d+)")
+    return { f = tonumber(f) :: number, x = tonumber(x) :: number, z = tonumber(z) :: number }
+end
+
+-- Breadth-first walk from `startKey`, returning which cells were reached and
+-- the cell each was reached from
+local function walk(
+    plan: Plan,
+    analysis: Analysis,
+    startKey: string,
+    lockdown: boolean?
+): ({ [string]: boolean }, { [string]: string })
+    local standable = {}
+    for _, c in MapPlan.Standable(plan, analysis) do
+        standable[MapPlan.Key(c.f, c.x, c.z)] = true
+    end
+    local links = stairLinks(analysis)
+    local seen, from = { [startKey] = true }, {}
+    if not standable[startKey] then
+        return {}, {}
+    end
+    local queue, head = { keyToCell(startKey) }, 1
+    while head <= #queue do
+        local c = queue[head]
+        head += 1
+        local here = MapPlan.Key(c.f, c.x, c.z)
+        for side, d in MapPlan.DIRS do
+            local key = MapPlan.Key(c.f, c.x + d[1], c.z + d[2])
+            local edge = analysis.byId[MapPlan.SideEdgeId(c.f, c.x, c.z, side)]
+            local passable = edge == nil
+                or (edge.kind == "door" and not (lockdown and edge.lockdown))
+            if standable[key] and not seen[key] and passable then
+                seen[key], from[key] = true, here
+                table.insert(queue, { f = c.f, x = c.x + d[1], z = c.z + d[2] })
+            end
+        end
+        for _, key in links[here] or {} do
+            if standable[key] and not seen[key] then
+                seen[key], from[key] = true, here
+                table.insert(queue, keyToCell(key))
+            end
+        end
+    end
+    return seen, from
+end
+
+-- How many standable cells can be reached from the first one, with Lockdown
+-- doors shut when `lockdown` is set. Returns reached, total and the keys of
+-- any cell left out.
 function MapPlan.Reachable(
     plan: Plan,
     analysis: Analysis,
     lockdown: boolean?
 ): (number, number, { string })
     local cells = MapPlan.Standable(plan, analysis)
-    local standable = {}
-    for _, c in cells do
-        standable[MapPlan.Key(c.f, c.x, c.z)] = true
+    if #cells == 0 then
+        return 0, 0, {}
     end
-    local links: { [string]: { string } } = {}
-    local function link(a: string, b: string)
-        links[a] = links[a] or {}
-        links[b] = links[b] or {}
-        table.insert(links[a], b)
-        table.insert(links[b], a)
-    end
-    for _, s in analysis.stairs do
-        link(
-            MapPlan.Key(s.floor, s.approach.x, s.approach.z),
-            MapPlan.Key(s.floor + 1, s.arrival.x, s.arrival.z)
-        )
-    end
-
-    local seen, queue = {}, {}
-    if cells[1] then
-        local first = MapPlan.Key(cells[1].f, cells[1].x, cells[1].z)
-        seen[first] = true
-        table.insert(queue, cells[1])
-    end
-    local head = 1
-    while head <= #queue do
-        local c = queue[head]
-        head += 1
-        local here = MapPlan.Key(c.f, c.x, c.z)
-        for side, d in MapPlan.DIRS do
-            local nx, nz = c.x + d[1], c.z + d[2]
-            local key = MapPlan.Key(c.f, nx, nz)
-            local edge = analysis.byId[MapPlan.SideEdgeId(c.f, c.x, c.z, side)]
-            local passable = edge == nil
-                or (edge.kind == "door" and not (lockdown and edge.lockdown))
-            if standable[key] and not seen[key] and passable then
-                seen[key] = true
-                table.insert(queue, { f = c.f, x = nx, z = nz })
-            end
-        end
-        local neighbours = links[here]
-        if neighbours then
-            for _, key in neighbours do
-                if standable[key] and not seen[key] then
-                    seen[key] = true
-                    local f, x, z = string.match(key, "(%d+):(%d+):(%d+)")
-                    table.insert(queue, {
-                        f = tonumber(f) :: number,
-                        x = tonumber(x) :: number,
-                        z = tonumber(z) :: number,
-                    })
-                end
-            end
-        end
-    end
-
-    local missing = {}
+    local seen = walk(plan, analysis, MapPlan.Key(cells[1].f, cells[1].x, cells[1].z), lockdown)
+    local reached, missing = 0, {}
     for _, c in cells do
         local key = MapPlan.Key(c.f, c.x, c.z)
-        if not seen[key] then
+        if seen[key] then
+            reached += 1
+        else
             table.insert(missing, key)
         end
     end
-    return #queue, #cells, missing
+    return reached, #cells, missing
+end
+
+-- The cells to walk through to get from one cell to another, the first step
+-- first and the goal last. Roblox pathfinding gives up over long distances in
+-- a building this dense, so NPCs cross it one short leg at a time.
+function MapPlan.Route(plan: Plan, analysis: Analysis, from, to): { any }?
+    local startKey, goalKey = MapPlan.Key(from.f, from.x, from.z), MapPlan.Key(to.f, to.x, to.z)
+    if startKey == goalKey then
+        return {}
+    end
+    local seen, cameFrom = walk(plan, analysis, startKey)
+    if not seen[goalKey] then
+        return nil
+    end
+    local route, key = {}, goalKey
+    while key and key ~= startKey do
+        table.insert(route, 1, keyToCell(key))
+        key = cameFrom[key]
+    end
+    return route
+end
+
+-- The cell a world position stands in
+function MapPlan.CellAt(plan: Plan, x: number, y: number, z: number): (number, number, number)
+    local gw, gd = MapPlan.Size(plan)
+    return math.floor(y / MapPlan.FLOOR_HEIGHT + 0.5) + 1,
+        math.floor(x / MapPlan.CELL + gw / 2) + 1,
+        math.floor(z / MapPlan.CELL + gd / 2) + 1
 end
 
 -- Spawn and coin cells spread through the whole building: each pick is the

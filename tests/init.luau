@@ -212,6 +212,33 @@ for name, plan in MapPlan.MAPS do
         eq(reached, total, "sealed in " .. table.concat(missing, ", "))
     end)
 
+    test(name .. " a route leads from one end of the building to the other", function()
+        local analysis = MapPlan.Analyse(plan)
+        local cells = MapPlan.Standable(plan, analysis)
+        local route = MapPlan.Route(plan, analysis, cells[1], cells[#cells])
+        assert(route and #route > 0, "no route")
+        eq(route[#route].f, cells[#cells].f, "ends on the right floor")
+        eq(route[#route].x, cells[#cells].x, "ends on the right cell")
+        local at = cells[1]
+        for i, c in route do
+            local stepped = c.f == at.f and math.abs(c.x - at.x) + math.abs(c.z - at.z) == 1
+            local climbed = math.abs(c.f - at.f) == 1
+            assert(
+                stepped or climbed,
+                ("step %d jumps from %d,%d,%d to %d,%d,%d"):format(
+                    i,
+                    at.f,
+                    at.x,
+                    at.z,
+                    c.f,
+                    c.x,
+                    c.z
+                )
+            )
+            at = c
+        end
+    end)
+
     test(name .. " spawns and coins reach every floor", function()
         local analysis = MapPlan.Analyse(plan)
         local points = MapPlan.Points(plan, analysis)
