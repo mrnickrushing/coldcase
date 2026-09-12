@@ -756,40 +756,37 @@ local function staircase(model: Model, plan, theme, s)
     local bx, _, bz = MapPlan.Position(plan, s.floor, last.x, last.z)
     local dir = Vector3.new(s.dx, 0, s.dz)
     local run = s.len * CELL
-    local centre = Vector3.new((ax + bx) / 2, base + H / 2, (az + bz) / 2)
+    local centre = Vector3.new((ax + bx) / 2, base, (az + bz) / 2)
     local wood = Color3.fromHex(theme.stair)
 
-    -- The walkable surface: a wedge rises toward its back face, so its front
-    -- looks back down the stairs
-    local ramp = Instance.new("WedgePart")
-    ramp.Name = "Stairs"
-    ramp.Anchored = true
-    ramp.Size = Vector3.new(STAIR_W, H, run)
-    ramp.CFrame = CFrame.lookAt(centre, centre - dir)
-    ramp.Color = wood
-    ramp.Material = theme.stairMaterial
-    ramp.Parent = model
-
-    -- Treads for the look of a staircase; feet ride the wedge underneath
-    local bottom = Vector3.new(centre.X, base, centre.Z) - dir * (run / 2)
+    -- Real steps rather than a ramp: a humanoid walks up a 0.8-stud riser
+    -- without jumping, pathfinding reads them, and the top lands flush with
+    -- the floor above
     local steps = s.len * 10
     local rise, depth = H / steps, run / steps
+    local bottom = centre - dir * (run / 2)
     for i = 1, steps do
-        local at = bottom + dir * ((i - 0.5) * depth) + Vector3.new(0, (i - 0.5) * rise, 0)
-        deco(
-            "Tread",
+        local height = i * rise
+        local at = bottom + dir * ((i - 0.5) * depth) + Vector3.new(0, height / 2, 0)
+        part(
+            "Step",
             model,
-            Vector3.new(STAIR_W, rise, depth),
-            CFrame.lookAt(at, at + dir),
+            if dir.X ~= 0
+                then Vector3.new(depth, height, STAIR_W)
+                else Vector3.new(STAIR_W, height, depth),
+            CFrame.new(at),
             wood,
             theme.stairMaterial
         )
     end
 
+    -- A banister down each side, so nobody walks off the steps
     local slope = dir * run + Vector3.new(0, H, 0)
     local side = Vector3.new(-s.dz, 0, s.dx)
     for _, sign in { -1, 1 } do
-        local mid = centre + side * (sign * (STAIR_W / 2 + 0.3)) + Vector3.new(0, RAIL_H / 2, 0)
+        local mid = centre
+            + side * (sign * (STAIR_W / 2 + 0.3))
+            + Vector3.new(0, H / 2 + RAIL_H / 2, 0)
         local banister = part(
             "Banister",
             model,

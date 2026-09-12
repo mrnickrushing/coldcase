@@ -676,14 +676,11 @@ function MapPlan.Reachable(
                 if standable[key] and not seen[key] then
                     seen[key] = true
                     local f, x, z = string.match(key, "(%d+):(%d+):(%d+)")
-                    table.insert(
-                        queue,
-                        {
-                            f = tonumber(f) :: number,
-                            x = tonumber(x) :: number,
-                            z = tonumber(z) :: number,
-                        }
-                    )
+                    table.insert(queue, {
+                        f = tonumber(f) :: number,
+                        x = tonumber(x) :: number,
+                        z = tonumber(z) :: number,
+                    })
                 end
             end
         end

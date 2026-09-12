@@ -371,8 +371,10 @@ function RoundService:Advance()
         setState("LOADING", Config.LOADING_TIME)
     elseif state == "LOADING" then
         local wanted = pendingBots
+        local joined = 0
         for _, bot in BotService:Spawn(wanted) do
             table.insert(participants, bot)
+            joined += 1
         end
         pendingBots = 0
         -- Never drop someone into a round alone: if the NPCs could not be
@@ -389,6 +391,9 @@ function RoundService:Advance()
             Remotes.Notify:FireAllClients("The NPCs could not join. Trying again next round.")
             setState("INTERMISSION", Config.INTERMISSION)
             return
+        end
+        if joined > 0 then
+            Remotes.Notify:FireAllClients(("%d NPCs joined this round."):format(joined))
         end
         self:LoadVotedMap()
         local present = {}
