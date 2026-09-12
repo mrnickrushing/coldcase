@@ -34,6 +34,12 @@ local playerGui = plr:WaitForChild("PlayerGui")
 local gui = playerGui:FindFirstChild("RoundHud") or BuildHud(playerGui)
 local HudController = {}
 
+-- The HUD belongs to the round: a menu covers the screen, so it steps aside
+ClientState.On("screen", function(screen)
+    gui.Enabled = screen == nil
+end)
+gui.Enabled = ClientState.screen == nil
+
 local top = gui.Top
 local roleTag = gui.RoleTag
 local roleCard = gui.RoleCard
