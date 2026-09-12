@@ -1,5 +1,5 @@
 --[[
-  COLD CASE · lighting. Night, a cold grade, and a little glow on the neon.
+  COLD CASE · lighting. Bright daylight, a warm grade, a little glow on neon.
   Bootstrap runs this on server start, before EventService captures the base
   light levels it restores after Lights Out.
 
@@ -26,28 +26,29 @@ return function()
         end
     end
 
-    -- A bright moonlit night: readable rooms, deep shadows, never a black box.
+    -- Bright and readable, the way the big social-deduction games look: the
+    -- drama comes from who is holding the knife, not from squinting.
     -- Lights Out (EventService) drops brightness and ambient from here.
-    Lighting.ClockTime = 0.5
-    Lighting.Brightness = 2.6
-    Lighting.Ambient = Color3.fromRGB(78, 84, 100)
-    Lighting.OutdoorAmbient = Color3.fromRGB(104, 112, 134)
+    Lighting.ClockTime = 15
+    Lighting.Brightness = 2.4
+    Lighting.Ambient = Color3.fromRGB(120, 122, 128)
+    Lighting.OutdoorAmbient = Color3.fromRGB(150, 155, 165)
     Lighting.EnvironmentDiffuseScale = 0.6
-    Lighting.EnvironmentSpecularScale = 0.7
+    Lighting.EnvironmentSpecularScale = 0.8
     Lighting.GlobalShadows = true
-    Lighting.ExposureCompensation = 0.45
+    Lighting.ExposureCompensation = 0
 
-    local sky = ensure("Sky", "NightSky") :: Sky
-    sky.StarCount = 3000
-    sky.MoonAngularSize = 9
+    local sky = ensure("Sky", "DaySky") :: Sky
+    sky.StarCount = 0
+    sky.SunAngularSize = 14
 
     local grade = ensure("ColorCorrectionEffect", "Grade") :: ColorCorrectionEffect
-    grade.Saturation = -0.05
-    grade.Contrast = 0.08
-    grade.TintColor = Color3.fromRGB(232, 238, 255)
+    grade.Saturation = 0.18
+    grade.Contrast = 0.1
+    grade.TintColor = Color3.fromRGB(255, 252, 245)
 
     local bloom = ensure("BloomEffect", "Glow") :: BloomEffect
-    bloom.Intensity = 0.5
-    bloom.Size = 28
-    bloom.Threshold = 1.4
+    bloom.Intensity = 0.3
+    bloom.Size = 24
+    bloom.Threshold = 1.8
 end

@@ -10,7 +10,7 @@ killer's coat, a time of death — and reading it fast is how innocents win inst
 **Status:** grey-box vertical slice, feature-complete in code. Three multi-floor maps, the full round
 loop, evidence, medic revive and body drag, Last Call, spectating, economy with crates, crafting,
 direct buys and Robux products including the Radio and Emote passes, player reports, NPCs that fill a
-quiet server, every menu screen, and the Production Handbook systems. First art pass: per-map materials, lamps, night
+quiet server, every menu screen, and the Production Handbook systems. Art pass: bright per-room palettes, lamps, daylight
 lighting, a dressed lobby, all 22 sound cues, effect particles, and generated weapon, furniture and
 pet models (see [docs/assets.md](docs/assets.md)).
 

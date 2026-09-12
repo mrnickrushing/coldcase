@@ -77,7 +77,15 @@ longer used.
 
 ## Built in code
 
-Materials, lamps and furniture placement live in `src/serverstorage/Build/BuildMaps.luau`. The night
+Palettes, lamps and furniture placement live in `src/serverstorage/Build/BuildMaps.luau`. The night
 sky, colour grade and bloom live in `BuildLighting.luau`, and the lobby room in `BuildLobby.luau`.
 Effect items and knife effects are particles defined in `src/shared/CosmeticFx.luau`, using Roblox's
 built-in particle textures. Store art lives in [store-art](store-art/README.md).
+
+## The bright pass
+
+The visual bar is the big social-deduction games: bright, saturated rooms that read at a glance
+rather than a dark noir box. Every room paints its own walls (`styles[...].wall` in `BuildMaps`),
+lighting is daylight, and the vision radius is a light haze instead of darkness. Eight cartoon props
+were generated for it: SofaRed, Television, Bed, KitchenCounter, Fridge, Plant, Arcade and
+VendingMachine, all in `AssetManifest`.
