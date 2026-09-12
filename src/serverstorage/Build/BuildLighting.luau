@@ -30,7 +30,7 @@ return function()
     -- drama comes from who is holding the knife, not from squinting.
     -- Lights Out (EventService) drops brightness and ambient from here.
     Lighting.ClockTime = 15
-    Lighting.Brightness = 2.4
+    Lighting.Brightness = 2.1
     Lighting.Ambient = Color3.fromRGB(120, 122, 128)
     Lighting.OutdoorAmbient = Color3.fromRGB(150, 155, 165)
     Lighting.EnvironmentDiffuseScale = 0.6

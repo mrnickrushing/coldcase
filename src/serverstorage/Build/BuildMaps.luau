@@ -131,7 +131,7 @@ local THEMES = {
             },
             kitchen = {
                 wall = "cfd8d8",
-                floor = "e6e6e0",
+                floor = "d2d2ca",
                 floorMaterial = M.CeramicTiles,
                 props = { "Barrel", "CrateStack", "FilingCabinet", "KitchenCounter", "Fridge" },
                 density = 0.4,
@@ -207,7 +207,7 @@ local THEMES = {
             },
             warehouse = {
                 wall = "9fb3bd",
-                floor = "8e8e88",
+                floor = "6f7278",
                 floorMaterial = M.Concrete,
                 clutter = 0.55,
                 props = { "CrateStack", "Barrel" },
@@ -282,7 +282,7 @@ local THEMES = {
             },
             corridor = {
                 wall = "e0d8c0",
-                floor = "cfc8ba",
+                floor = "b8b1a2",
                 floorMaterial = M.Concrete,
                 props = { "FilingCabinet" },
                 density = 0.12,
@@ -305,7 +305,7 @@ local THEMES = {
             },
             hall = {
                 wall = "e6dcc4",
-                floor = "d8d2c4",
+                floor = "c2bcae",
                 floorMaterial = M.CeramicTiles,
                 props = { "CardCatalog", "Plant", "VendingMachine" },
                 density = 0.1,
@@ -321,7 +321,7 @@ local THEMES = {
             },
             records = {
                 wall = "d8d0b8",
-                floor = "cfc8ba",
+                floor = "b8b1a2",
                 floorMaterial = M.CeramicTiles,
                 clutter = 0.3,
                 props = { "FilingCabinet", "CardCatalog", "Bookshelf" },
