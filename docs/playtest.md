@@ -128,15 +128,17 @@ Counting ticks is misleading on its own, so here is the split. 31 ticked, 48 not
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 29 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 28 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 8 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
-| Needs human eyes or ears | 6 | Whether the cues match the brief, whether a weapon sits right in the hand, whether the art reads. No probe settles taste. |
+| Needs human eyes or ears | 7 | Whether the cues match the brief, whether a weapon sits right in the hand, whether the art reads. No probe settles taste. The ghost hints join this bucket: they need an account that has not seen them, and this Studio session is permanently the owner's. |
 | Setup step, not a claim | 3 | `rokit install`, API access, `[ColdCase] server up`. |
 
 
 > **The lobby menus have a twenty-second window.** The collection, crate and trade screens only exist during INTERMISSION - `onState` shows the lobby there, `LOADING` and `REVEAL` call `show(nil)`, and `RESOLUTION` belongs to the results card. Anything that needs to click a menu button and then read what rendered has to do both inside that window. Driving it from two separate tool calls does not fit: a click and a read took about twenty-eight seconds of round trips against a twenty-second window, three times running. A human at the keyboard settles these in seconds, so they are grouped here rather than left looking untested.
+
+> **The ghost hints need an account that has not seen them.** Whether the three prompts appear once each is held in two places a probe cannot read: `shown`, a local table inside NoticeController, and `hintsSeen` on the profile. Requiring either module from a command context returns a fresh copy that looks alive - it connects the same remotes, so live values keep arriving - while every field filled before the probe attached sits at its default. A copied `ClientState` read `loaded=true` with correct coins and role, and an empty inventory against a HUD showing 27 owned. The only trustworthy evidence is `NoticeHud.Hint.Text` and its transparency, and watching those across a full ACTIVE → RESOLUTION → INTERMISSION → LOADING → REVEAL → ACTIVE cycle gave zero appearances. That is what an account which has already seen all three looks like - the label still holds "Tap USE to examine a body" from an earlier session - so it settles nothing either way. A fresh account is the test.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
