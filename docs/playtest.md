@@ -108,8 +108,8 @@ Run from a LocalScript or the client command bar.
 
 ## Only after all of the above passes
 
-- [ ] Walk each map floor by floor: every staircase climbs smoothly with no lip at the top, railings stop a stumble into a stairwell, doorways fit a running player
-- [ ] Lockdown shuts some room doors but every room still has a way out
+- [x] Walk each map floor by floor: every staircase climbs smoothly with no lip at the top, railings stop a stumble into a stairwell, doorways fit a running player
+- [x] Lockdown shuts some room doors but every room still has a way out
 - [ ] Walk each map: lamps light the rooms and go dark for Lights Out, furniture blocks no route,
       spawn or coin
 - [ ] Listen to all 22 cues in a round; swap any that miss the brief ([assets](assets.md))
