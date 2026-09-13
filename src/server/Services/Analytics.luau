@@ -90,13 +90,15 @@ function Analytics.PlayerDeath(
     map: string,
     pos: Vector3
 )
+    -- Roblox rejects a custom field containing a comma, a quote or an
+    -- apostrophe, and drops the whole event, so the cell reads 4x4 not 4,4
     local cell = Config.HEATMAP_CELL
     local cx, cz = math.floor((pos.X + 480) / cell), math.floor((pos.Z + 300) / cell)
     custom(
         plr,
         "player_death",
         math.floor(timeAlive),
-        fields(role, killerRole, ("%s:%d,%d"):format(map, cx, cz))
+        fields(role, killerRole, ("%s:%dx%d"):format(map, cx, cz))
     )
 end
 
