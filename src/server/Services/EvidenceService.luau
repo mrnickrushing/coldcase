@@ -3,6 +3,7 @@ local Shared = game.ReplicatedStorage.Shared
 local Config = require(Shared.Config)
 local FibreBands = require(Shared.FibreBands)
 local Remotes = game.ReplicatedStorage.Remotes
+local Reach = require(script.Parent.Reach)
 local EventService = require(script.Parent.EventService)
 local AudioService = require(script.Parent.AudioService)
 local DataService = require(script.Parent.DataService)
@@ -148,11 +149,7 @@ function EvidenceService:RemoveBody(model: Instance)
 end
 
 local function inRange(plr: Player, model: Model): boolean
-    local char = plr.Character
-    return char ~= nil
-        and model.Parent ~= nil
-        and (char:GetPivot().Position - model:GetPivot().Position).Magnitude
-            <= Config.EXAMINE_RANGE
+    return Reach.Within(plr, model, Config.EXAMINE_RANGE)
 end
 
 function EvidenceService:Examine(plr: Player, model: Instance)

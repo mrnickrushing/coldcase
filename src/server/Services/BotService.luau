@@ -9,6 +9,7 @@ local Players = game:GetService("Players")
 local Config = require(game.ReplicatedStorage.Shared.Config)
 local MapPlan = require(game.ReplicatedStorage.Shared.MapPlan)
 local FibreBands = require(game.ReplicatedStorage.Shared.FibreBands)
+local Shuffle = require(game.ReplicatedStorage.Shared.Shuffle)
 local RoleService = require(script.Parent.RoleService)
 local CombatService = require(script.Parent.CombatService)
 
@@ -80,22 +81,13 @@ local function pick(list: { string }): string
     return list[math.random(#list)]
 end
 
-local function shuffled(list: { string }): { string }
-    local out = table.clone(list)
-    for i = #out, 2, -1 do
-        local j = math.random(i)
-        out[i], out[j] = out[j], out[i]
-    end
-    return out
-end
-
 -- The fibre clue names the colour band of the killer's shirt, so a round where
 -- three NPCs wear the same band narrows almost nothing. Shirts are dealt one
 -- band at a time, and never handed out twice.
 local function shirtDeck(): { string }
     local byBand: { [string]: { string } } = {}
     local order = {}
-    for _, hex in shuffled(SHIRTS) do
+    for _, hex in Shuffle.Shuffled(SHIRTS) do
         local band = FibreBands.Describe(Color3.fromHex(hex):ToHSV())
         if not byBand[band] then
             byBand[band] = {}
@@ -273,7 +265,7 @@ function BotService:Spawn(count: number): { any }
     if count <= 0 then
         return made
     end
-    local names = shuffled(NAMES)
+    local names = Shuffle.Shuffled(NAMES)
     local shirts = shirtDeck()
     local lobby = workspace:FindFirstChild("Lobby")
     local spawnPart = lobby and lobby:FindFirstChild("LobbySpawn")

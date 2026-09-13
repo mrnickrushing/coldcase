@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local Config = require(game.ReplicatedStorage.Shared.Config)
+local Shuffle = require(game.ReplicatedStorage.Shared.Shuffle)
 local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
 local CosmeticService = require(script.Parent.CosmeticService)
@@ -9,13 +10,6 @@ local Remotes = game.ReplicatedStorage.Remotes
 local RoleService = {}
 local roles = {} -- [Player] = "murderer" | "sheriff" | "innocent" | "hero" | ...
 local sinceMurderer = {} -- [Player] = rounds since they last held the knife
-
-local function shuffle(t)
-    for i = #t, 2, -1 do
-        local j = math.random(i)
-        t[i], t[j] = t[j], t[i]
-    end
-end
 
 -- Weighted draw so nobody gets the knife twice in three rounds while a
 -- friend goes ten without it.
@@ -54,8 +48,8 @@ function RoleService:Assign(participants: { Player })
     for _, plr in participants do
         table.insert(isFirstRound(plr) and newcomers or pool, plr)
     end
-    shuffle(pool)
-    shuffle(newcomers)
+    Shuffle.Shuffle(pool)
+    Shuffle.Shuffle(newcomers)
     while #pool < murderers + sheriffs and #newcomers > 0 do
         table.insert(pool, table.remove(newcomers))
     end

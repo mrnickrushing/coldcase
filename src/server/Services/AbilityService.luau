@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Config = require(game.ReplicatedStorage.Shared.Config)
+local Reach = require(script.Parent.Reach)
 local Remotes = game.ReplicatedStorage.Remotes
 local RoleService = require(script.Parent.RoleService)
 local EvidenceService = require(script.Parent.EvidenceService)
@@ -25,11 +26,11 @@ local function position(plr: Player): Vector3?
     return char and char:GetPivot().Position
 end
 
+-- Deliberately no PING_ALLOWANCE: that slack is for the reach checks a moving
+-- player disputes (knife, gun pickup, coins). Examining and reviving are
+-- stationary, so they use the plain range.
 local function near(plr: Player, model: Instance): boolean
-    local here = position(plr)
-    return here ~= nil
-        and model.Parent ~= nil
-        and (here - (model :: Model):GetPivot().Position).Magnitude <= Config.EXAMINE_RANGE
+    return Reach.Within(plr, model, Config.EXAMINE_RANGE)
 end
 
 ---------------------------------------------------------------- Revive

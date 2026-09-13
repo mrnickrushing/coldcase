@@ -11,6 +11,7 @@
 ]]
 local ServerStorage = game:GetService("ServerStorage")
 local MapPlan = require(game.ReplicatedStorage.Shared.MapPlan)
+local Shuffle = require(game.ReplicatedStorage.Shared.Shuffle)
 
 local CELL, H = MapPlan.CELL, MapPlan.FLOOR_HEIGHT
 local WALL = 1.4 -- interior wall thickness
@@ -1230,11 +1231,10 @@ local function dressRooms(
             and rng:NextNumber() < math.min(0.9, (style.density or 0) * 1.25)
         then
             -- One piece with its back to a wall (or a railing, outdoors)
-            local order = table.clone(SIDES)
-            for i = #order, 2, -1 do
-                local j = rng:NextInteger(1, i)
-                order[i], order[j] = order[j], order[i]
-            end
+            -- Random has NextInteger but is nominally typed, so it does not
+            -- match Shuffle.Generator structurally. The seed still decides the
+            -- order, which is what keeps a map dressing itself the same way.
+            local order = Shuffle.Shuffled(SIDES, rng :: any)
             for _, side in order do
                 local kind = info.kinds[side]
                 if

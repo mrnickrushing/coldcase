@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
+local Shuffle = require(ReplicatedStorage.Shared.Shuffle)
 local Remotes = ReplicatedStorage.Remotes
 local RoleService = require(script.Parent.RoleService)
 local EventService = require(script.Parent.EventService)
@@ -182,10 +183,7 @@ function RoundService:LoadVotedMap()
             table.insert(spawns, part)
         end
     end
-    for i = #spawns, 2, -1 do
-        local j = math.random(i)
-        spawns[i], spawns[j] = spawns[j], spawns[i]
-    end
+    Shuffle.Shuffle(spawns)
 
     -- Spawn with a minimum pairwise separation, or someone dies before they
     -- have moved. When no spawn clears the minimum, take the one farthest

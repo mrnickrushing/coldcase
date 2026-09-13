@@ -10,6 +10,7 @@ local Catalog = require("./src/shared/Catalog")
 local SoundCues = require("./src/shared/SoundCues")
 local Products = require("./src/shared/Products")
 local Config = require("./src/shared/Config")
+local Shuffle = require("./src/shared/Shuffle")
 local fs = require("@lune/fs")
 
 local passed, failed = 0, 0
@@ -395,6 +396,65 @@ test("every map offers a spawn pad for a full server", function()
             ("%s places only %d spawns for %d players"):format(name, #points.spawns, FULL_SERVER)
         )
     end
+end)
+
+---------------------------------------------------------------- Shuffle
+test("a shuffle keeps every element exactly once", function()
+    local source = {}
+    for i = 1, 50 do
+        source[i] = i
+    end
+    local out = Shuffle.Shuffled(source)
+    eq(#out, #source, "length")
+    local seen = {}
+    for _, v in out do
+        assert(not seen[v], "duplicated " .. tostring(v))
+        seen[v] = true
+    end
+    for i = 1, 50 do
+        assert(seen[i], "lost " .. tostring(i))
+    end
+end)
+
+test("Shuffled leaves the original alone and Shuffle does not", function()
+    local source = { "a", "b", "c", "d", "e", "f", "g", "h" }
+    local copy = table.clone(source)
+    Shuffle.Shuffled(source)
+    eq(table.concat(source, ""), table.concat(copy, ""), "Shuffled must not touch its input")
+
+    -- In place returns the same table, not a new one
+    local same = Shuffle.Shuffle(source)
+    assert(same == source, "Shuffle should return the table it shuffled")
+end)
+
+-- BuildMaps seeds off the map name so a map always dresses itself the same
+-- way. If a seeded shuffle stopped being reproducible, maps would quietly
+-- rebuild differently every server start.
+--
+-- Lune has no Random datatype, so this drives the same code path with a
+-- deterministic stub. Shuffle only ever calls NextInteger, which is why it
+-- takes a structural Generator rather than a Roblox Random.
+local function seeded(seed: number)
+    local state = seed
+    return {
+        NextInteger = function(_self, lo: number, hi: number): number
+            state = (state * 1103515245 + 12345) % 2147483648
+            return lo + state % (hi - lo + 1)
+        end,
+    }
+end
+
+test("a seeded shuffle is reproducible", function()
+    local source = {}
+    for i = 1, 30 do
+        source[i] = i
+    end
+    local a = Shuffle.Shuffled(source, seeded(12345))
+    local b = Shuffle.Shuffled(source, seeded(12345))
+    local c = Shuffle.Shuffled(source, seeded(99999))
+    eq(table.concat(a, ","), table.concat(b, ","), "same seed, same order")
+    assert(table.concat(a, ",") ~= table.concat(c, ","), "different seeds should differ")
+    eq(#a, #source, "length preserved")
 end)
 
 ---------------------------------------------------------------- round results
