@@ -1,3 +1,4 @@
+--!strict
 -- Fisher-Yates, once, instead of four hand-written copies.
 -- Pure module: requires nothing, so Lune can test it.
 --

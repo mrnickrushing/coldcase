@@ -1,3 +1,4 @@
+--!strict
 -- COLD CASE · the only place UI colours and fonts are defined.
 -- Handbook rule: two fonts in the whole game, one colour per role.
 local Theme = {}

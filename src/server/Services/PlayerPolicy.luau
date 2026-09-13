@@ -1,3 +1,4 @@
+--!strict
 -- Roblox policy APIs for paid random items and paid item trading.
 -- Resolved once per player on join and published as Player attributes, so the
 -- client can explain why a feature is unavailable. Fails closed: while the

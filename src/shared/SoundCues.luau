@@ -1,3 +1,4 @@
+--!strict
 -- COLD CASE · the twenty-two sound cues from the production handbook.
 -- In a deduction game sound is information, so every cue has a deliberate
 -- range. `range = nil` is 2D (local to one client). A number is the audible

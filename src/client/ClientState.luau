@@ -1,3 +1,4 @@
+--!strict
 -- What this client knows about itself. Controllers read and subscribe here
 -- instead of each listening to the same remotes.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

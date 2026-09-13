@@ -1,3 +1,4 @@
+--!strict
 -- COLD CASE · the ninety-day live-ops calendar as data.
 -- Pure module: no Roblox services, so it runs under Lune tests too.
 -- Every gate takes a launch day number; the server decides what "today" is.

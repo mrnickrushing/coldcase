@@ -1,3 +1,4 @@
+--!strict
 -- One proximity check for the server-side actions that re-validate after a
 -- yield. EvidenceService and AbilityService each had their own copy of this
 -- with the same guards and the same constant under different names, and both

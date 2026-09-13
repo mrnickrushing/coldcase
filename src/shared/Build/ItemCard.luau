@@ -1,3 +1,4 @@
+--!strict
 -- One item tile, used by the crate reel, direct-buy shelf, inventory and trade.
 local Theme = require(script.Parent.Parent.Theme)
 local Catalog = require(script.Parent.Parent.Catalog)

@@ -1,3 +1,4 @@
+--!strict
 -- COLD CASE · every tuning number lives here
 return {
     -- Round

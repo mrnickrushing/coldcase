@@ -1,3 +1,4 @@
+--!strict
 --[[
   COLD CASE · NoticeHud builder. Sits above every menu.
     Hint   (TextLabel)  onboarding ghost prompt

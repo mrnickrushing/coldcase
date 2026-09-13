@@ -1,3 +1,4 @@
+--!strict
 -- The 24 launch items plus seasonal drops. Rarity, kind and value are FIXED
 -- per item — never roll a name and a rarity independently.
 -- `season` marks an item that only drops from that season's crate and is

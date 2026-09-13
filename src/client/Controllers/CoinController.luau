@@ -1,3 +1,4 @@
+--!strict
 -- Asks for a coin when standing on a node. Sends a node id — never an amount.
 -- The server measures against its own copy of the character, which trails
 -- the client by the player's ping, so an ask can be refused while the client

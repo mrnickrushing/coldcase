@@ -1,3 +1,4 @@
+--!strict
 -- Buckets a colour into a broad fabric band for the fibre clue.
 -- A clue must narrow the field, never name one person.
 -- Pure module: takes HSV in 0..1 (Color3:ToHSV), no Roblox services.

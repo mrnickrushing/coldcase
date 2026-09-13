@@ -1,3 +1,4 @@
+--!strict
 -- A round participant is a Player or an NPC from BotService. NPCs are plain
 -- tables carrying the few Player fields round code reads (Name, DisplayName,
 -- UserId, Character), so anything that talks to a client, a profile or

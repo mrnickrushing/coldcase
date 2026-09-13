@@ -1,3 +1,4 @@
+--!strict
 -- COLD CASE · uploaded mesh and texture ids for every generated model.
 -- BuildAssets rebuilds ServerStorage.Cosmetics, ServerStorage.Props and
 -- ReplicatedStorage.PetModels from this when the place file lacks them.

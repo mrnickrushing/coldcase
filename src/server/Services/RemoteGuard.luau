@@ -1,3 +1,4 @@
+--!strict
 -- Every client -> server remote goes through here (Handbook §06 · Remote spam).
 -- A ceiling per player across every remote, and a tighter one per remote from
 -- Config.REMOTE_LIMITS. Over-limit calls are rejected silently; sustained

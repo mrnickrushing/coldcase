@@ -1,3 +1,4 @@
+--!strict
 -- Fixed one-second window rate limiter with strike tracking.
 -- Pure module (no Roblox services) so it can be unit tested under Lune.
 local RateLimiter = {}

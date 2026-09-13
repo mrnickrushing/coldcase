@@ -1,3 +1,4 @@
+--!strict
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Config = require(game.ReplicatedStorage.Shared.Config)

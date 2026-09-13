@@ -1,3 +1,4 @@
+--!strict
 -- Particle looks for Effect items (worn as an aura at the feet) and knife
 -- effects (Shop.EFFECTS, on the blade while it is drawn). Built-in particle
 -- textures only. Nothing here glows: LightEmission is 0 so a cosmetic never

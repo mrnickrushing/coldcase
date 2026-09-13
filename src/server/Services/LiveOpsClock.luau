@@ -1,3 +1,4 @@
+--!strict
 -- Server-side "what launch day is it". In Studio, set the attribute
 -- ServerStorage.LiveOpsDay (number) to preview any day of the calendar.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

@@ -1,3 +1,4 @@
+--!strict
 -- Direct buys, effect re-rolls and crate pricing, shared so the client shows
 -- exactly the prices the server charges.
 local Catalog = require(script.Parent.Catalog)

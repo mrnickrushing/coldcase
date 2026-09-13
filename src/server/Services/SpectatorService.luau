@@ -1,3 +1,4 @@
+--!strict
 -- Dead participants follow the living. Two minutes staring at your own body
 -- is the biggest quit risk in a round game. The client owns the camera; the
 -- server only says who is left to watch. Who is alive is public already (the

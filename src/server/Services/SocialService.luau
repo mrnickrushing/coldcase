@@ -1,3 +1,4 @@
+--!strict
 -- The Radio and Emote passes, and player reports.
 -- Handbook rule: sell identity, not advantage. Radio is refused to the dead
 -- during a round — a spectator feeding the living breaks deduction.

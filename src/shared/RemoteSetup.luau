@@ -1,3 +1,4 @@
+--!strict
 -- Creates every RemoteEvent in ReplicatedStorage.Remotes. Idempotent.
 -- Bootstrap calls it on server start; it can also be run from the command bar:
 --   require(game.ReplicatedStorage.Shared.RemoteSetup)()

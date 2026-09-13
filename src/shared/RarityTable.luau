@@ -1,3 +1,4 @@
+--!strict
 -- Pull weights for The Locker. Publish these in-game; Roblox requires
 -- disclosure on paid random items and visible odds increase pull rates.
 return {

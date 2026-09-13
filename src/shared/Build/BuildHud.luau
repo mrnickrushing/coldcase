@@ -1,3 +1,4 @@
+--!strict
 --[[
   COLD CASE · RoundHud builder (Production Handbook §01)
   HudController calls this at runtime when PlayerGui has no RoundHud, so a

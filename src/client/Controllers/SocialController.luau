@@ -1,3 +1,4 @@
+--!strict
 -- StarterPlayerScripts/Controllers/SocialController
 -- The Radio and Emote pass dock for owners (bottom left, above the evidence
 -- log), and emote labels over heads for everyone. Radio lines arrive in the

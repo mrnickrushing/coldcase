@@ -1,3 +1,4 @@
+--!strict
 -- Plays the handbook's twenty-two cues. Server-emitted cues arrive on
 -- PlayCue (already range-filtered); the rest are triggered locally from
 -- events this client is entitled to know about.

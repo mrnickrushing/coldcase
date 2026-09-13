@@ -1,3 +1,4 @@
+--!strict
 -- Who plays the next round. Each player chooses in the lobby to play now
 -- (NPCs fill a quiet server) or to wait for a round of real players. Pure, so
 -- RoundService decides with it and the lobby countdown mirrors it exactly.

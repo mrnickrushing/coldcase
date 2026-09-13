@@ -1,3 +1,4 @@
+--!strict
 --[[
   COLD CASE · lighting. Bright daylight, a warm grade, a little glow on neon.
   Bootstrap runs this on server start, before EventService captures the base

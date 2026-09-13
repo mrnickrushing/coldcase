@@ -1,3 +1,4 @@
+--!strict
 -- Robux gamepasses and developer products (Design Bible · Robux).
 -- Replace each `id = 0` with the real id from the Creator Dashboard. An id of
 -- 0 is never offered or granted.

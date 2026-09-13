@@ -1,3 +1,4 @@
+--!strict
 -- Server side of the sound spec (Handbook §04).
 -- Positional cues are sent only to players inside the cue's range. Parenting
 -- a replicated Sound at the source would hand an exploiter a live map of every

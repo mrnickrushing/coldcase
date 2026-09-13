@@ -1,3 +1,4 @@
+--!strict
 -- StarterPlayerScripts/Controllers/NoticeController
 -- Ghost hints (Handbook §02) and short toasts, drawn above every menu.
 local CollectionService = game:GetService("CollectionService")

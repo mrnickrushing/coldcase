@@ -1,3 +1,4 @@
+--!strict
 -- StarterPlayerScripts/Controllers/SpectatorController
 -- Dead players watch the living instead of their own body. The server sends
 -- who is left; the camera is ours.

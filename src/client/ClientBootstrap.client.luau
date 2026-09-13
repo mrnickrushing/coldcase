@@ -1,3 +1,4 @@
+--!strict
 -- StarterPlayerScripts/ClientBootstrap (LocalScript)
 local Controllers = script.Parent:WaitForChild("Controllers")
 for _, module in Controllers:GetChildren() do
