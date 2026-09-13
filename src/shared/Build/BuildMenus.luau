@@ -519,7 +519,14 @@ return function(parent: Instance?)
         pad(root, 26)
         local h = header(root, "EVIDENCE CRATE", "THE LOCKER")
 
-        local tabs = frame("Tabs", h, UDim2.new(0, 360, 0, 36), UDim2.new(1, -360, 0, 0), nil, true)
+        local tabs = frame(
+            "Tabs",
+            h,
+            UDim2.new(0, 360, 0, Theme.TAP_MIN),
+            UDim2.new(1, -360, 0, 0),
+            nil,
+            true
+        )
         list(tabs, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Right)
         for i, key in { "Locker", "Seasonal" } do
             local t =
@@ -638,8 +645,9 @@ return function(parent: Instance?)
         select.BackgroundTransparency = 1
         select.Size = UDim2.new(1, 0, 1, -Theme.TAP_MIN)
         select.Parent = card
-        local eq = button("Equip", card, "EQUIP", UDim2.new(1, -16, 0, 36), RAISED, Theme.AMBER)
-        eq.Position = UDim2.new(0, 8, 1, -42)
+        local eq =
+            button("Equip", card, "EQUIP", UDim2.new(1, -16, 0, Theme.TAP_MIN), RAISED, Theme.AMBER)
+        eq.Position = UDim2.new(0, 8, 1, -(Theme.TAP_MIN + 6))
         stroke(eq, Color3.fromHex("2b323c"))
 
         local status = text("Status", root, "", 12, Theme.SOFT)

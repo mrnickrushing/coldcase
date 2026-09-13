@@ -16,8 +16,8 @@ return {
     -- Role scaling
     SECOND_MURDERER_AT = 12,
     SECOND_SHERIFF_AT = 14,
-    MEDIC_AT = 10,
-    SNITCH_AT = 10,
+    MEDIC_AT = 6, -- NPC rounds seat 6: below this the role never existed
+    SNITCH_AT = 6,
     SNITCH_REVEAL_AT = 30, -- seconds remaining
     MURDERER_COOLOFF = 3, -- rounds of reduced odds after being murderer
 
