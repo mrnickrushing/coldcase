@@ -27,7 +27,7 @@ workflow — no manual Studio setup is needed.)
 
 - [ ] Map vote panel is open on arrival; votes update for everyone
 - [ ] A brand-new player gets a free Locker pull about five seconds after landing
-- [ ] Intermission counts down; the round starts; everyone teleports to separated spawns
+- [x] Intermission counts down; the round starts; everyone teleports to separated spawns
 - [ ] Role card shows for 4s, movement locked during it
 - [ ] A player on their first round is never murderer or sheriff (when veterans are present)
 - [ ] Ghost hints appear once each: move, coins, examine — and not again after a rejoin
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 33 ticked, 46 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 34 ticked, 45 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 26 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 25 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 8 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -145,6 +145,8 @@ Counting ticks is misleading on its own, so here is the split. 33 ticked, 46 not
 > **A round payout is never just the base numbers.** Checking that rewards are paid in full means reconciling the whole multiplier, and the pieces are spread across three files. `Grant` applies one combined factor with `math.floor(coins * mult + 0.5)`, not a chain of separate roundings, and `CoinMultiplier` builds it from the live-ops boost, the friend bonus, VIP, and Last Call. Two observed payouts: a win with survival, `COINS_WIN 90 + COINS_SURVIVE 40 = 130`, paid 325; a loss, `COINS_LOSS 30`, paid 75. Both are exactly 2.5x, which is VIP's 1.25 times Last Call's 2 - the double-coin weekend is days 60-62 and the server is on day 3, so it contributes nothing. An unexplained payout is worth chasing to an exact figure before ticking anything: the first guess here was the coin boost, and it was wrong.
 >
 > **The settlement payout inherits Last Call's doubling.** `PayOut` is called at `RoundService:541`, one line before `SetLastCall(false)` at 542, so the end-of-round win/loss/survive coins are granted while `lastCall` is still set - and `round` is listed in `LAST_CALL_SOURCES` alongside pickup, examine and revive. It is deliberate by the letter of the code, but it has a consequence worth a design decision: `lastCallFired` resets every round, so a round that ends before the thirty-second mark settles at 1.25x while the same win in a longer round settles at 2.5x. Identical outcomes pay double based only on how long the round ran. Not changed - which way that should go is a call about the economy, not a bug to fix.
+
+> **The spawn separation was measured at six, and six is the only headcount reachable alone.** At REVEAL - the first moment everyone is placed, and before anyone has walked, since movement is locked - all fifteen pairs cleared the sixty stud minimum, closest 63.2. The placements also spanned three Y bands, 3.0, 19.2 and 35.2, so participants start on different floors rather than in one cluster. That is the good case and it is the only one a solo session produces: `Lobby.Plan` fills to `BOT_FILL_TO`, so an NPC round is six. The separation is known to fail at twelve, where the pads cannot deliver it at all - measured exactly in the spawn commits - and that headcount needs twelve humans, so it is not reachable here.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
