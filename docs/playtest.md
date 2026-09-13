@@ -36,7 +36,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] Sheriff click fires; hitting an innocent kills the sheriff too
 - [ ] Sheriff death drops a pistol; an innocent can take it and becomes Hero
 - [x] Body appears; E within 14 studs, after a 1.5s channel, returns three or four clue lines
-- [ ] Examining after 20s, or during Lights Out, returns "The trail has gone cold."
+- [x] Examining after 20s, or during Lights Out, returns "The trail has gone cold."
 - [ ] Walking over a coin collects it once; coins land on the HUD
 - [x] Event fires at the 45% mark, once, banner fades in and out, lighting restores after
 - [ ] Round ends on murderer death, wipe, or timeout; results card names the murderer
