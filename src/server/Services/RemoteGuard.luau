@@ -18,6 +18,11 @@ end
 local global = newLimiter(Config.REMOTE_CALLS_PER_SEC)
 local limiters: { RateLimiter.RateLimiter } = { global }
 
+-- A flood arrives as hundreds of queued calls, and the limiter keeps saying
+-- "kick" for every one of them. Kick the player once and drop the rest, or the
+-- log fills with identical disconnect lines and buries everything else.
+local kicked: { [Player]: boolean } = {}
+
 function RemoteGuard.Connect(remoteName: string, handler: (Player, ...any) -> ())
     local remote = Remotes:FindFirstChild(remoteName) :: RemoteEvent
     assert(remote, "RemoteGuard: no remote named " .. remoteName)
@@ -33,7 +38,10 @@ function RemoteGuard.Connect(remoteName: string, handler: (Player, ...any) -> ()
             allowed, kick = own:Hit(plr, now)
         end
         if kick then
-            plr:Kick("Disconnected.")
+            if not kicked[plr] then
+                kicked[plr] = true
+                plr:Kick("Disconnected.")
+            end
             return
         end
         if not allowed then
@@ -57,6 +65,7 @@ function RemoteGuard.IsFiniteVector(v: any): boolean
 end
 
 Players.PlayerRemoving:Connect(function(plr)
+    kicked[plr] = nil
     for _, limiter in limiters do
         limiter:Remove(plr)
     end
