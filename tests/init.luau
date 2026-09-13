@@ -735,6 +735,29 @@ test("cosmetic particles never emit light", function()
     eq(tonumber(influence), 1, "LightInfluence")
 end)
 
+---------------------------------------------------------------- touch layout
+-- The social dock is drawn bottom-left by SocialController; the touch action
+-- buttons are anchored to the right edge by InputController. Neither file can
+-- see the other, so the inset the dock budgets for has to match the real
+-- leftmost button or they overlap on a short screen - which is exactly what
+-- happened at 568x320, where the dock covered a corner of DRAG.
+test("the dock is sized to clear the leftmost touch button", function()
+    local input = fs.readFile("src/client/Controllers/InputController.luau")
+    local social = fs.readFile("src/client/Controllers/SocialController.luau")
+
+    local insets = {}
+    for n in input:gmatch("UDim2%.new%(1, %-(%d+), 1, %-%d+%)") do
+        table.insert(insets, tonumber(n))
+    end
+    assert(#insets > 0, "found no action button positions in InputController")
+    table.sort(insets)
+    local leftmost = insets[#insets] -- the biggest inset reaches furthest left
+
+    local budget = tonumber(social:match("local maxWidth = width %- (%d+)"))
+    assert(budget, "SocialController no longer budgets the dock against a button inset")
+    eq(budget, leftmost, "dock width budget vs the leftmost button's inset")
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")

@@ -194,9 +194,18 @@ local function render()
 
     -- Sits above the evidence log, which collapses on narrow screens
     local camera = workspace.CurrentCamera
-    local narrow = camera ~= nil and camera.ViewportSize.X < Theme.NARROW_WIDTH
+    local width = camera and camera.ViewportSize.X or 1920
+    local narrow = width < Theme.NARROW_WIDTH
+    -- Bottom edge sits 8px above the evidence log, which collapses when narrow
     dock.Position = UDim2.new(0, 16, 1, narrow and -120 or -174)
-    dock.Size = UDim2.new(0, narrow and 240 or 340, 0, Theme.TAP_MIN * 2 + 8)
+    -- The touch action buttons are anchored to the right edge, and the
+    -- leftmost of them (DRAG) starts 250px in. On a short landscape screen the
+    -- dock's right edge reached underneath it - at 568x320 it covered a 38x4px
+    -- corner of DRAG - so the dock never grows past the gap that leaves.
+    -- 250 is DRAG's inset, 16 the dock's own left margin, 8 a gap.
+    local maxWidth = width - 250 - 16 - 8
+    dock.Size =
+        UDim2.new(0, math.clamp(maxWidth, 200, narrow and 240 or 340), 0, Theme.TAP_MIN * 2 + 8)
 end
 
 for _, key in { "data", "role", "screen", "spectating" } do

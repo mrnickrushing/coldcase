@@ -70,7 +70,7 @@ workflow — no manual Studio setup is needed.)
 
 - [ ] FIRE / THROW / REVIVE appear only for the roles that can use them
 - [ ] USE relabels to STAB / EXAMINE / TAKE as the context changes
-- [ ] Every button is comfortably thumb-sized, and the radio and emote dock covers none of them
+- [x] Every button is comfortably thumb-sized, and the radio and emote dock covers none of them
 
 ## Exploit sweep — before any public test
 
