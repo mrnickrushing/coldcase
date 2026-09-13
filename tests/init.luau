@@ -758,6 +758,38 @@ test("the dock is sized to clear the leftmost touch button", function()
     eq(budget, leftmost, "dock width budget vs the leftmost button's inset")
 end)
 
+---------------------------------------------------------------- round loop
+-- The round loop is a single coroutine. An uncaught error inside it ends that
+-- coroutine permanently: the loop stops, and the server sits in whatever state
+-- it was in until it shuts down, for every player on it. Nothing watches it,
+-- so the tick has to be wrapped - and the wrapping is the kind of thing a
+-- later refactor quietly drops, because nothing looks wrong without it.
+test("the round loop cannot be killed by one bad tick", function()
+    local src = fs.readFile("src/server/Services/RoundService.luau")
+
+    local body = src:match("function RoundService:Start%(%)(.-)\nend")
+    assert(body, "could not find RoundService:Start")
+
+    assert(
+        body:find("xpcall", 1, true) or body:find("pcall", 1, true),
+        "Start's loop no longer guards its tick - one error would stop the round loop for good"
+    )
+    assert(
+        body:find("debug.traceback", 1, true),
+        "Start guards the tick but discards the traceback, which makes the failure unreadable"
+    )
+    -- and the guard has to be inside the loop, not around it: wrapping the
+    -- whole `while true` would still exit for good on the first error.
+    local loopAt = body:find("while true", 1, true)
+    local guardAt = body:find("xpcall", 1, true) or body:find("pcall", 1, true)
+    assert(loopAt and guardAt and guardAt > loopAt, "the guard sits outside the loop")
+
+    assert(
+        src:find("function RoundService:Tick", 1, true),
+        "Start no longer calls out to a tick function"
+    )
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")

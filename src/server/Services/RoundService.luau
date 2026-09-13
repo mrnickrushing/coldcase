@@ -343,43 +343,75 @@ local function murdererNames(): { string }
     return names
 end
 
+-- Everything below runs in one coroutine, and an uncaught error inside it
+-- would end that coroutine for good: the round loop simply stops and the
+-- server sits in whatever state it was in until it shuts down, for everyone
+-- on it. Nothing else watches the loop, so a bad tick has to be survivable
+-- here. The error is logged with a traceback rather than swallowed, and the
+-- round is dropped back to the lobby so the next cycle starts from a known
+-- state instead of half a round.
+local function recover(self, err: string)
+    warn("[ColdCase] round loop error, returning to the lobby:\n" .. tostring(err))
+    -- ReturnToLobby must not be able to kill the loop either
+    local ok, cleanupErr = pcall(function()
+        self:ReturnToLobby()
+    end)
+    if not ok then
+        warn("[ColdCase] cleanup after that error also failed:\n" .. tostring(cleanupErr))
+    end
+    for _, c in diedConnections do
+        c:Disconnect()
+    end
+    diedConnections = {}
+    alive = {}
+    pendingBots = 0
+    setState("INTERMISSION", Config.INTERMISSION)
+end
+
 function RoundService:Start()
     task.spawn(function()
         while true do
             task.wait(Config.SIGHTLINE_SAMPLE)
-            if os.clock() < stateEnds then
-                if state == "ACTIVE" then
-                    local left = stateEnds - os.clock()
-                    if
-                        not eventFired
-                        and roundLength - left >= roundLength * Config.EVENT_AT_PCT
-                    then
-                        eventFired = true
-                        EventService:FireWeighted(mapIsIndoor)
-                    end
-                    if not snitchRevealed and left <= Config.SNITCH_REVEAL_AT then
-                        snitchRevealed = true
-                        RoleService:RevealSnitch()
-                    end
-                    -- Last Call: coins double and the murderer is outlined for
-                    -- everyone. Forces an ending instead of a hide-out.
-                    if not lastCallFired and left <= Config.LAST_CALL_AT then
-                        lastCallFired = true
-                        EconomyService:SetLastCall(true)
-                        Remotes.EventFired:FireAllClients(
-                            "LAST_CALL",
-                            math.ceil(left),
-                            murdererNames()
-                        )
-                    end
-                    -- Witness clues need real observation time, not a facing check
-                    EvidenceService:SampleSightlines(aliveList(), os.clock())
-                end
-                continue
+            local ok, err = xpcall(function()
+                self:Tick()
+            end, debug.traceback)
+            if not ok then
+                recover(self, err)
             end
-            self:Advance()
         end
     end)
+end
+
+-- One tick of the round loop. Split out so Start's coroutine has something it
+-- can wrap: the per-tick work matters as much as the transition, since an
+-- event, a snitch reveal or a sightline sample erroring would kill the loop
+-- just as dead as Advance would.
+function RoundService:Tick()
+    if os.clock() < stateEnds then
+        if state == "ACTIVE" then
+            local left = stateEnds - os.clock()
+            if not eventFired and roundLength - left >= roundLength * Config.EVENT_AT_PCT then
+                eventFired = true
+                EventService:FireWeighted(mapIsIndoor)
+            end
+            if not snitchRevealed and left <= Config.SNITCH_REVEAL_AT then
+                snitchRevealed = true
+                RoleService:RevealSnitch()
+            end
+            -- Last Call: coins double and the murderer is outlined for
+            -- everyone. Forces an ending instead of a hide-out.
+            if not lastCallFired and left <= Config.LAST_CALL_AT then
+                lastCallFired = true
+                EconomyService:SetLastCall(true)
+                Remotes.EventFired:FireAllClients("LAST_CALL", math.ceil(left), murdererNames())
+            end
+            -- Witness clues need real observation time, not a facing check
+            EvidenceService:SampleSightlines(aliveList(), os.clock())
+        end
+        -- The state has not run out yet, so there is nothing to advance
+        return
+    end
+    self:Advance()
 end
 
 function RoundService:Advance()
