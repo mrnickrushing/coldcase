@@ -56,7 +56,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] Holding F for 2s drags a body at reduced walk speed; releasing drops it
 - [x] Last Call fires at 30s: banner, coins double, murderer outlined through walls
 - [x] Lights Out shrinks the vision radius (fog at 88 studs), not just brightness
-- [ ] Fog Bank hides name tags past 40 studs
+- [x] Fog Bank hides name tags past 40 studs
 - [ ] With `LiveOpsDay = 28`, TRADE opens a table between two players who both ask
 - [x] Dying puts the camera on a living player; ‹ › (or ← →) switches; respawning in the lobby keeps
       spectating; a revive or the end of the round hands the camera back
@@ -124,12 +124,12 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 30 ticked, 49 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 31 ticked, 48 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 30 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
-| Needs two or more real players | 9 | Trading, vote tallies across clients, the results roster, radio reaching everyone, the closed test. A second client is the only way. The radio's "the dead cannot send one mid-round" half belongs here too: health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
+| Testable in Studio, not yet done | 29 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Needs two or more real players | 8 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
 | Needs human eyes or ears | 6 | Whether the cues match the brief, whether a weapon sits right in the hand, whether the art reads. No probe settles taste. |

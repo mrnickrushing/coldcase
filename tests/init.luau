@@ -790,6 +790,49 @@ test("the round loop cannot be killed by one bad tick", function()
     )
 end)
 
+------------------------------------------------------------ playtest triage
+-- docs/playtest.md carries a triage table: a headline count of ticked and
+-- unticked lines, then a split of everything not yet ticked into buckets by
+-- what it would actually take to settle it. Both are maintained by hand, one
+-- line at a time, and nothing about a wrong number looks wrong from the page.
+-- The table drifted by one for several sessions and was caught by accident,
+-- not by reading it - the radio line had been counted once in a bucket's list
+-- and then a second time for its other half. A count that disagrees with the
+-- checkboxes is worse than no count, because it gets quoted as progress.
+test("the playtest triage table agrees with its own checkboxes", function()
+    local doc = fs.readFile("docs/playtest.md")
+
+    local ticked, unticked = 0, 0
+    local buckets = {}
+    for line in doc:gmatch("[^\n]+") do
+        if line:find("^%- %[x%]") then
+            ticked += 1
+        elseif line:find("^%- %[ %]") then
+            unticked += 1
+        end
+        -- The second column of a triage row is its count. The header row and
+        -- the `| --- |` rule hold no digits there, so they skip themselves.
+        local n = line:match("^| [^|]+ | (%d+) |")
+        if n then
+            table.insert(buckets, tonumber(n))
+        end
+    end
+
+    local saidTicked, saidUnticked = doc:match("(%d+) ticked, (%d+) not")
+    assert(saidTicked, "the triage headline no longer states a ticked/not split")
+    eq(tonumber(saidTicked), ticked, "headline ticked count vs the real checkboxes")
+    eq(tonumber(saidUnticked), unticked, "headline unticked count vs the real checkboxes")
+
+    assert(#buckets > 0, "found no triage buckets to add up")
+    local total = 0
+    for _, n in buckets do
+        total += n
+    end
+    -- Every unticked line sits in exactly one bucket, so the split has to
+    -- account for all of them and no more.
+    eq(total, unticked, "triage buckets summed vs the unticked lines")
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")
