@@ -73,11 +73,14 @@ function RoleService:Assign(participants: { Player })
         end
     end
     -- An NPC medic never revives anyone and an NPC snitch's reveal reaches no
-    -- screen, so these two go to a person whenever the round has one
+    -- screen, so these two lean toward a person. Only a lean: preferring a
+    -- human every time handed the same player medic round after round.
     local function drawPreferHuman(): Player?
-        for i = #pool, 1, -1 do
-            if not Participant.IsBot(pool[i]) then
-                return table.remove(pool, i)
+        if math.random() < 0.5 then
+            for i = #pool, 1, -1 do
+                if not Participant.IsBot(pool[i]) then
+                    return table.remove(pool, i)
+                end
             end
         end
         return table.remove(pool)
