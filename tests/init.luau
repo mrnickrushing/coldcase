@@ -9,6 +9,7 @@ local MapPlan = require("./src/shared/MapPlan")
 local Catalog = require("./src/shared/Catalog")
 local SoundCues = require("./src/shared/SoundCues")
 local Products = require("./src/shared/Products")
+local Config = require("./src/shared/Config")
 
 local passed, failed = 0, 0
 
@@ -268,7 +269,10 @@ test("every catalogue item carries the fields the code reads", function()
     for id, def in pairs(Catalog) do
         assert(type(def.name) == "string" and def.name ~= "", id .. " has no name")
         assert(kinds[def.kind], ("%s has an unknown kind %q"):format(id, tostring(def.kind)))
-        assert(rarities[def.rarity], ("%s has an unknown rarity %q"):format(id, tostring(def.rarity)))
+        assert(
+            rarities[def.rarity],
+            ("%s has an unknown rarity %q"):format(id, tostring(def.rarity))
+        )
         assert(type(def.value) == "number" and def.value > 0, id .. " has no value")
     end
 end)
@@ -276,7 +280,10 @@ end)
 test("catalogue item names are unique", function()
     local byName = {}
     for id, def in pairs(Catalog) do
-        assert(not byName[def.name], ("%s and %s are both called %q"):format(id, tostring(byName[def.name]), def.name))
+        assert(
+            not byName[def.name],
+            ("%s and %s are both called %q"):format(id, tostring(byName[def.name]), def.name)
+        )
         byName[def.name] = id
     end
 end)
@@ -287,7 +294,10 @@ test("every sound cue has a group, a volume and an asset", function()
         count += 1
         assert(type(cue.group) == "string" and cue.group ~= "", id .. " has no group")
         assert(type(cue.volume) == "number" and cue.volume > 0, id .. " has no volume")
-        assert(type(cue.soundId) == "string" and cue.soundId:match("^rbxassetid://%d+$"), id .. " has no asset id")
+        assert(
+            type(cue.soundId) == "string" and cue.soundId:match("^rbxassetid://%d+$"),
+            id .. " has no asset id"
+        )
     end
     assert(count >= 20, ("only %d cues defined"):format(count))
 end)
@@ -304,12 +314,63 @@ test("every purchasable product has an id and a price", function()
         if type(entries) == "table" then
             for key, def in pairs(entries) do
                 if type(def) == "table" and def.price ~= nil then
-                    assert(type(def.name) == "string" and def.name ~= "", ("%s.%s has no name"):format(group, key))
+                    assert(
+                        type(def.name) == "string" and def.name ~= "",
+                        ("%s.%s has no name"):format(group, key)
+                    )
                     assert(type(def.id) == "number", ("%s.%s has no numeric id"):format(group, key))
-                    assert(type(def.price) == "number" and def.price > 0, ("%s.%s has no price"):format(group, key))
+                    assert(
+                        type(def.price) == "number" and def.price > 0,
+                        ("%s.%s has no price"):format(group, key)
+                    )
                 end
             end
         end
+    end
+end)
+
+test("no analytics field value carries a character Roblox rejects", function()
+    -- A comma, quote or apostrophe in a custom field makes Roblox discard the
+    -- whole event. This bit us once: the death heatmap cell read "map:4,4" and
+    -- every player_death was being thrown away.
+    local function offending(value: string): string?
+        for _, ch in { ",", '"', "'" } do
+            if string.find(value, ch, 1, true) then
+                return ch
+            end
+        end
+        return nil
+    end
+
+    local sent = {}
+    -- item ids, not display names: CrateOpened is called with entry.id, and
+    -- "Widow's Peak" never reaches a field
+    for id in pairs(Catalog) do
+        table.insert(sent, id)
+    end
+    for _, map in Config.MAPS do
+        table.insert(sent, map)
+        table.insert(sent, ("%s:%dx%d"):format(map, 12, 7))
+    end
+    for _, reason in Config.REPORT_REASONS do
+        table.insert(sent, reason)
+    end
+    for _, emote in Config.EMOTES do
+        table.insert(sent, emote)
+    end
+    for _, role in
+        { "innocent", "sheriff", "murderer", "hero", "medic", "snitch", "reset", "left", "self" }
+    do
+        table.insert(sent, role)
+    end
+    for _, event in { "LIGHTS_OUT", "POWER_SURGE", "LOCKDOWN", "FOG_BANK", "NONE" } do
+        table.insert(sent, event .. "|6-8")
+    end
+
+    for _, value in sent do
+        local ch = offending(value)
+        assert(ch == nil, ("%q would be rejected: it contains %s"):format(value, tostring(ch)))
+        assert(#value <= 50, ("%q is %d characters"):format(value, #value))
     end
 end)
 
