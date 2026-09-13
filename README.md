@@ -113,7 +113,7 @@ src/
                              SocialService, BotService, Participant
   serverstorage/Build/       → ServerStorage.Build
     BuildMaps.luau           builds each MapPlan: floors, walls, doorways, stairs, lamps, furniture
-    BuildLighting.luau       night sky, colour grade, bloom (no Atmosphere: vision uses fog)
+    BuildLighting.luau       daylight, warm grade, bloom (no Atmosphere: vision uses fog)
     BuildLobby.luau          the lobby room: walls, lamps, case board, furniture
   client/                    → StarterPlayerScripts
     ClientBootstrap.client.luau
