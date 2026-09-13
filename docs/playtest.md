@@ -79,24 +79,32 @@ Run from a LocalScript or the client command bar.
 - [ ] Print every value the client holds. **No other player's role appears.**
 - [ ] Fire `RequestStab` at a distant player — nothing happens
 - [ ] Fire `RequestShoot` 50× in a second — at most one shot lands; sustained spam disconnects
-- [ ] Fire `RequestExamine` on a body across the map — nothing returns, not even "cold"
-- [ ] Fire `RequestCoin` for every node id from one spot — only nodes within range pay
-- [ ] Fire `RequestCrate` with 0 coins, and with `"seasonal"` outside the season — nothing granted
-- [ ] Fire `RequestShoot` with a NaN vector — ignored, no server error
-- [ ] Offer a uid you do not own, or the same uid twice, in a trade — rejected
-- [ ] Change an offer after both locked — both locks and confirms reset
-- [ ] Fire `RequestRevive` as a non-medic, or on an examined body — nothing happens
+- [x] Fire `RequestExamine` on a body across the map — nothing returns, not even "cold"
+- [x] Fire `RequestCoin` for every node id from one spot — only nodes within range pay
+- [x] Fire `RequestCrate` with 0 coins, and with `"seasonal"` outside the season — nothing granted
+- [x] Fire `RequestShoot` with a NaN vector — ignored, no server error
+- [x] Offer a uid you do not own, or the same uid twice, in a trade — rejected
+- [x] Change an offer after both locked — both locks and confirms reset
+- [x] Fire `RequestRevive` as a non-medic, or on an examined body — nothing happens
 - [ ] Fire `RequestDrag` on a body across the map — nothing happens
-- [ ] Fire `RequestEquip` with a uid you do not own — nothing changes
-- [ ] Fire `RequestBuy` for an item not on the shelf, or without the coins — nothing granted
-- [ ] Deliver the same developer-product receipt twice — coins granted once
-- [ ] Fire `RequestStab` 10× in a second — at most 4 reach the handler (`Config.REMOTE_LIMITS`)
-- [ ] Fire `RequestRadio` without the pass, or while dead mid-round — nothing is broadcast
-- [ ] Fire `RequestReport` at the same player repeatedly — one report counted
+- [x] Fire `RequestEquip` with a uid you do not own — nothing changes
+- [x] Fire `RequestBuy` for an item not on the shelf, or without the coins — nothing granted
+- [x] Deliver the same developer-product receipt twice — coins granted once
+- [x] Fire `RequestStab` 10× in a second — at most 4 reach the handler (`Config.REMOTE_LIMITS`)
+- [x] Fire `RequestRadio` without the pass, or while dead mid-round — nothing is broadcast
+- [x] Fire `RequestReport` at the same player repeatedly — one report counted
 - [ ] Regional policy: until `PlayerPolicy` resolves (and wherever PolicyService restricts), crates,
       seasonal keys, crafting and re-rolls are refused with a message, and TRADE shows N/A. Test a
       restricted player with a VPN or an account in a restricted region; attributes set by hand only
       change the UI, the server keeps its own cache
+
+> **Testing coins is trickier than it looks.** `CoinService:Arm` only creates nodes during `ACTIVE`
+> and `Disarm` destroys them all at the end of the round, so a probe that stages on the server and
+> fires from the client goes vacuous whenever the round rolls over in between — it then proves only
+> that `armed = false` rejects the call. `CoinController` also collects any node within range by
+> itself every 0.15s, so standing on one to "test the exploit" just takes it legitimately first. Do
+> the whole thing in one client call: wait for `ACTIVE`, confirm nodes exist, move well out of
+> range, re-check the round still holds, *then* fire every id.
 
 ## Only after all of the above passes
 
