@@ -190,11 +190,19 @@ function RoundService:LoadVotedMap()
     -- Spawn with a minimum pairwise separation, or someone dies before they
     -- have moved. When no spawn clears the minimum, take the one farthest
     -- from everyone already placed rather than leaving a player in the lobby.
+    -- More participants than pads would otherwise leave people standing in the
+    -- lobby while the round runs without them: at a full server that stranded
+    -- five of twelve, the human among them. Refill from the same pads instead.
+    local allSpawns = table.clone(spawns)
     local used = {}
     for _, plr in participants do
         local char = plr.Character
-        if #spawns == 0 or not char then
+        if not char then
             continue
+        end
+        if #spawns == 0 then
+            spawns = table.clone(allSpawns)
+            used = {}
         end
         local bestIndex, bestGap = 1, -1
         for i, s in spawns do

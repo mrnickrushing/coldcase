@@ -23,7 +23,7 @@ local MapPlan = {}
 
 MapPlan.CELL = 20 -- studs per plan cell
 MapPlan.FLOOR_HEIGHT = 16 -- studs from one floor to the next
-MapPlan.SPAWNS = 10
+MapPlan.SPAWNS = 14 -- a full server is 12; the extra two keep the spread honest
 MapPlan.COINS = 18
 
 export type Region = { name: string, style: string, hall: boolean?, outdoor: boolean? }

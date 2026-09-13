@@ -374,6 +374,28 @@ test("no analytics field value carries a character Roblox rejects", function()
     end
 end)
 
+test("every map offers a spawn pad for a full server", function()
+    -- A full server is 12. With only 10 pads the placement loop ran out and
+    -- left the rest standing in the lobby while the round played on without
+    -- them, which is exactly what happened at the advertised player count.
+    local FULL_SERVER = 12
+    assert(
+        MapPlan.SPAWNS >= FULL_SERVER,
+        ("maps generate %d spawn pads, short of a full server of %d"):format(
+            MapPlan.SPAWNS,
+            FULL_SERVER
+        )
+    )
+    for name, plan in MapPlan.MAPS do
+        local analysis = MapPlan.Analyse(plan)
+        local points = MapPlan.Points(plan, analysis)
+        assert(
+            #points.spawns >= FULL_SERVER,
+            ("%s places only %d spawns for %d players"):format(name, #points.spawns, FULL_SERVER)
+        )
+    end
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")
