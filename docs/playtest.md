@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 25 ticked, 54 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 27 ticked, 52 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 34 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 32 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 9 | Trading, vote tallies across clients, the results roster, radio reaching everyone, the closed test. A second client is the only way. The radio's "the dead cannot send one mid-round" half belongs here too: health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
