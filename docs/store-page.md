@@ -23,7 +23,7 @@ thumbnails with in-game shots after the art pass.
 
 **One of you has a knife. Nobody knows who.**
 
-Eight players. Ninety seconds. One murderer, one sheriff, and a room full of people who have no idea which is which.
+Twelve players. Two minutes. One murderer, one sheriff — two of each in a full server — and a room full of people who have no idea which is which.
 
 But here, the bodies talk. Every kill leaves real evidence — the direction of the wound, a fibre from the killer's coat, a time of death that breaks somebody's alibi. Find a body, read it fast, and you might name the murderer before they find you. Wait too long and the trail goes cold.
 
@@ -35,6 +35,15 @@ Collect 24 knives, pistols, pets and effects. Trade with anyone. And when the li
 
 > Check before launch: trading unlocks on day 28 (see [live-ops](live-ops.md)), so "Trade with
 > anyone" is not true at launch.
+>
+> Two more to weigh, both softer than the copy makes them sound. Rounds are 110s, 120s or 150s by
+> headcount, not a flat two minutes — the line rounds, it does not lie. And "when the lights go out"
+> happens about half the time: one event fires per round at the 45% mark, and only Lights Out and
+> Power Surge darken anything (Lockdown and Fog Bank do not). Promising darkness every round sets up
+> a player to notice it missing.
+>
+> The numbers that were simply wrong are fixed: it said eight players and ninety seconds, against a
+> twelve-player cap and no ninety-second round anywhere in Config.
 
 ## Tags
 
