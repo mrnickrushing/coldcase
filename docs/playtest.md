@@ -49,7 +49,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] Crate reel spins and lands on the item the server actually granted; the free first crate
       opens the crate screen by itself
 - [ ] Published odds are visible on the crate screen, for the Locker and the seasonal crate
-- [ ] Direct-buy shelf charges 1.6× item value; effect re-roll always lands on a new effect
+- [x] Direct-buy shelf charges 1.6× item value; effect re-roll always lands on a new effect
 - [ ] Inventory lists starters and owned items; Equip persists across a rejoin
 - [ ] Crafting five duplicates yields one item of the next tier
 - [ ] Medic R revives an unexamined body once per round; moving during the 3s breaks it
