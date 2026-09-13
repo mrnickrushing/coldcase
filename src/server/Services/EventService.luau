@@ -14,7 +14,28 @@ local lastFiredId: string? = nil
 local BASE = {
     Brightness = Lighting.Brightness,
     Ambient = Lighting.Ambient,
+    OutdoorAmbient = Lighting.OutdoorAmbient,
+    EnvironmentDiffuseScale = Lighting.EnvironmentDiffuseScale,
+    ClockTime = Lighting.ClockTime,
 }
+
+-- Killing the lights means killing every source of it. On a daylit map the sun,
+-- the sky and the outdoor ambient all have to go, or the blackout is not dark.
+local function douse()
+    Lighting.Brightness = 0
+    Lighting.Ambient = Color3.fromRGB(8, 10, 14)
+    Lighting.OutdoorAmbient = Color3.fromRGB(12, 14, 20)
+    Lighting.EnvironmentDiffuseScale = 0
+    Lighting.ClockTime = 0.2
+end
+
+local function relight()
+    Lighting.Brightness = BASE.Brightness
+    Lighting.Ambient = BASE.Ambient
+    Lighting.OutdoorAmbient = BASE.OutdoorAmbient
+    Lighting.EnvironmentDiffuseScale = BASE.EnvironmentDiffuseScale
+    Lighting.ClockTime = BASE.ClockTime
+end
 
 -- One event per round. Chaos stops being an event when it is the weather.
 local EVENTS = {
@@ -83,16 +104,18 @@ function EventService:Fire(event)
 
     if event.id == "LIGHTS_OUT" then
         AudioService:Play2D(nil, "lights_out")
-        Lighting.Brightness = 0
-        Lighting.Ambient = Color3.fromRGB(8, 10, 14)
+        douse()
         setMapLights(false)
     elseif event.id == "POWER_SURGE" then
         AudioService:Play2D(nil, "power_surge")
         task.spawn(function()
+            douse()
             local t0 = os.clock()
             while os.clock() - t0 < event.duration and active == event do
                 local on = math.random() > 0.5
-                Lighting.Brightness = on and 2 or 0
+                -- The sun stays down; only the lights stutter
+                Lighting.Brightness = if on then BASE.Brightness else 0
+                Lighting.Ambient = if on then BASE.Ambient else Color3.fromRGB(8, 10, 14)
                 setMapLights(on)
                 task.wait(math.random(4, 22) / 100)
             end
@@ -127,8 +150,7 @@ function EventService:Clear()
         door.Transparency = 1
     end
     active = nil
-    Lighting.Brightness = BASE.Brightness
-    Lighting.Ambient = BASE.Ambient
+    relight()
     setMapLights(true)
     Remotes.EventFired:FireAllClients("CLEAR", 0)
 end
