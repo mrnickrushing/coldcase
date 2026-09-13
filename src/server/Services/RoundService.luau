@@ -287,7 +287,7 @@ function RoundService:MarkDead(plr: Player, killer: Player?, method: string)
         end
         BotService:OnDeath(plr, killer, method, pos)
     end
-    self:CheckWinConditions()
+    self:CheckWinConditions(method)
 end
 
 -- A medic brought them back. Their role is unchanged.
@@ -449,8 +449,9 @@ function RoundService:Advance()
     end
 end
 
--- Called after every elimination
-function RoundService:CheckWinConditions()
+-- Called after every elimination. `method` is how the last one went out, so a
+-- murderer who disconnects is not reported to the room as one who was killed.
+function RoundService:CheckWinConditions(method: string?)
     if state ~= "ACTIVE" then
         return
     end
@@ -463,7 +464,7 @@ function RoundService:CheckWinConditions()
         end
     end
     if not murdererAlive then
-        self:Resolve("innocents", "killed")
+        self:Resolve("innocents", method == "left" and "left" or "killed")
     elseif othersAlive == 0 then
         self:Resolve("murderer", "wiped")
     end

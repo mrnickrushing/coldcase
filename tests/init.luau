@@ -10,6 +10,7 @@ local Catalog = require("./src/shared/Catalog")
 local SoundCues = require("./src/shared/SoundCues")
 local Products = require("./src/shared/Products")
 local Config = require("./src/shared/Config")
+local fs = require("@lune/fs")
 
 local passed, failed = 0, 0
 
@@ -393,6 +394,50 @@ test("every map offers a spawn pad for a full server", function()
             #points.spawns >= FULL_SERVER,
             ("%s places only %d spawns for %d players"):format(name, #points.spawns, FULL_SERVER)
         )
+    end
+end)
+
+---------------------------------------------------------------- round results
+-- The server picks a reason string and the client renders BLURB[reason]; an
+-- unknown key renders an empty line, so a new reason can ship looking fine in
+-- Studio and silently say nothing to players. These two lists must agree.
+test("every round-over reason the server sends has a blurb", function()
+    local server = fs.readFile("src/server/Services/RoundService.luau")
+    local client = fs.readFile("src/client/Controllers/MenuController.luau")
+
+    local blurbs = {}
+    local table_ = client:match("local BLURB = {(.-)\n}")
+    assert(table_, "could not find the BLURB table in MenuController")
+    for key in table_:gmatch("(%w+)%s*=") do
+        blurbs[key] = true
+    end
+
+    -- A reason is not always a literal argument: one call picks between two
+    -- with an `and/or`, so read every string on the line and drop the winners.
+    local winners = { innocents = true, murderer = true }
+    local reasons, found = {}, 0
+    for line in server:gmatch("[^\n]+") do
+        if line:find("self:Resolve(", 1, true) then
+            found += 1
+            for literal in line:gmatch('"(%w+)"') do
+                if not winners[literal] then
+                    reasons[literal] = true
+                end
+            end
+        end
+    end
+    assert(found > 0, "found no Resolve call sites to check - did the call shape change?")
+
+    for reason in reasons do
+        assert(
+            blurbs[reason],
+            ("the server resolves with %q but no blurb explains it"):format(reason)
+        )
+    end
+
+    -- ...and nothing in the table is dead weight left over from an old reason
+    for key in blurbs do
+        assert(reasons[key], ("BLURB has %q but the server never sends it"):format(key))
     end
 end)
 
