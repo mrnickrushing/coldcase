@@ -5,7 +5,6 @@ local NAMES = {
     -- server -> client
     "RoundState",
     "RoleAssigned",
-    "BodyDropped",
     "Clue",
     "RoundOver",
     "RoundReward",

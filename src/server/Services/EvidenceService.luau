@@ -135,7 +135,6 @@ function EvidenceService:DropBody(victim: Player, killer: Player)
         examined = false,
         draggedBy = nil,
     }
-    Remotes.BodyDropped:FireAllClients(model, pos)
     AudioService:Emit("body_drop", pos)
 end
 

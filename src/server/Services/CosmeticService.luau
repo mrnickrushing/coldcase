@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 local Catalog = require(game.ReplicatedStorage.Shared.Catalog)
+local Shop = require(game.ReplicatedStorage.Shared.Shop)
 local Theme = require(game.ReplicatedStorage.Shared.Theme)
 local ItemCard = require(game.ReplicatedStorage.Shared.Build.ItemCard)
 local CosmeticFx = require(game.ReplicatedStorage.Shared.CosmeticFx)
@@ -12,7 +13,6 @@ local Participant = require(script.Parent.Participant)
 
 local CosmeticService = {}
 
-local SLOT_FOR_KIND = { Knife = "knife", Pistol = "gun", Effect = "effect", Pet = "pet" }
 local DEFAULTS: { [string]: string } = { knife = "ash", gun = "ledger" }
 local drawToken: { [Player]: number } = {}
 
@@ -47,7 +47,7 @@ function CosmeticService:Equip(plr: Player, ref: string)
         end
     end
     local def = id and Catalog[id]
-    local slot = def and SLOT_FOR_KIND[def.kind]
+    local slot = def and Shop.SLOT_FOR_KIND[def.kind]
     if not slot then
         return
     end

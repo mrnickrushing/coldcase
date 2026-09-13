@@ -6,7 +6,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared.Theme)
 local Config = require(Shared.Config)
-local Catalog = require(Shared.Catalog)
+local Shop = require(Shared.Shop)
 local ItemCard = require(Shared.Build.ItemCard)
 local ClientState = require(script.Parent.Parent.ClientState)
 
@@ -41,15 +41,6 @@ end
 local function status(text: string, colour: Color3?)
     root.Status.Text = text
     root.Status.TextColor3 = colour or Theme.MUTED
-end
-
-local function valueOf(entries: { Entry }): number
-    local total = 0
-    for _, e in entries do
-        local def = Catalog[e.id]
-        total += def and def.value or 0
-    end
-    return total
 end
 
 local function inLiveRound(): boolean
@@ -112,7 +103,7 @@ local function render()
     root.Mine.Stroke.Color = s.myLock and GREEN or QUIET_STROKE
     root.Theirs.Stroke.Color = s.theirLock and GREEN or QUIET_STROKE
 
-    local mineV, theirV = valueOf(s.mine), valueOf(s.theirs)
+    local mineV, theirV = Shop.ValueOf(s.mine), Shop.ValueOf(s.theirs)
     root.Mine.Value.Text = ("Table value · %d"):format(mineV)
     root.Theirs.Value.Text = ("Table value · %d"):format(theirV)
 

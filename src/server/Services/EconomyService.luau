@@ -93,7 +93,15 @@ function EconomyService:GiveItem(data, id: string)
         return nil
     end
     if item.season then
-        local season = LiveOps.ActiveSeason(LiveOpsClock.Day())
+        local day = LiveOpsClock.Day()
+        -- Two different questions: has this item's season closed for good, and
+        -- is it the one running right now. The second alone would also block a
+        -- season that has not opened yet, which is intended - but only the
+        -- first is the "retired forever" rule, and it is the one under test.
+        if LiveOps.IsRetired(item.season, day) then
+            return nil
+        end
+        local season = LiveOps.ActiveSeason(day)
         if not season or season.id ~= item.season then
             return nil
         end

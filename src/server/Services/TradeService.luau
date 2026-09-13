@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
-local Catalog = require(game.ReplicatedStorage.Shared.Catalog)
 local Config = require(game.ReplicatedStorage.Shared.Config)
+local Shop = require(game.ReplicatedStorage.Shared.Shop)
 local LiveOps = require(game.ReplicatedStorage.Shared.LiveOps)
 local Remotes = game.ReplicatedStorage.Remotes
 local DataService = require(script.Parent.DataService)
@@ -44,15 +44,6 @@ end
 local function invalidate(s)
     s.lockA, s.lockB, s.confirmA, s.confirmB = false, false, false, false
     push(s)
-end
-
-local function valueOf(entries): number
-    local total = 0
-    for _, it in entries do
-        local item = Catalog[it.id]
-        total += item and item.value or 0
-    end
-    return total
 end
 
 function TradeService:Open(a: Player, b: Player)
@@ -226,7 +217,7 @@ function TradeService:Execute(s)
         table.insert(da.inventory, it)
     end
 
-    Analytics.TradeComplete(s.a, valueOf(fromA), valueOf(fromB))
+    Analytics.TradeComplete(s.a, Shop.ValueOf(fromA), Shop.ValueOf(fromB))
     CosmeticService:Reconcile(s.a)
     CosmeticService:Reconcile(s.b)
     Remotes.TradeComplete:FireClient(s.a)

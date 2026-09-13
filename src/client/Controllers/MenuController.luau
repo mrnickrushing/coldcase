@@ -703,7 +703,6 @@ for _, attr in { "SeasonId", "SeasonDaysLeft", "SeasonCrateCost" } do
 end
 
 ---------------------------------------------------------------- Inventory
-local SLOT_FOR_KIND = { Knife = "knife", Pistol = "gun", Effect = "effect", Pet = "pet" }
 local selected: string? = nil
 local renderedInventory, renderedEquipped = nil, nil
 
@@ -795,7 +794,7 @@ local function renderInventory()
         card.Effect.Text = (def.kind == "Knife" and not def.starter)
                 and ("EFFECT · %s"):format(string.upper(e.effect or "none"))
             or ""
-        local slot = SLOT_FOR_KIND[def.kind]
+        local slot = Shop.SLOT_FOR_KIND[def.kind]
         local equipped = d.equipped ~= nil and slot ~= nil and d.equipped[slot] == e.id
         card.Equip.Text = equipped and "EQUIPPED" or "EQUIP"
         setEnabled(card.Equip, not equipped)

@@ -10,7 +10,6 @@
 export type Cue = {
     group: string,
     range: number?,
-    twoD: boolean?, -- also play a 2D layer for everyone (lockdown)
     volume: number,
     soundId: string,
     desc: string,
@@ -140,10 +139,13 @@ local cues: { [string]: Cue } = {
         soundId = "rbxassetid://9114237487",
         desc = "Electrical arcing, irregular. Never loops cleanly.",
     },
+    -- The 2D layer everyone hears is played by EventService alongside the
+    -- per-door positional cues. It is not a flag here: AudioService:Emit
+    -- range-filters on purpose, and broadcasting from inside it would send
+    -- one layer per door and undo that.
     lockdown = {
         group = "EVENTS",
         range = 80,
-        twoD = true,
         volume = 0.9,
         soundId = "rbxassetid://9114143852",
         desc = "Four bolts throwing in sequence, each at its real door position.",
