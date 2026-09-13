@@ -79,7 +79,19 @@ function RoleService:Assign(participants: { Player })
         end
         return table.remove(pool)
     end
-    if count >= Config.MEDIC_AT and #pool > 2 then
+    -- A medic can only revive a person: RequestRevive and RoundService:Revive
+    -- both refuse an NPC victim, because an NPC has no player to bring back.
+    -- One human in the round therefore means nobody the medic could ever
+    -- revive, and drawPreferHuman would hand that dead ability to the only
+    -- real player half the time. The snitch has no such problem - its reveal
+    -- reaches a human snitch and names the murderer - so it is not gated.
+    local humans = 0
+    for _, plr in participants do
+        if not Participant.IsBot(plr) then
+            humans += 1
+        end
+    end
+    if count >= Config.MEDIC_AT and #pool > 2 and humans >= 2 then
         local medic = drawPreferHuman()
         if medic then
             roles[medic] = "medic"

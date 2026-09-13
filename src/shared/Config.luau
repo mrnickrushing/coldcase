@@ -25,7 +25,9 @@ return {
     -- sheriff never once appeared. Matched to the second murderer so a full
     -- lobby scales both sides together instead of only the killers.
     SECOND_SHERIFF_AT = 12,
-    MEDIC_AT = 6, -- NPC rounds seat 6: below this the role never existed
+    -- Needs two humans as well as this headcount: the medic cannot revive an
+    -- NPC, so in a solo round the role would sit dead (RoleService gates it).
+    MEDIC_AT = 6,
     SNITCH_AT = 6,
     SNITCH_REVEAL_AT = 30, -- seconds remaining
     MURDERER_COOLOFF = 3, -- rounds of reduced odds after being murderer
