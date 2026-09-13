@@ -21,7 +21,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] An NPC murderer waits at least 12s, then picks off whoever is alone
 - [ ] An NPC sheriff shoots only a killer it saw, or the outlined murderer at Last Call
 - [ ] Stabbing, shooting, spectating and examining work on NPCs; the fibre clue matches their shirt
-- [ ] Round rewards are paid in full with NPCs, and the NPCs are gone once everyone is back in the lobby
+- [x] Round rewards are paid in full with NPCs, and the NPCs are gone once everyone is back in the lobby
 
 ## First playtest — Test → Clients and Servers, 4 players
 
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 32 ticked, 47 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 33 ticked, 46 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 27 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 26 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 8 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -141,6 +141,10 @@ Counting ticks is misleading on its own, so here is the split. 32 ticked, 47 not
 > **The ghost hints need an account that has not seen them.** Whether the three prompts appear once each is held in two places a probe cannot read: `shown`, a local table inside NoticeController, and `hintsSeen` on the profile. Requiring either module from a command context returns a fresh copy that looks alive - it connects the same remotes, so live values keep arriving - while every field filled before the probe attached sits at its default. A copied `ClientState` read `loaded=true` with correct coins and role, and an empty inventory against a HUD showing 27 owned. The only trustworthy evidence is `NoticeHud.Hint.Text` and its transparency, and watching those across a full ACTIVE → RESOLUTION → INTERMISSION → LOADING → REVEAL → ACTIVE cycle gave zero appearances. That is what an account which has already seen all three looks like - the label still holds "Tap USE to examine a body" from an earlier session - so it settles nothing either way. A fresh account is the test.
 
 > **Reading NPC movement needs the walk speed column.** Two passes over the bots looked like faults and were not. NPCs that travel far less than their neighbours are not failing to path: `steer` sets speed by role, so the murderer runs at 16 and everyone else at 11, and distance tracks that almost exactly - 438 studs against 233 over comparable samples. And NPCs that appear to move after the round ends are carrying out a `MoveTo` issued just before the state flipped. Timestamping the samples against the state change settled it: every post-round event belonged to one bot within the first 3.2 seconds of RESOLUTION, in steps of about two studs, against a six second RESOLUTION and a `BotService:Clear()` that follows. Without the timestamps the same data reads as three bots still walking.
+
+> **A round payout is never just the base numbers.** Checking that rewards are paid in full means reconciling the whole multiplier, and the pieces are spread across three files. `Grant` applies one combined factor with `math.floor(coins * mult + 0.5)`, not a chain of separate roundings, and `CoinMultiplier` builds it from the live-ops boost, the friend bonus, VIP, and Last Call. Two observed payouts: a win with survival, `COINS_WIN 90 + COINS_SURVIVE 40 = 130`, paid 325; a loss, `COINS_LOSS 30`, paid 75. Both are exactly 2.5x, which is VIP's 1.25 times Last Call's 2 - the double-coin weekend is days 60-62 and the server is on day 3, so it contributes nothing. An unexplained payout is worth chasing to an exact figure before ticking anything: the first guess here was the coin boost, and it was wrong.
+>
+> **The settlement payout inherits Last Call's doubling.** `PayOut` is called at `RoundService:541`, one line before `SetLastCall(false)` at 542, so the end-of-round win/loss/survive coins are granted while `lastCall` is still set - and `round` is listed in `LAST_CALL_SOURCES` alongside pickup, examine and revive. It is deliberate by the letter of the code, but it has a consequence worth a design decision: `lastCallFired` resets every round, so a round that ends before the thirty-second mark settles at 1.25x while the same win in a longer round settles at 2.5x. Identical outcomes pay double based only on how long the round ran. Not changed - which way that should go is a call about the economy, not a bug to fix.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden

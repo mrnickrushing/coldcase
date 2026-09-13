@@ -265,7 +265,11 @@ function EconomyService:PayOut(
         end
 
         if withBots then
-            -- Rounds against NPCs pay less, so an empty server is not a coin farm
+            -- The lever for paying less in a round against NPCs, so an empty
+            -- server cannot be farmed. It is set to 1 - full pay - because a
+            -- solo player's first rounds are all NPC rounds and docking them
+            -- punishes the newest players hardest. Left in place so the nerf
+            -- is one number away if farming ever shows up in the numbers.
             coins = math.floor(coins * Config.BOT_ROUND_REWARD)
             xp = math.floor(xp * Config.BOT_ROUND_REWARD)
         end

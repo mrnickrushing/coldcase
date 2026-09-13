@@ -875,10 +875,7 @@ test("every lethal path checks the weapon grace", function()
     for _, fn in { "RequestStab", "RequestThrow", "RequestShoot" } do
         local body = src:match("function CombatService:" .. fn .. "%(.-\nend")
         assert(body, "could not find CombatService:" .. fn)
-        assert(
-            body:find("inGrace()", 1, true),
-            fn .. " can kill without checking the grace window"
-        )
+        assert(body:find("inGrace()", 1, true), fn .. " can kill without checking the grace window")
     end
 end)
 
