@@ -915,8 +915,10 @@ local function fit()
     for _, g in guis do
         local root = g.Root
         local size = root.Size
-        root.Scale.Scale =
-            math.clamp(math.min((vp.X - 24) / size.X.Offset, (vp.Y - 24) / size.Y.Offset), 0.35, 1)
+        -- Never clamp above what fits: a floor of 0.35 left a 1040 wide canvas
+        -- hanging off the side of a small phone. Small and on screen beats
+        -- large and cut off.
+        root.Scale.Scale = math.min((vp.X - 24) / size.X.Offset, (vp.Y - 24) / size.Y.Offset, 1)
     end
 end
 local viewportConn

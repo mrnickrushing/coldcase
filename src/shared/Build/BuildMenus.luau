@@ -340,7 +340,7 @@ return function(parent: Instance?)
         text("Caption", players, "IN LOBBY", 10, Theme.DIM)
         local plist = scroller("List", players, UDim2.new(1, 0, 1, -22), UDim2.new(0, 0, 0, 22))
         list(plist, nil, 6)
-        local row = frame("RowTemplate", plist, UDim2.new(1, -8, 0, 32), nil, nil, true)
+        local row = frame("RowTemplate", plist, UDim2.new(1, -8, 0, Theme.TAP_MIN), nil, nil, true)
         row.Visible = false
         local rn = text("PlayerName", row, "", 15, Theme.INK, Theme.DISPLAY)
         rn.Size = UDim2.new(0.38, 0, 1, 0)
@@ -398,8 +398,14 @@ return function(parent: Instance?)
         stroke(inv, Theme.CYAN)
 
         -- Robux store. Entries with a product id of 0 stay hidden.
-        local store =
-            frame("Store", root, UDim2.new(1, 0, 0, 40), UDim2.new(0, 0, 0, 548), nil, true)
+        local store = frame(
+            "Store",
+            root,
+            UDim2.new(1, 0, 0, Theme.TAP_MIN),
+            UDim2.new(0, 0, 0, 544),
+            nil,
+            true
+        )
         list(store, Enum.FillDirection.Horizontal, 8)
         for i, key in { "vip", "radio", "emotes", "coins2500", "seasonalKey" } do
             local b = button(key, store, "", UDim2.new(1 / 5, -7, 1, 0), RAISED, Theme.SOFT)
