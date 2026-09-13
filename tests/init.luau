@@ -833,6 +833,55 @@ test("the playtest triage table agrees with its own checkboxes", function()
     eq(total, unticked, "triage buckets summed vs the unticked lines")
 end)
 
+------------------------------------------------------------- weapon grace
+-- Nobody can be killed for the first WEAPON_GRACE seconds. Two things have to
+-- hold for that to mean anything, and neither looks wrong if it breaks.
+--
+-- First, roundStart is stamped by MarkRoundStart, and it has to be stamped as
+-- the round goes ACTIVE. The call currently sits at the end of the REVEAL
+-- branch, right before setState("ACTIVE", ...). Move it up into LOADING or the
+-- start of REVEAL and the grace is measured from there instead - LOADING_TIME
+-- plus REVEAL_TIME is 7 seconds against a 4 second grace, so the window would
+-- be over before anyone could move, and every test of it would still pass
+-- because the constant is untouched.
+--
+-- Second, every path that can kill has to consult it. There are three, and a
+-- fourth added later would not announce itself.
+test("the weapon grace is measured from the start of the round", function()
+    local src = fs.readFile("src/server/Services/RoundService.luau")
+
+    local reveal = src:match('elseif state == "REVEAL" then(.-)elseif state == "ACTIVE"')
+    assert(reveal, "could not find the REVEAL branch of the round state machine")
+    assert(
+        reveal:find("CombatService:MarkRoundStart()", 1, true),
+        "MarkRoundStart is no longer called as the round goes ACTIVE - the grace "
+            .. "would be measured from whenever it is called instead"
+    )
+
+    -- and it must be stamped before the state flips, not after
+    local markAt = reveal:find("CombatService:MarkRoundStart()", 1, true)
+    local activeAt = reveal:find('setState("ACTIVE"', 1, true)
+    assert(activeAt, "the REVEAL branch no longer sets the round ACTIVE")
+    assert(markAt < activeAt, "the round goes ACTIVE before the grace clock is started")
+end)
+
+test("every lethal path checks the weapon grace", function()
+    local src = fs.readFile("src/server/Services/CombatService.luau")
+
+    assert(src:find("local function inGrace", 1, true), "CombatService no longer has a grace check")
+
+    -- Each of these can end a life. Pickup cannot, and Eliminate is the
+    -- internal executor the three below call once they have decided.
+    for _, fn in { "RequestStab", "RequestThrow", "RequestShoot" } do
+        local body = src:match("function CombatService:" .. fn .. "%(.-\nend")
+        assert(body, "could not find CombatService:" .. fn)
+        assert(
+            body:find("inGrace()", 1, true),
+            fn .. " can kill without checking the grace window"
+        )
+    end
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")
