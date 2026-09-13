@@ -135,6 +135,9 @@ Counting ticks is misleading on its own, so here is the split. 28 ticked, 51 not
 | Needs human eyes or ears | 6 | Whether the cues match the brief, whether a weapon sits right in the hand, whether the art reads. No probe settles taste. |
 | Setup step, not a claim | 3 | `rokit install`, API access, `[ColdCase] server up`. |
 
+
+> **The lobby menus have a twenty-second window.** The collection, crate and trade screens only exist during INTERMISSION - `onState` shows the lobby there, `LOADING` and `REVEAL` call `show(nil)`, and `RESOLUTION` belongs to the results card. Anything that needs to click a menu button and then read what rendered has to do both inside that window. Driving it from two separate tool calls does not fit: a click and a read took about twenty-eight seconds of round trips against a twenty-second window, three times running. A human at the keyboard settles these in seconds, so they are grouped here rather than left looking untested.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
