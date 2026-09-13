@@ -6,6 +6,9 @@ local FibreBands = require("./src/shared/FibreBands")
 local Progression = require("./src/shared/Progression")
 local Lobby = require("./src/shared/Lobby")
 local MapPlan = require("./src/shared/MapPlan")
+local Catalog = require("./src/shared/Catalog")
+local SoundCues = require("./src/shared/SoundCues")
+local Products = require("./src/shared/Products")
 
 local passed, failed = 0, 0
 
@@ -253,6 +256,62 @@ for name, plan in MapPlan.MAPS do
         end
     end)
 end
+
+---------------------------------------------------------------- Data integrity
+-- These cross-references fail silently at runtime: a style naming a prop that
+-- does not exist just places nothing, and a cue id with no entry plays no
+-- sound. Checking them here turns a silent gap into a failing test.
+
+test("every catalogue item carries the fields the code reads", function()
+    local kinds = { Knife = true, Pistol = true, Effect = true, Pet = true }
+    local rarities = { Common = true, Uncommon = true, Rare = true, Legendary = true, Godly = true }
+    for id, def in pairs(Catalog) do
+        assert(type(def.name) == "string" and def.name ~= "", id .. " has no name")
+        assert(kinds[def.kind], ("%s has an unknown kind %q"):format(id, tostring(def.kind)))
+        assert(rarities[def.rarity], ("%s has an unknown rarity %q"):format(id, tostring(def.rarity)))
+        assert(type(def.value) == "number" and def.value > 0, id .. " has no value")
+    end
+end)
+
+test("catalogue item names are unique", function()
+    local byName = {}
+    for id, def in pairs(Catalog) do
+        assert(not byName[def.name], ("%s and %s are both called %q"):format(id, tostring(byName[def.name]), def.name))
+        byName[def.name] = id
+    end
+end)
+
+test("every sound cue has a group, a volume and an asset", function()
+    local count = 0
+    for id, cue in pairs(SoundCues.cues) do
+        count += 1
+        assert(type(cue.group) == "string" and cue.group ~= "", id .. " has no group")
+        assert(type(cue.volume) == "number" and cue.volume > 0, id .. " has no volume")
+        assert(type(cue.soundId) == "string" and cue.soundId:match("^rbxassetid://%d+$"), id .. " has no asset id")
+    end
+    assert(count >= 20, ("only %d cues defined"):format(count))
+end)
+
+test("every role has a reveal pitch", function()
+    for _, role in { "innocent", "sheriff", "murderer", "hero", "medic", "snitch" } do
+        local pitch = SoundCues.ROLE_PITCH[role]
+        assert(type(pitch) == "number" and pitch > 0, role .. " has no reveal pitch")
+    end
+end)
+
+test("every purchasable product has an id and a price", function()
+    for group, entries in pairs(Products) do
+        if type(entries) == "table" then
+            for key, def in pairs(entries) do
+                if type(def) == "table" and def.price ~= nil then
+                    assert(type(def.name) == "string" and def.name ~= "", ("%s.%s has no name"):format(group, key))
+                    assert(type(def.id) == "number", ("%s.%s has no numeric id"):format(group, key))
+                    assert(type(def.price) == "number" and def.price > 0, ("%s.%s has no price"):format(group, key))
+                end
+            end
+        end
+    end
+end)
 
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
