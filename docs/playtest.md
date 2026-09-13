@@ -38,7 +38,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] Body appears; E within 14 studs, after a 1.5s channel, returns three or four clue lines
 - [ ] Examining after 20s, or during Lights Out, returns "The trail has gone cold."
 - [ ] Walking over a coin collects it once; coins land on the HUD
-- [ ] Event fires at the 45% mark, once, banner fades in and out, lighting restores after
+- [x] Event fires at the 45% mark, once, banner fades in and out, lighting restores after
 - [ ] Round ends on murderer death, wipe, or timeout; results card names the murderer
 - [ ] When a murderer killed, the round ends on a 2.5s kill-cam circling the last kill, then results
 - [ ] Results show "You were N coins short." when the balance is under 250
@@ -54,8 +54,8 @@ workflow — no manual Studio setup is needed.)
 - [ ] Crafting five duplicates yields one item of the next tier
 - [ ] Medic R revives an unexamined body once per round; moving during the 3s breaks it
 - [ ] Holding F for 2s drags a body at reduced walk speed; releasing drops it
-- [ ] Last Call fires at 30s: banner, coins double, murderer outlined through walls
-- [ ] Lights Out shrinks the vision radius (fog at 88 studs), not just brightness
+- [x] Last Call fires at 30s: banner, coins double, murderer outlined through walls
+- [x] Lights Out shrinks the vision radius (fog at 88 studs), not just brightness
 - [ ] Fog Bank hides name tags past 40 studs
 - [ ] With `LiveOpsDay = 28`, TRADE opens a table between two players who both ask
 - [ ] Dying puts the camera on a living player; ‹ › (or ← →) switches; respawning in the lobby keeps
