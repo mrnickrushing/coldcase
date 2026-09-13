@@ -54,7 +54,7 @@ return {
     DRAG_SOUND_INTERVAL = 0.8,
 
     -- Vision (client-side radius, in studs)
-    VISION_NORMAL = 260,
+    VISION_NORMAL = 130, -- past the 60 stud median sightline, short of the 240 longest
     VISION_DARK = 88,
     VISION_SURGE = 130,
     FOG_NAMETAG_RANGE = 40,
