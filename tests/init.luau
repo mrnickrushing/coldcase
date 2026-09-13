@@ -713,6 +713,28 @@ test("no headcount threshold is above the server cap", function()
     end
 end)
 
+---------------------------------------------------------------- cosmetics
+-- Cosmetics must never be worth an advantage. A particle emitter with
+-- LightEmission above 0 glows in the dark, so an equipped effect would light
+-- its owner's way through Lights Out - the one event whose whole point is that
+-- nobody can see. That would be pay-to-win, and it would be invisible in
+-- review: the item still looks like a cosmetic.
+test("cosmetic particles never emit light", function()
+    local src = fs.readFile("src/shared/CosmeticFx.luau")
+    local body = src:match("function CosmeticFx%.Emitter.-\nend")
+    assert(body, "could not find CosmeticFx.Emitter")
+
+    local emission = body:match("LightEmission%s*=%s*([%d%.]+)")
+    assert(emission, "Emitter no longer sets LightEmission at all")
+    eq(tonumber(emission), 0, "LightEmission")
+
+    -- LightInfluence 1 means the particle is lit by the scene rather than
+    -- ignoring it, so it goes dark with everything else.
+    local influence = body:match("LightInfluence%s*=%s*([%d%.]+)")
+    assert(influence, "Emitter no longer sets LightInfluence")
+    eq(tonumber(influence), 1, "LightInfluence")
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")
