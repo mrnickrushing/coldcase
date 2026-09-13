@@ -565,6 +565,81 @@ test("every funnel step the server references exists", function()
     assert(checked > 0, "found no funnel references to check")
 end)
 
+---------------------------------------------------------------- economy ordering
+-- Every path that mints an item calls GiveItem, which can refuse: a starter,
+-- or a seasonal whose season has closed. Anything irreversible - taking coins,
+-- removing duplicates, burning a once-per-account flag - has to happen AFTER
+-- that call succeeds, or the player pays and gets nothing. Today the standard
+-- pool holds no id GiveItem would refuse, so this is latent; it goes live the
+-- moment a starter or seasonal is added to a standard tier.
+test("no economy path charges before its grant succeeds", function()
+    local src = fs.readFile("src/server/Services/EconomyService.luau")
+
+    -- Slice from a function's header to the next top-level declaration.
+    -- Matching to an `end` with a non-greedy pattern does not work: these
+    -- bodies contain nested blocks that end first, so the match stops early
+    -- or fails outright.
+    local lines = {}
+    for line in (src .. "\n"):gmatch("([^\n]*)\n") do
+        table.insert(lines, line)
+    end
+
+    local function bodyOf(header: string): string
+        local from
+        for i, line in lines do
+            if line:find(header, 1, true) == 1 then
+                from = i
+                break
+            end
+        end
+        assert(from, "could not find " .. header)
+        local out = {}
+        for i = from + 1, #lines do
+            local line = lines[i]
+            if line:find("^function ") or line:find("^local function ") then
+                break
+            end
+            table.insert(out, line)
+        end
+        return table.concat(out, "\n")
+    end
+
+    -- In each body, the GiveItem call must come before the irreversible bits.
+    local cases = {
+        {
+            name = "Craft",
+            body = bodyOf("function EconomyService:Craft"),
+            after = { "data%.coins %-= Config%.CRAFT_FEE", "table%.remove%(data%.inventory" },
+        },
+        {
+            name = "OpenCrate",
+            body = bodyOf("function EconomyService:OpenCrate"),
+            after = { "data%.coins %-= cost" },
+        },
+        {
+            name = "giveRankGift",
+            body = bodyOf("local function giveRankGift"),
+            after = { "data%.onboarding%.rankGift = true" },
+        },
+    }
+
+    for _, case in cases do
+        local grantAt = case.body:find("GiveItem%(")
+        assert(grantAt, ("%s no longer calls GiveItem - has it been renamed?"):format(case.name))
+        for _, pattern in case.after do
+            local at = case.body:find(pattern)
+            assert(at, ("%s no longer contains %s"):format(case.name, pattern))
+            assert(
+                at > grantAt,
+                ("%s does something irreversible (%s) before GiveItem can refuse"):format(
+                    case.name,
+                    pattern
+                )
+            )
+        end
+    end
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")

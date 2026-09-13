@@ -136,10 +136,15 @@ local function rollTier(pools)
 end
 
 local function giveRankGift(plr: Player, data)
-    data.onboarding.rankGift = true
+    -- Grant first, then burn the once-per-account flag. The other way round,
+    -- a refused GiveItem leaves rankGift true with nothing to show for it and
+    -- the check at the call site never lets them have another go - the reward
+    -- is gone for good. OnboardingService's free crate gets this right by
+    -- un-setting its flag on failure; this simply does not set it early.
     local ids = standardPool[Config.RANK_GIFT_RARITY]
     local entry = EconomyService:GiveItem(data, ids[math.random(#ids)])
     if entry then
+        data.onboarding.rankGift = true
         Remotes.CrateResult:FireClient(
             plr,
             { id = entry.id, uid = entry.uid, rarity = Config.RANK_GIFT_RARITY, gift = true }
@@ -415,21 +420,36 @@ function EconomyService:Craft(plr: Player, itemId: any)
         return
     end
 
-    data.coins -= Config.CRAFT_FEE
-    table.sort(matches, function(a, b)
-        return a > b
-    end)
-    for i = 1, Config.CRAFT_DUPES do
-        table.remove(data.inventory, matches[i])
-    end
+    -- Grant first, charge second. GiveItem can refuse (a starter, or a
+    -- seasonal whose season has closed), and the old order took the fee and
+    -- the five duplicates before finding out - leaving the player with
+    -- nothing for 150 coins and five items. OpenCrate already works this way.
     local entry = self:GiveItem(data, pool[math.random(#pool)])
-    Analytics.CoinsSpent(plr, "craft", Config.CRAFT_FEE, data.coins)
-    if entry then
-        Remotes.CrateResult:FireClient(
-            plr,
-            { id = entry.id, uid = entry.uid, rarity = nextTier, crafted = true }
-        )
+    if not entry then
+        Remotes.ShopResult:FireClient(plr, false, "That craft is not available right now.")
+        return
     end
+
+    -- `matches` are indices taken before the grant. GiveItem appends, which
+    -- shifts nothing already in the list, and removing high indices first
+    -- keeps the rest valid - but neither of those is obvious, so remove by
+    -- identity instead of trusting the arithmetic to stay true.
+    local doomed = {}
+    for i = 1, Config.CRAFT_DUPES do
+        doomed[data.inventory[matches[i]]] = true
+    end
+    for i = #data.inventory, 1, -1 do
+        if doomed[data.inventory[i]] then
+            table.remove(data.inventory, i)
+        end
+    end
+
+    data.coins -= Config.CRAFT_FEE
+    Analytics.CoinsSpent(plr, "craft", Config.CRAFT_FEE, data.coins)
+    Remotes.CrateResult:FireClient(
+        plr,
+        { id = entry.id, uid = entry.uid, rarity = nextTier, crafted = true }
+    )
     require(script.Parent.CosmeticService):Reconcile(plr)
     Remotes.DataChanged:FireClient(plr, { coins = data.coins, inventory = data.inventory })
 end
