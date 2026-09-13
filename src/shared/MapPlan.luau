@@ -709,8 +709,8 @@ function MapPlan.Reachable(
 end
 
 -- The cells to walk through to get from one cell to another, the first step
--- first and the goal last. Roblox pathfinding gives up over long distances in
--- a building this dense, so NPCs cross it one short leg at a time.
+-- first and the goal last. NPCs walk it one short leg at a time, which keeps
+-- each path request cheap and sends them through known doorways and stairs.
 function MapPlan.Route(plan: Plan, analysis: Analysis, from, to): { any }?
     local startKey, goalKey = MapPlan.Key(from.f, from.x, from.z), MapPlan.Key(to.f, to.x, to.z)
     if startKey == goalKey then

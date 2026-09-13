@@ -164,7 +164,7 @@ return function()
                 dressing,
                 Vector3.new(PANEL, 0.08, 0.6),
                 Vector3.new(top.X + x, top.Y + 0.04, top.Z + z + PANEL / 2),
-                Color3.fromHex("6f4a2c"),
+                Color3.fromHex("6b5740"),
                 Enum.Material.SmoothPlastic
             )
             local seamB = block(
@@ -172,7 +172,7 @@ return function()
                 dressing,
                 Vector3.new(0.6, 0.08, PANEL),
                 Vector3.new(top.X + x + PANEL / 2, top.Y + 0.04, top.Z + z),
-                Color3.fromHex("6f4a2c"),
+                Color3.fromHex("6b5740"),
                 Enum.Material.SmoothPlastic
             )
             local inlay = block(
@@ -180,7 +180,7 @@ return function()
                 dressing,
                 Vector3.new(PANEL - 6, 0.06, PANEL - 6),
                 Vector3.new(top.X + x, top.Y + 0.03, top.Z + z),
-                Color3.fromHex("94743f"),
+                Color3.fromHex("9d8259"),
                 Enum.Material.SmoothPlastic
             )
             for _, piece in { seamA, seamB, inlay } do

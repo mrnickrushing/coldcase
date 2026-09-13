@@ -361,9 +361,10 @@ local function collectPoints()
     end
 end
 
--- Roblox pathfinding gives up over long distances in a building this dense,
--- so an NPC crosses it a few rooms at a time: the plan says which cells lead
--- to the goal, and the NPC heads for one a short way along that route.
+-- NPCs cross a building a few rooms at a time: the plan says which cells lead
+-- to the goal, and the NPC heads for one a short way along that route. Short
+-- legs keep each path request cheap and reliable, and they send an NPC through
+-- the doorways and up the stairs the plan knows about rather than guessing.
 local function leg(root: BasePart, goal: Vector3): Vector3
     if not (plan and planAnalysis) then
         return goal
