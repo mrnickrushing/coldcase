@@ -640,6 +640,48 @@ test("no economy path charges before its grant succeeds", function()
     end
 end)
 
+---------------------------------------------------------------- round events
+-- One event fires per round, picked from the ones that suit the map. A map
+-- whose pool holds a single event plays the same round every time, and an
+-- empty pool would fire nothing at all.
+test("every map has at least two round events to choose from", function()
+    local src = fs.readFile("src/server/Services/EventService.luau")
+    local block = src:match("local EVENTS = {(.-)\n}")
+    assert(block, "could not find the EVENTS table")
+
+    local events = {}
+    for line in block:gmatch("[^\n]+") do
+        local id = line:match('id = "(%u[%u_]*)"')
+        if id then
+            local weight = tonumber(line:match("weight = (%d+)"))
+            assert(weight and weight > 0, ("%s has no usable weight"):format(id))
+            table.insert(events, {
+                id = id,
+                weight = weight,
+                anywhere = line:find("anywhere = true", 1, true) ~= nil,
+                indoor = line:find("indoor = true", 1, true) ~= nil,
+            })
+        end
+    end
+    assert(#events > 0, "found no events")
+
+    for _, indoors in { true, false } do
+        local pool = {}
+        for _, e in events do
+            if e.anywhere or e.indoor == indoors then
+                table.insert(pool, e.id)
+            end
+        end
+        assert(
+            #pool >= 2,
+            ("%s maps would only ever see: %s"):format(
+                indoors and "indoor" or "outdoor",
+                table.concat(pool, ", ")
+            )
+        )
+    end
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")

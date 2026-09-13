@@ -38,10 +38,14 @@ local function relight()
 end
 
 -- One event per round. Chaos stops being an event when it is the weather.
+-- `anywhere` events ignore the indoor/outdoor split. Lockdown is one of them:
+-- every map builds LockdownDoor parts (the Pier has five) and MapPlan's
+-- reachability test proves a shut door seals nobody in, on every map. Without
+-- it the Pier had a pool of two, half of which was a blackout.
 local EVENTS = {
     { id = "LIGHTS_OUT", weight = 30, duration = Config.LIGHTS_OUT_DUR, indoor = true },
-    { id = "POWER_SURGE", weight = 25, duration = Config.LIGHTS_OUT_DUR, indoor = true },
-    { id = "LOCKDOWN", weight = 20, duration = Config.LOCKDOWN_DUR, indoor = true },
+    { id = "POWER_SURGE", weight = 25, duration = Config.LIGHTS_OUT_DUR, anywhere = true },
+    { id = "LOCKDOWN", weight = 20, duration = Config.LOCKDOWN_DUR, anywhere = true },
     { id = "FOG_BANK", weight = 25, duration = Config.FOG_DUR, indoor = false },
 }
 
@@ -74,7 +78,7 @@ end
 function EventService:FireWeighted(mapIsIndoor: boolean)
     local pool = {}
     for _, e in EVENTS do
-        if e.indoor == mapIsIndoor or e.id == "POWER_SURGE" then
+        if e.anywhere or e.indoor == mapIsIndoor then
             table.insert(pool, e)
         end
     end
