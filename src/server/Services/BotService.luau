@@ -8,6 +8,7 @@ local PathfindingService = game:GetService("PathfindingService")
 local Players = game:GetService("Players")
 local Config = require(game.ReplicatedStorage.Shared.Config)
 local MapPlan = require(game.ReplicatedStorage.Shared.MapPlan)
+local FibreBands = require(game.ReplicatedStorage.Shared.FibreBands)
 local RoleService = require(script.Parent.RoleService)
 local CombatService = require(script.Parent.CombatService)
 
@@ -77,6 +78,44 @@ end
 
 local function pick(list: { string }): string
     return list[math.random(#list)]
+end
+
+local function shuffled(list: { string }): { string }
+    local out = table.clone(list)
+    for i = #out, 2, -1 do
+        local j = math.random(i)
+        out[i], out[j] = out[j], out[i]
+    end
+    return out
+end
+
+-- The fibre clue names the colour band of the killer's shirt, so a round where
+-- three NPCs wear the same band narrows almost nothing. Shirts are dealt one
+-- band at a time, and never handed out twice.
+local function shirtDeck(): { string }
+    local byBand: { [string]: { string } } = {}
+    local order = {}
+    for _, hex in shuffled(SHIRTS) do
+        local band = FibreBands.Describe(Color3.fromHex(hex):ToHSV())
+        if not byBand[band] then
+            byBand[band] = {}
+            table.insert(order, band)
+        end
+        table.insert(byBand[band], hex)
+    end
+    local deck = {}
+    local more = true
+    while more do
+        more = false
+        for _, band in order do
+            local hex = table.remove(byBand[band])
+            if hex then
+                table.insert(deck, hex)
+                more = more or #byBand[band] > 0
+            end
+        end
+    end
+    return deck
 end
 
 function BotService:BindRound(roundService)
@@ -234,11 +273,8 @@ function BotService:Spawn(count: number): { any }
     if count <= 0 then
         return made
     end
-    local names = table.clone(NAMES)
-    for i = #names, 2, -1 do
-        local j = math.random(i)
-        names[i], names[j] = names[j], names[i]
-    end
+    local names = shuffled(NAMES)
+    local shirts = shirtDeck()
     local lobby = workspace:FindFirstChild("Lobby")
     local spawnPart = lobby and lobby:FindFirstChild("LobbySpawn")
     local origin = if spawnPart and spawnPart:IsA("BasePart")
@@ -259,7 +295,7 @@ function BotService:Spawn(count: number): { any }
         end
         colour(
             char,
-            Color3.fromHex(pick(SHIRTS)),
+            Color3.fromHex(shirts[i] or pick(SHIRTS)),
             Color3.fromHex(pick(SKIN)),
             Color3.fromHex(pick(TROUSERS))
         )
