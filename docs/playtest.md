@@ -39,12 +39,12 @@ workflow — no manual Studio setup is needed.)
 - [x] Examining after 20s, or during Lights Out, returns "The trail has gone cold."
 - [x] Walking over a coin collects it once; coins land on the HUD
 - [x] Event fires at the 45% mark, once, banner fades in and out, lighting restores after
-- [ ] Round ends on murderer death, wipe, or timeout; results card names the murderer
+- [x] Round ends on murderer death, wipe, or timeout; results card names the murderer
 - [x] When a murderer killed, the round ends on a 2.5s kill-cam circling the last kill, then results
 - [ ] Results show "You were N coins short." when the balance is under 250
 - [ ] Locker shows `coins / 250` and reads NEED N MORE until affordable
 - [ ] Everyone returns to the lobby; coins and XP survive a rejoin (with API access on)
-- [ ] Results screen names the murderer, lists the roster with the dead struck through, shows the
+- [x] Results screen names the murderer, lists the roster with the dead struck through, shows the
       kill timeline and the payout
 - [x] Crate reel spins and lands on the item the server actually granted; the free first crate
       opens the crate screen by itself
