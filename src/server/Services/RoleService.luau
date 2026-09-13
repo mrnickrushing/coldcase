@@ -72,11 +72,27 @@ function RoleService:Assign(participants: { Player })
             roles[s] = "sheriff"
         end
     end
+    -- An NPC medic never revives anyone and an NPC snitch's reveal reaches no
+    -- screen, so these two go to a person whenever the round has one
+    local function drawPreferHuman(): Player?
+        for i = #pool, 1, -1 do
+            if not Participant.IsBot(pool[i]) then
+                return table.remove(pool, i)
+            end
+        end
+        return table.remove(pool)
+    end
     if count >= Config.MEDIC_AT and #pool > 2 then
-        roles[table.remove(pool)] = "medic"
+        local medic = drawPreferHuman()
+        if medic then
+            roles[medic] = "medic"
+        end
     end
     if count >= Config.SNITCH_AT and #pool > 2 then
-        roles[table.remove(pool)] = "snitch"
+        local snitch = drawPreferHuman()
+        if snitch then
+            roles[snitch] = "snitch"
+        end
     end
     for _, plr in pool do
         roles[plr] = "innocent"
