@@ -38,9 +38,14 @@ RoundService.clueCounts = {} :: { [Player]: number }
 
 local function setState(new: string, duration: number)
     state, stateEnds = new, os.clock() + duration
-    -- Attributes let late joiners and the HUD timer sync without os.clock drift
-    ReplicatedStorage:SetAttribute("RoundState", new)
+    -- Attributes let late joiners and the HUD timer sync without os.clock drift.
+    -- RoundEnds goes first: every client handler for the RoundState change reads
+    -- RoundEnds inside that handler, so setting it second handed them the
+    -- previous state's deadline. Usually the stale value had only just expired
+    -- and nobody noticed; after LOADING, which overruns by a couple of seconds
+    -- while the map clones, it was nearly four seconds out of date.
     ReplicatedStorage:SetAttribute("RoundEnds", workspace:GetServerTimeNow() + duration)
+    ReplicatedStorage:SetAttribute("RoundState", new)
     Remotes.RoundState:FireAllClients(new, duration)
     for _, plr in Players:GetPlayers() do
         DataService:SetScreen(plr, (new == "ACTIVE" and not alive[plr]) and "SPECTATING" or new)
@@ -160,7 +165,13 @@ local function winningMap(): string
     return best or Config.MAPS[math.random(#Config.MAPS)]
 end
 
-function RoundService:LoadVotedMap()
+-- Built as LOADING begins rather than as it ends. Cloning a map floods
+-- replication, and a client that receives the burst late receives the state
+-- change behind it late too: measured, the server ran a full 4s REVEAL while
+-- clients saw 2.5s, so a role card meant to be readable for four seconds was
+-- on screen for two and a half. Building here gives the LOADING window
+-- something to do - absorbing that burst is the reason it exists.
+function RoundService:BuildVotedMap()
     local old = workspace:FindFirstChild("Round")
     if old then
         old:Destroy()
@@ -179,6 +190,15 @@ function RoundService:LoadVotedMap()
     end
     votes = {}
     broadcastTally()
+end
+
+-- Kept separate from building because it needs the final participant list:
+-- NPCs are spawned and absent players dropped after the map is already up.
+function RoundService:PlaceParticipants()
+    local folder = workspace:FindFirstChild("Round")
+    if not folder then
+        return
+    end
 
     local spawns = {}
     for _, part in folder:GetDescendants() do
@@ -381,6 +401,8 @@ function RoundService:Advance()
         end
         participants = if plan.full then humans else ready
         pendingBots = plan.npcs
+        -- Clone the map now, so the LOADING window covers its replication
+        self:BuildVotedMap()
         setState("LOADING", Config.LOADING_TIME)
     elseif state == "LOADING" then
         local wanted = pendingBots
@@ -401,6 +423,12 @@ function RoundService:Advance()
             )
             BotService:Clear()
             participants = {}
+            -- The map is already standing by the time we get here, so take it
+            -- back down instead of leaving it in view behind the lobby.
+            local built = workspace:FindFirstChild("Round")
+            if built then
+                built:Destroy()
+            end
             Remotes.Notify:FireAllClients("The NPCs could not join. Trying again next round.")
             setState("INTERMISSION", Config.INTERMISSION)
             return
@@ -408,7 +436,7 @@ function RoundService:Advance()
         if joined > 0 then
             Remotes.Notify:FireAllClients(("%d NPCs joined this round."):format(joined))
         end
-        self:LoadVotedMap()
+        self:PlaceParticipants()
         local present = {}
         for _, plr in participants do
             if plr.Parent == Players and plr.Character then
