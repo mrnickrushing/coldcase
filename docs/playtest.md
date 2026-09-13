@@ -40,7 +40,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] Walking over a coin collects it once; coins land on the HUD
 - [x] Event fires at the 45% mark, once, banner fades in and out, lighting restores after
 - [ ] Round ends on murderer death, wipe, or timeout; results card names the murderer
-- [ ] When a murderer killed, the round ends on a 2.5s kill-cam circling the last kill, then results
+- [x] When a murderer killed, the round ends on a 2.5s kill-cam circling the last kill, then results
 - [ ] Results show "You were N coins short." when the balance is under 250
 - [ ] Locker shows `coins / 250` and reads NEED N MORE until affordable
 - [ ] Everyone returns to the lobby; coins and XP survive a rejoin (with API access on)
@@ -58,7 +58,7 @@ workflow — no manual Studio setup is needed.)
 - [x] Lights Out shrinks the vision radius (fog at 88 studs), not just brightness
 - [ ] Fog Bank hides name tags past 40 studs
 - [ ] With `LiveOpsDay = 28`, TRADE opens a table between two players who both ask
-- [ ] Dying puts the camera on a living player; ‹ › (or ← →) switches; respawning in the lobby keeps
+- [x] Dying puts the camera on a living player; ‹ › (or ← →) switches; respawning in the lobby keeps
       spectating; a revive or the end of the round hands the camera back
 - [ ] The murderer's knife and the sheriff's pistol stay hidden while walking about and appear in hand
       only on a stab, throw or shot
