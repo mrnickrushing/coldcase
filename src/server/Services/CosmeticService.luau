@@ -8,6 +8,7 @@ local ItemCard = require(game.ReplicatedStorage.Shared.Build.ItemCard)
 local CosmeticFx = require(game.ReplicatedStorage.Shared.CosmeticFx)
 local Remotes = game.ReplicatedStorage.Remotes
 local DataService = require(script.Parent.DataService)
+local Participant = require(script.Parent.Participant)
 
 local CosmeticService = {}
 
@@ -207,7 +208,54 @@ function CosmeticService:GiveWeapon(plr: Player, slot: string)
     tool.Parent = backpack
 end
 
+-- NPCs have no Backpack and cannot equip a Tool, so they would kill with empty
+-- hands: no knife to witness, no tell to catch them by. They get the same
+-- weapon model welded into the hand for the same moment a player shows one.
+local function flashForBot(bot, slot: string, seconds: number)
+    local char = bot.Character
+    local hand = char and (char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm"))
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not (hand and hum and hum.Health > 0) then
+        return
+    end
+    local old = char:FindFirstChild("DrawnWeapon")
+    if old then
+        old:Destroy()
+    end
+    local folder = ServerStorage:FindFirstChild("Cosmetics")
+    local generic = folder and folder:FindFirstChild(slot)
+    local handle: BasePart?
+    if generic and generic:IsA("Tool") and generic:FindFirstChild("Handle") then
+        handle = (generic.Handle :: BasePart):Clone()
+    else
+        handle = blockout(slot, nil):FindFirstChild("Handle") :: BasePart
+    end
+    if not handle then
+        return
+    end
+    handle.Name = "DrawnWeapon"
+    handle.CanCollide = false
+    handle.CanTouch = false
+    handle.CanQuery = false
+    handle.Massless = true
+    handle.CFrame = hand.CFrame * CFrame.new(0, -0.8, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = hand
+    weld.Part1 = handle
+    weld.Parent = handle
+    handle.Parent = char
+    task.delay(seconds, function()
+        if handle.Parent == char then
+            handle:Destroy()
+        end
+    end)
+end
+
 function CosmeticService:DrawWeapon(plr: Player, slot: string, seconds: number)
+    if Participant.IsBot(plr) then
+        flashForBot(plr, slot, seconds)
+        return
+    end
     local char = plr.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     local tool = weaponsOf(plr, slot)[1]
