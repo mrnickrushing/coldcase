@@ -377,10 +377,11 @@ test("no analytics field value carries a character Roblox rejects", function()
 end)
 
 test("every map offers a spawn pad for a full server", function()
-    -- A full server is 12. With only 10 pads the placement loop ran out and
-    -- left the rest standing in the lobby while the round played on without
-    -- them, which is exactly what happened at the advertised player count.
-    local FULL_SERVER = 12
+    -- With only 10 pads the placement loop ran out and left the rest standing
+    -- in the lobby while the round played on without them, which is exactly
+    -- what happened at the advertised player count. The cap is declared once,
+    -- in Config, mirroring Players.MaxPlayers from default.project.json.
+    local FULL_SERVER = Config.MAX_PLAYERS
     assert(
         MapPlan.SPAWNS >= FULL_SERVER,
         ("maps generate %d spawn pads, short of a full server of %d"):format(
@@ -677,6 +678,36 @@ test("every map has at least two round events to choose from", function()
             ("%s maps would only ever see: %s"):format(
                 indoors and "indoor" or "outdoor",
                 table.concat(pool, ", ")
+            )
+        )
+    end
+end)
+
+---------------------------------------------------------------- headcounts
+-- A threshold above the server cap is dead configuration: the rule it guards
+-- never fires and nobody notices, because nothing errors. SECOND_SHERIFF_AT
+-- sat at 14 against a cap of 12, so a second sheriff never once appeared.
+test("no headcount threshold is above the server cap", function()
+    for _, name in
+        {
+            "MIN_PLAYERS",
+            "SECOND_MURDERER_AT",
+            "SECOND_SHERIFF_AT",
+            "ROUND_LARGE_AT",
+            "ROUND_SMALL_UNDER",
+            "MEDIC_AT",
+            "SNITCH_AT",
+            "BOT_FILL_TO",
+        }
+    do
+        local v = Config[name]
+        assert(type(v) == "number", ("Config.%s is missing"):format(name))
+        assert(
+            v <= Config.MAX_PLAYERS,
+            ("Config.%s = %d is above MAX_PLAYERS (%d), so it can never fire"):format(
+                name,
+                v,
+                Config.MAX_PLAYERS
             )
         )
     end

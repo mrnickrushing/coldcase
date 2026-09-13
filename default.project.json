@@ -29,7 +29,8 @@
     "Players": {
       "$properties": {
         "CharacterAutoLoads": true,
-        "RespawnTime": 3
+        "RespawnTime": 3,
+        "MaxPlayers": 12
       }
     },
     "Workspace": {

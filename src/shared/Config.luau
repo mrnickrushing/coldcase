@@ -12,12 +12,19 @@ return {
     ROUND_SMALL_UNDER = 8, -- below this headcount a round uses the small length
     ROUND_LARGE_AT = 12, -- at or above it, the large one
     MIN_PLAYERS = 4,
+    -- The server cap, mirrored from Players.MaxPlayers (declared in
+    -- default.project.json so it lives in the repo rather than only in the
+    -- place settings). Every headcount threshold below is checked against it.
+    MAX_PLAYERS = 12,
     SPAWN_MIN_SEP = 60,
     WEAPON_GRACE = 4, -- no kills for the first 4 seconds
 
     -- Role scaling
     SECOND_MURDERER_AT = 12,
-    SECOND_SHERIFF_AT = 14,
+    -- Was 14, which no server could ever reach: the cap is 12, so a second
+    -- sheriff never once appeared. Matched to the second murderer so a full
+    -- lobby scales both sides together instead of only the killers.
+    SECOND_SHERIFF_AT = 12,
     MEDIC_AT = 6, -- NPC rounds seat 6: below this the role never existed
     SNITCH_AT = 6,
     SNITCH_REVEAL_AT = 30, -- seconds remaining
