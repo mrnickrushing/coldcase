@@ -118,6 +118,7 @@ function EvidenceService:DropBody(victim: Player, killer: Player)
     local killerPos = killer.Character and killer.Character:GetPivot().Position or pos
 
     local model = game.ServerStorage.BodyTemplate:Clone()
+    model.Name = victim.DisplayName -- a body on the floor is a person, not a template
     model:PivotTo(CFrame.new(pos - Vector3.new(0, 2.5, 0)))
     model:AddTag("Body")
     model.Parent = roundFolder
