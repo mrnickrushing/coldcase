@@ -6,7 +6,7 @@ return {
     REVEAL_TIME = 4,
     RESOLUTION_TIME = 6,
     KILLCAM_TIME = 2.5, -- of RESOLUTION_TIME, before the results screen
-    ROUND_LENGTH_SMALL = 90, -- fewer than 8 players
+    ROUND_LENGTH_SMALL = 110, -- fewer than 8 players; the buildings are big
     ROUND_LENGTH = 120,
     ROUND_LENGTH_LARGE = 150, -- 12+ players
     MIN_PLAYERS = 4,
@@ -129,8 +129,8 @@ return {
     BOTS_ENABLED = true,
     BOT_FILL_TO = 6, -- players who chose Play now + NPCs, while humans < MIN_PLAYERS
     BOT_ROUND_REWARD = 1, -- coins and XP scale in a round with NPCs (1 = full pay)
-    BOT_FIRST_HUNT = { 12, 22 }, -- seconds before an NPC murderer first strikes
-    BOT_HUNT_PAUSE = { 10, 18 }, -- seconds between an NPC murderer's kills
+    BOT_FIRST_HUNT = { 9, 16 }, -- seconds before an NPC murderer first strikes
+    BOT_HUNT_PAUSE = { 6, 11 }, -- seconds between an NPC murderer's kills
     BOT_REACTION = { 0.9, 1.6 }, -- seconds before an NPC sheriff fires on a killer
     BOT_SIGHT = 70, -- studs an NPC can witness a kill from
     BOT_STROLL_SPEED = 11, -- NPCs walk; they only run to chase or flee
