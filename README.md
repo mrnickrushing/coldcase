@@ -137,7 +137,7 @@ reads.
 INTERMISSION (20s)     lobby menus: map vote, crate, collection, trading
 LOADING      (3s)      clone voted map, spawn with separation
 REVEAL       (4s)      roles sent one player at a time, movement locked
-ACTIVE       (90–150s) one map event at 45%, snitch reveal and Last Call at 30s left
+ACTIVE      (110–150s) one map event at 45%, snitch reveal and Last Call at 30s left
 RESOLUTION   (6s)      results screen: murderer, roster, kill timeline, payout
 ```
 
