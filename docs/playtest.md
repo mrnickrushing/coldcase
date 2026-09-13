@@ -121,3 +121,21 @@ Run from a LocalScript or the client command bar.
 - [ ] 30-stranger closed test
 
 Every hour spent on art before the exploit sweep is an hour you will spend again.
+
+## What a Studio session can and cannot settle
+
+Counting ticks is misleading on its own, so here is the split as of the automated passes.
+
+| Bucket | Count | Meaning |
+| --- | --- | --- |
+| Testable in Studio, not yet done | 37 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Needs two or more real players | 9 | Trading, vote tallies across clients, the results roster, radio reaching everyone, the closed test. A second client is the only way. |
+| Needs a purchased pass | 1 | Emotes. Studio without API access owns nothing. |
+| Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
+| Needs human eyes or ears | 6 | Whether the cues match the brief, whether a weapon sits right in the hand, whether the art reads. No probe settles taste. |
+| Setup step, not a claim | 3 | `rokit install`, API access, `[ColdCase] server up`. |
+
+A tick here means observed, not inferred. Where something is verified by reading the code but never
+seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
+weapon are both in that state.
+
