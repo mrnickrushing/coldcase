@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared.Theme)
+local Config = require(Shared.Config)
 local Catalog = require(Shared.Catalog)
 local ItemCard = require(Shared.Build.ItemCard)
 local ClientState = require(script.Parent.Parent.ClientState)
@@ -14,7 +15,7 @@ local gui = plr:WaitForChild("PlayerGui"):WaitForChild("TradeGui")
 local root = gui:WaitForChild("Root")
 local TradeController = {}
 
-local MAX_OFFER = 8
+local MAX_OFFER = Config.MAX_TRADE_OFFER
 local GREEN = Color3.fromHex("4fb0a0")
 local QUIET_STROKE = Color3.fromHex("1f252e")
 

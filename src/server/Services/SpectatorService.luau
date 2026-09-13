@@ -38,10 +38,6 @@ function SpectatorService:Send(plr: Player, targets: { string })
     end
 end
 
-function SpectatorService:IsSpectating(plr: Player): boolean
-    return watching[plr] == true
-end
-
 function SpectatorService:Reset()
     for plr in watching do
         if plr.Parent == Players then

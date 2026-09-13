@@ -83,9 +83,9 @@ local function minPlayers(): number
 end
 
 local function lengthFor(count: number): number
-    if count < 8 then
+    if count < Config.ROUND_SMALL_UNDER then
         return Config.ROUND_LENGTH_SMALL
-    elseif count >= 12 then
+    elseif count >= Config.ROUND_LARGE_AT then
         return Config.ROUND_LENGTH_LARGE
     end
     return Config.ROUND_LENGTH
@@ -227,7 +227,7 @@ function RoundService:SetMovementLocked(locked: boolean)
     for _, plr in participants do
         local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
         if hum then
-            hum.WalkSpeed = locked and 0 or 16
+            hum.WalkSpeed = locked and 0 or Config.WALKSPEED
             hum.JumpHeight = locked and 0 or 7.2
             hum.JumpPower = locked and 0 or 50
         end

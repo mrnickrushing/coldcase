@@ -15,6 +15,7 @@ local Rarities = require(Shared.RarityTable)
 local Shop = require(Shared.Shop)
 local Progression = require(Shared.Progression)
 local Lobby = require(Shared.Lobby)
+local LiveOps = require(Shared.LiveOps)
 local Products = require(Shared.Products)
 local BuildMenus = require(Shared.Build.BuildMenus)
 local ItemCard = require(Shared.Build.ItemCard)
@@ -107,7 +108,7 @@ local function renderPlayers()
         end
     end
     local tradingOpen = ReplicatedStorage:GetAttribute("TradingOpen") == true
-    local opensDay = ReplicatedStorage:GetAttribute("TradingOpensDay") or 28
+    local opensDay = ReplicatedStorage:GetAttribute("TradingOpensDay") or LiveOps.TRADING_UNLOCK_DAY
     local everyone = Players:GetPlayers()
     table.sort(everyone, function(a, b)
         return (a:GetAttribute("Rank") or 1) > (b:GetAttribute("Rank") or 1)

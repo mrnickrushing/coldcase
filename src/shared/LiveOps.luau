@@ -29,6 +29,10 @@ LiveOps.SEASONS = {
         -- countdown) and "Day 76 · Season One closes". Day 90 is used here.
         closesDay = 90,
         crateId = "seasonal",
+        -- The server charges this; the lobby quotes Config.SEASONAL_COST as a
+        -- pre-replication fallback, so the two must agree. This module cannot
+        -- read Config - it requires nothing so Lune can load it, and
+        -- `script.Parent` is nil there - so a test pins the two numbers instead.
         crateCost = 600,
     },
 } :: { Season }

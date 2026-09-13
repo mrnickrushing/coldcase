@@ -161,7 +161,7 @@ function AbilityService:StopDrag(plr: Player)
     d.body.draggedBy = nil
     local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
     if hum and round:IsAlive(plr) then
-        hum.WalkSpeed = 16
+        hum.WalkSpeed = Config.WALKSPEED
     end
     if plr.Parent == Players then
         Remotes.AbilityState:FireClient(plr, "drag_stop", 0)

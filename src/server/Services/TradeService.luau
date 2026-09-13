@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local Catalog = require(game.ReplicatedStorage.Shared.Catalog)
+local Config = require(game.ReplicatedStorage.Shared.Config)
 local LiveOps = require(game.ReplicatedStorage.Shared.LiveOps)
 local Remotes = game.ReplicatedStorage.Remotes
 local DataService = require(script.Parent.DataService)
@@ -12,7 +13,7 @@ local TradeService = {}
 local sessions = {} -- [id] = session
 local sessionOf = {} -- [Player] = id
 local invites = {} -- [Player] = Player they asked to trade with
-local MAX_OFFER = 8
+local MAX_OFFER = Config.MAX_TRADE_OFFER
 
 -- What each side has on the table, resolved to catalog ids for display
 local function describe(owner: Player, uids: { string })

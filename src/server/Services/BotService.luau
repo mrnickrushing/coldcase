@@ -18,7 +18,7 @@ local bots: { any } = {}
 local byCharacter: { [Instance]: any } = {}
 local points: { Vector3 } = {}
 local plan, planAnalysis = nil, nil -- the map being played, for room-to-room routing
-local RUN_SPEED = 16 -- a player's walk speed; NPCs match it only when running
+local RUN_SPEED = Config.WALKSPEED -- a player's walk speed; NPCs match it only when running
 
 local NAMES = {
     "Otto",

@@ -9,6 +9,8 @@ return {
     ROUND_LENGTH_SMALL = 110, -- fewer than 8 players; the buildings are big
     ROUND_LENGTH = 120,
     ROUND_LENGTH_LARGE = 150, -- 12+ players
+    ROUND_SMALL_UNDER = 8, -- below this headcount a round uses the small length
+    ROUND_LARGE_AT = 12, -- at or above it, the large one
     MIN_PLAYERS = 4,
     SPAWN_MIN_SEP = 60,
     WEAPON_GRACE = 4, -- no kills for the first 4 seconds
@@ -50,6 +52,7 @@ return {
     REVIVE_MOVE_TOLERANCE = 3, -- studs; moving further breaks the channel
     REVIVE_COINS = 60,
     REVIVE_XP = 40,
+    WALKSPEED = 16, -- base speed; what DRAG_WALKSPEED is restored back to
     DRAG_WALKSPEED = 8,
     DRAG_SOUND_INTERVAL = 0.8,
 
@@ -70,7 +73,6 @@ return {
     STARTING_COINS = 100, -- below CRATE_COST so the second crate is locked in round two
     COIN_PICKUP = 5,
     COIN_PICKUP_RANGE = 7,
-    COIN_NODES = 16,
     COINS_SURVIVE = 40,
     COINS_WIN = 90,
     COINS_LOSS = 30,
@@ -80,6 +82,7 @@ return {
     CRAFT_FEE = 150,
     DIRECT_BUY_MARKUP = 1.6, -- direct buy is the impatience tax
     REROLL_COST = 300,
+    MAX_TRADE_OFFER = 8, -- items one side may put on the table; both ends read this
     DISCOUNT_RANK = 25,
     DISCOUNT_AMOUNT = 25, -- coins off every crate
     LAST_CALL_MULT = 2,

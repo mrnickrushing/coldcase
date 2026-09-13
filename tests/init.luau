@@ -441,6 +441,16 @@ test("every round-over reason the server sends has a blurb", function()
     end
 end)
 
+-- The server charges season.crateCost (EconomyService) while the lobby quotes
+-- Config.SEASONAL_COST until the attribute replicates. LiveOps cannot require
+-- Config, so nothing but this test stops the two from drifting apart and
+-- quoting players a price the server will not honour.
+test("the seasonal crate costs the same on both sides", function()
+    local season = LiveOps.GetSeason("S1")
+    assert(season, "S1 exists")
+    eq(season.crateCost, Config.SEASONAL_COST, "season price vs Config")
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")
