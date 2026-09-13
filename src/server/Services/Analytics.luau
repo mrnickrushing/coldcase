@@ -229,18 +229,30 @@ function Analytics.PlayerReport(plr: Player, reason: string, reportsOnTarget: nu
 end
 
 -- Onboarding funnel: each step logs once per player, in order
+-- Every step here must be one the player cannot avoid, in the order they
+-- reach it. Voting used to sit at step 2 and it was neither: the free crate
+-- lands automatically five seconds after joining, while voting needs a tap on
+-- a map card that most players never make. So the real sequence was 1 -> 3,
+-- with 2 either missing or arriving late, which reads as everyone dropping
+-- out at step 2 while going on to finish two rounds. It is a custom event now.
 Analytics.FUNNEL = {
     JOINED = { 1, "joined" },
-    VOTED = { 2, "voted" },
-    FREE_CRATE = { 3, "free_crate" },
-    FIRST_ROUND_START = { 4, "first_round_start" },
-    FIRST_ROUND_END = { 5, "first_round_end" },
-    SECOND_ROUND_START = { 6, "second_round_start" },
+    FREE_CRATE = { 2, "free_crate" },
+    FIRST_ROUND_START = { 3, "first_round_start" },
+    FIRST_ROUND_END = { 4, "first_round_end" },
+    SECOND_ROUND_START = { 5, "second_round_start" },
 }
 
 function Analytics.Funnel(plr: Player, step: { any })
     debugLog("funnel", step[1], step[2])
     pcall(AnalyticsService.LogOnboardingFunnelStepEvent, AnalyticsService, plr, step[1], step[2])
+end
+
+-- The first map a new player votes for. Deliberately not a funnel step, and
+-- the name is one RoundService already matched against Config.MAPS, so no
+-- player-supplied string reaches the field.
+function Analytics.FirstVote(plr: Player, mapName: string)
+    custom(plr, "first_vote", 1, fields(mapName))
 end
 
 return Analytics

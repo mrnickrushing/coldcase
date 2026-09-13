@@ -511,6 +511,60 @@ test("the seasonal crate costs the same on both sides", function()
     eq(season.crateCost, Config.SEASONAL_COST, "season price vs Config")
 end)
 
+---------------------------------------------------------------- onboarding funnel
+-- Roblox's funnel report assumes a player reaches step N only after N-1, so
+-- the numbers have to run 1..N with nothing missing and nothing repeated. A
+-- gap reads as a cohort vanishing at a step that does not exist.
+test("funnel steps are numbered from 1 with no gaps or repeats", function()
+    local src = fs.readFile("src/server/Services/Analytics.luau")
+    local block = src:match("Analytics%.FUNNEL = {(.-)\n}")
+    assert(block, "could not find Analytics.FUNNEL - did the shape change?")
+
+    local numbers, seen = {}, {}
+    for num in block:gmatch("{%s*(%d+)%s*,") do
+        local n = tonumber(num) :: number
+        assert(not seen[n], ("step %d is used twice"):format(n))
+        seen[n] = true
+        table.insert(numbers, n)
+    end
+    assert(#numbers > 0, "found no funnel steps")
+
+    table.sort(numbers)
+    for i, n in numbers do
+        eq(n, i, ("step in position %d"):format(i))
+    end
+end)
+
+-- Removing a step leaves Analytics.FUNNEL.THAT_ONE as nil, and the funnel
+-- helper immediately indexes it. luau-lsp does not flag a missing table field,
+-- so nothing but this catches a call site left behind.
+test("every funnel step the server references exists", function()
+    local src = fs.readFile("src/server/Services/Analytics.luau")
+    local block = src:match("Analytics%.FUNNEL = {(.-)\n}")
+    assert(block, "could not find Analytics.FUNNEL")
+
+    local keys = {}
+    for key in block:gmatch("(%u[%u_]*)%s*=") do
+        keys[key] = true
+    end
+
+    local paths = { "src/server/Bootstrap.server.luau" }
+    for _, name in fs.readDir("src/server/Services") do
+        table.insert(paths, "src/server/Services/" .. name)
+    end
+
+    local checked = 0
+    for _, path in paths do
+        if fs.isFile(path) then
+            for key in fs.readFile(path):gmatch("Analytics%.FUNNEL%.(%u[%u_]*)") do
+                checked += 1
+                assert(keys[key], ("Analytics.FUNNEL.%s does not exist (%s)"):format(key, path))
+            end
+        end
+    end
+    assert(checked > 0, "found no funnel references to check")
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")

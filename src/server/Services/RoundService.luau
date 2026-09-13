@@ -135,12 +135,15 @@ function RoundService:GetEligible(): { Player }
     return out
 end
 
-function RoundService:CastVote(plr: Player, mapName: string)
+-- Returns whether the vote was accepted, so the caller can tell a real vote
+-- from a rejected one without re-checking the map name itself.
+function RoundService:CastVote(plr: Player, mapName: string): boolean
     if state ~= "INTERMISSION" or not table.find(Config.MAPS, mapName) then
-        return
+        return false
     end
     votes[plr] = mapName
     broadcastTally()
+    return true
 end
 
 local function winningMap(): string

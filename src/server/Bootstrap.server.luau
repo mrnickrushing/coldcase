@@ -106,9 +106,10 @@ RemoteGuard.Connect("RequestDrag", function(plr, model, stop)
 end)
 
 RemoteGuard.Connect("RequestVote", function(plr, mapName)
-    if type(mapName) == "string" then
-        RoundService:CastVote(plr, mapName)
-        OnboardingService:NoteVote(plr)
+    -- Note only a vote the round accepted: that way the map name reaching
+    -- analytics is one of Config.MAPS, never a string the client chose.
+    if type(mapName) == "string" and RoundService:CastVote(plr, mapName) then
+        OnboardingService:NoteVote(plr, mapName)
     end
 end)
 

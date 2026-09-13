@@ -35,13 +35,21 @@ than an analytics field.
 | Event | Value | Field 1 | Field 2 | Why |
 | --- | --- | --- | --- | --- |
 | `player_report` | reports against that player on this server | reason (`exploiting`, `harassment`, `other`) | report-count bucket | Roblox's own report flow does the moderation; this shows whether reports cluster on one player. The reported player is never a field. |
+| `first_vote` | always 1 | map name | — | The first map a new player votes for, once per session. Not a funnel step, because voting is optional. The name is one the round already matched against `Config.MAPS`, so no client-supplied string reaches the field. |
 
 ## Onboarding funnel
 
 Logged with `LogOnboardingFunnelStepEvent`, once per new player, in order:
 
-1. `joined` · 2. `voted` · 3. `free_crate` · 4. `first_round_start` · 5. `first_round_end` ·
-6. `second_round_start`
+1. `joined` · 2. `free_crate` · 3. `first_round_start` · 4. `first_round_end` ·
+5. `second_round_start`
+
+Every step is one the player cannot avoid, listed in the order they reach it. `voted` used to sit at
+step 2 and was neither: the free crate lands on its own five seconds after joining, while voting
+needs a tap on a map card that most players never make. The steps therefore arrived as 1 → 3, with 2
+missing or late, which reads as the whole cohort dropping out at step 2 while going on to finish two
+rounds. It is `first_vote` in the table above now. Read a gap here as real attrition — nothing in
+this list is optional.
 
 ## KPI targets
 

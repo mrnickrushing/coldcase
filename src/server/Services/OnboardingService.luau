@@ -12,19 +12,27 @@ local Analytics = require(script.Parent.Analytics)
 local OnboardingService = {}
 local HINTS = { move = true, examine = true, coins = true }
 local FREE_CRATE_DELAY = 5
-local logged: { [Player]: { [number]: boolean } } = {}
+local logged: { [Player]: { [any]: boolean } } = {}
 
-local function funnel(plr: Player, step)
+-- True the first time a new player's session reaches `key`, false after that
+-- and false for anyone who is not new.
+local function once(plr: Player, key: any): boolean
     local session = DataService:GetSession(plr)
     if not (session and session.isNew) then
-        return
+        return false
     end
     logged[plr] = logged[plr] or {}
-    if logged[plr][step[1]] then
-        return
+    if logged[plr][key] then
+        return false
     end
-    logged[plr][step[1]] = true
-    Analytics.Funnel(plr, step)
+    logged[plr][key] = true
+    return true
+end
+
+local function funnel(plr: Player, step)
+    if once(plr, step[1]) then
+        Analytics.Funnel(plr, step)
+    end
 end
 
 local function grantFreeCrate(plr: Player)
@@ -59,8 +67,12 @@ function OnboardingService:MarkHintSeen(plr: Player, hintId: any)
     end
 end
 
-function OnboardingService:NoteVote(plr: Player)
-    funnel(plr, Analytics.FUNNEL.VOTED)
+-- Not a funnel step; see the note on Analytics.FUNNEL. Only reached for a vote
+-- the round accepted, so mapName is always one of Config.MAPS.
+function OnboardingService:NoteVote(plr: Player, mapName: string)
+    if once(plr, "voted") then
+        Analytics.FirstVote(plr, mapName)
+    end
 end
 
 function OnboardingService:NoteRoundStart(participants: { Player })
