@@ -12,7 +12,7 @@ workflow — no manual Studio setup is needed.)
 
 ## Solo with NPCs — press Play, no attributes
 
-- [ ] Lobby countdown reads "STARTS IN Ns · 5 NPCS JOIN" and the round starts with five NPCs
+- [x] Lobby countdown reads "STARTS IN Ns · 5 NPCS JOIN" and the round starts with five NPCs
 - [ ] WAIT FOR PLAYERS highlights, the countdown switches to "WAITING FOR PLAYERS · 1/4", no round starts, and the choice is still set after a rejoin
 - [ ] PLAY NOW · NPCS switches back and the next intermission starts an NPC round
 - [ ] With two players, one waiting: the other plays with NPCs, the waiter stays in the lobby and shows "WAITING" in the player list
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 35 ticked, 44 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 36 ticked, 43 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 24 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 23 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 8 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -149,6 +149,10 @@ Counting ticks is misleading on its own, so here is the split. 35 ticked, 44 not
 > **The spawn separation was measured at six, and six is the only headcount reachable alone.** At REVEAL - the first moment everyone is placed, and before anyone has walked, since movement is locked - all fifteen pairs cleared the sixty stud minimum, closest 63.2. The placements also spanned three Y bands, 3.0, 19.2 and 35.2, so participants start on different floors rather than in one cluster. That is the good case and it is the only one a solo session produces: `Lobby.Plan` fills to `BOT_FILL_TO`, so an NPC round is six. The separation is known to fail at twelve, where the pads cannot deliver it at all - measured exactly in the spawn commits - and that headcount needs twelve humans, so it is not reachable here.
 
 > **Timing a state window needs the `RoundEnds` anchor, not a poll.** The role card took three passes, and all three failures were the probe's, not the game's - each one looked like a defect first. Polling for the `LOADING -> REVEAL` edge put `t=0` about 1.3 seconds late, which made a correct 4.0s movement lock read as an early release at 2.69s. `RoundEnds` is set to `GetServerTimeNow() + duration` as the state begins, so `RoundEnds - REVEAL_TIME` recovers the true start however late the probe notices, and the observer's latency cancels out. Then visibility: `roleCard.Visible = false` hides the parent frame and leaves the child label's own `Visible` and transparency untouched, so a check on the label alone reports a card that never goes away. Walk the ancestors. And finally the names - `BuildHud` creates a `RoleName` inside `RoleTag`, the small persistent top-right tag, and a second `RoleName` inside `RoleCard`, the full-screen reveal. A search by name finds the tag, which stays up all round by design, and reports the card as stuck. Measured properly: card up through 4.09s, lock released at 4.09s, both against a `REVEAL_TIME` of 4.
+
+> **The lobby countdown and the server can disagree in Studio only.** `MenuController` says it "mirrors RoundService, which decides with the same `Lobby.Plan`", and it does call the same function - but not with the same arguments. The server passes `minPlayers()`, which returns `ServerStorage.MinPlayers` when that attribute is set and `RunService:IsStudio()`, falling back to `Config.MIN_PLAYERS`; the client always passes the constant. Outside Studio the override cannot exist and the two agree exactly, which is why this is a note and not a fix. Inside Studio with `MinPlayers` set, the countdown can advertise a plan the server will not act on - worth knowing before treating a lobby that says one thing and does another as a bug. Observed with no override: the label read "STARTS IN 20s · 5 NPCS JOIN" and exactly five NPCs were placed.
+>
+> The headcount argument differs too, and that one is not Studio-only. The client counts `Players:GetPlayers()`; the server counts `GetEligible()`, which keeps only players who have a Character *and* loaded data. So someone still spawning or still waiting on their profile is in the client's count and out of the server's. With one player it cannot show. On a filling server it can: the countdown quotes a headcount, and an NPC count derived from it, that the server will not honour until those players finish loading. It resolves itself within a second or two of them landing, so it is a transient cosmetic mismatch rather than a broken round - but it is the client's label that is wrong in that window, not the server's decision.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
