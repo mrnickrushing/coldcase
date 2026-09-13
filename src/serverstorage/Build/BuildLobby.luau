@@ -8,7 +8,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Theme = require(game.ReplicatedStorage.Shared.Theme)
 
 local HEIGHT = 18
-local BRICK = Color3.fromHex("c2855c")
+local BRICK = Color3.fromHex("cf9a6a")
 local LAMP = Color3.fromHex("ffe3b0")
 
 -- { template, x, z, facing } relative to the floor centre; the front of the
@@ -25,6 +25,15 @@ local PROPS = {
     { "Sofa", 0, 44, Vector3.zAxis },
     { "WritingDesk", 46, 18, -Vector3.xAxis },
     { "Globe", 50, 32, -Vector3.xAxis },
+    { "SofaRed", -30, 44, Vector3.zAxis },
+    { "Plant", -52, -52, Vector3.xAxis },
+    { "Plant", 52, -52, -Vector3.xAxis },
+    { "Plant", -52, 52, Vector3.xAxis },
+    { "VendingMachine", 20, -57.5, Vector3.zAxis },
+    { "Arcade", 30, -57.5, Vector3.zAxis },
+    { "Television", -20, -57.5, Vector3.zAxis },
+    { "CrateStack", -57.5, 0, -Vector3.xAxis },
+    { "Bookshelf", 57.5, -50, -Vector3.xAxis },
 }
 
 local function block(
@@ -144,6 +153,52 @@ return function()
     end
 
     caseBoard(dressing, Vector3.new(top.X, top.Y + 9, top.Z - half + 0.3))
+
+    -- A floor of laid panels rather than one flat sheet, and a ceiling to
+    -- close the room in
+    local PANEL = 20
+    for x = -half + PANEL / 2, half - PANEL / 2, PANEL do
+        for z = -half + PANEL / 2, half - PANEL / 2, PANEL do
+            local seamA = block(
+                "FloorSeam",
+                dressing,
+                Vector3.new(PANEL, 0.08, 0.6),
+                Vector3.new(top.X + x, top.Y + 0.04, top.Z + z + PANEL / 2),
+                Color3.fromHex("6f4a2c"),
+                Enum.Material.SmoothPlastic
+            )
+            local seamB = block(
+                "FloorSeam",
+                dressing,
+                Vector3.new(0.6, 0.08, PANEL),
+                Vector3.new(top.X + x + PANEL / 2, top.Y + 0.04, top.Z + z),
+                Color3.fromHex("6f4a2c"),
+                Enum.Material.SmoothPlastic
+            )
+            local inlay = block(
+                "FloorInlay",
+                dressing,
+                Vector3.new(PANEL - 6, 0.06, PANEL - 6),
+                Vector3.new(top.X + x, top.Y + 0.03, top.Z + z),
+                Color3.fromHex("94743f"),
+                Enum.Material.SmoothPlastic
+            )
+            for _, piece in { seamA, seamB, inlay } do
+                piece.CanCollide = false
+                piece.CanQuery = false
+                piece.CastShadow = false
+            end
+        end
+    end
+    local ceiling = block(
+        "Ceiling",
+        dressing,
+        Vector3.new(floor.Size.X + 4, 0.6, floor.Size.Z + 4),
+        Vector3.new(top.X, top.Y + HEIGHT, top.Z),
+        Color3.fromHex("f2efe6"),
+        Enum.Material.SmoothPlastic
+    )
+    ceiling.CanQuery = false
 
     -- A rug in front of the fireplace
     for _, layer in
