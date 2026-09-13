@@ -63,7 +63,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] The murderer's knife and the sheriff's pistol stay hidden while walking about and appear in hand
       only on a stab, throw or shot
 - [ ] With the Radio pass a message reaches everyone; the dead cannot send one mid-round
-- [ ] With the Emote pass the five emotes show over the player's head within 40 studs
+- [x] With the Emote pass the five emotes show over the player's head within 40 studs
 - [ ] REPORT on a lobby row asks to confirm; reporting the same player twice is refused
 
 ## Mobile pass — test on a phone, not the emulator
@@ -130,7 +130,7 @@ Counting ticks is misleading on its own, so here is the split as of the automate
 | --- | --- | --- |
 | Testable in Studio, not yet done | 37 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 9 | Trading, vote tallies across clients, the results roster, radio reaching everyone, the closed test. A second client is the only way. |
-| Needs a purchased pass | 1 | Emotes. Studio without API access owns nothing. |
+| Needs a purchased pass | 1 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
 | Needs human eyes or ears | 6 | Whether the cues match the brief, whether a weapon sits right in the hand, whether the art reads. No probe settles taste. |
 | Setup step, not a claim | 3 | `rokit install`, API access, `[ColdCase] server up`. |
