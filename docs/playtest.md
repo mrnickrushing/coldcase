@@ -46,7 +46,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] Everyone returns to the lobby; coins and XP survive a rejoin (with API access on)
 - [ ] Results screen names the murderer, lists the roster with the dead struck through, shows the
       kill timeline and the payout
-- [ ] Crate reel spins and lands on the item the server actually granted; the free first crate
+- [x] Crate reel spins and lands on the item the server actually granted; the free first crate
       opens the crate screen by itself
 - [ ] Published odds are visible on the crate screen, for the Locker and the seasonal crate
 - [x] Direct-buy shelf charges 1.6× item value; effect re-roll always lands on a new effect
