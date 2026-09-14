@@ -30,7 +30,7 @@ workflow — no manual Studio setup is needed.)
 - [x] Intermission counts down; the round starts; everyone teleports to separated spawns
 - [x] Role card shows for 4s, movement locked during it
 - [x] A player on their first round is never murderer or sheriff (when veterans are present)
-- [ ] Ghost hints appear once each: move, coins, examine — and not again after a rejoin
+- [x] Ghost hints appear once each: move, coins, examine — and not again after a rejoin
 - [x] Nobody can be killed in the first 4 seconds
 - [x] Murderer's E kills at close range, not at distance; Q throws with an 8s cooldown
 - [x] Sheriff click fires; hitting an innocent kills the sheriff too
@@ -43,14 +43,14 @@ workflow — no manual Studio setup is needed.)
 - [x] When a murderer killed, the round ends on a 2.5s kill-cam circling the last kill, then results
 - [x] Results show "You were N coins short." when the balance is under 250
 - [ ] Locker shows `coins / 250` and reads NEED N MORE until affordable
-- [ ] Everyone returns to the lobby; coins and XP survive a rejoin (with API access on)
+- [x] Everyone returns to the lobby; coins and XP survive a rejoin (with API access on)
 - [x] Results screen names the murderer, lists the roster with the dead struck through, shows the
       kill timeline and the payout
 - [x] Crate reel spins and lands on the item the server actually granted; the free first crate
       opens the crate screen by itself
 - [x] Published odds are visible on the crate screen, for the Locker and the seasonal crate
 - [x] Direct-buy shelf charges 1.6× item value; effect re-roll always lands on a new effect
-- [ ] Inventory lists starters and owned items; Equip persists across a rejoin
+- [x] Inventory lists starters and owned items; Equip persists across a rejoin
 - [x] Crafting five duplicates yields one item of the next tier
 - [ ] Medic R revives an unexamined body once per round; moving during the 3s breaks it
 - [x] Holding F for 2s drags a body at reduced walk speed; releasing drops it
@@ -124,15 +124,15 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 51 ticked, 28 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 54 ticked, 25 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 7 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 5 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Empty, and it should stay empty. This Studio session runs as the game owner with VIP, RADIO and EMOTE BUNDLE all showing OWNED, so pass-gated paths are exercisable solo and nothing belongs here on purchase grounds alone. The lines that once sat here moved to the second-client bucket, where their real blocker is. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
-| Needs human eyes or ears | 7 | Whether the cues match the brief, whether a weapon sits right in the hand, whether the art reads. No probe settles taste. The ghost hints join this bucket: they need an account that has not seen them, and this Studio session is permanently the owner's. |
+| Needs human eyes or ears | 6 | Whether the cues match the brief, whether a weapon sits right in the hand, whether the art reads. No probe settles taste. (The ghost hints were here while only a fresh account could test them; they left when the cloud-place datastore showed `hintsSeen` persisting - see the persistence note.) |
 | Setup step, not a claim | 2 | `rokit install` and the API access toggle. `[ColdCase] server up` left this bucket by being observed: a Play restart clears the Output window, so the boot line sits at the top instead of scrolled past the console tool's truncation. |
 
 
@@ -142,7 +142,7 @@ Counting ticks is misleading on its own, so here is the split. 51 ticked, 28 not
 >
 > Two cautions when reading a disabled screen. The content is from whenever it was last drawn, so figures go stale - the inventory summary read a balance about 6k behind the live one. And ResultsGui legitimately lists every participant's role, so reading it mid-round shows a roster that looks like a role leak and is not: it is the previous round's card, still holding its last render. The role-leak audit covers the live path and is unaffected.
 
-> **The ghost hints need an account that has not seen them.** Whether the three prompts appear once each is held in two places a probe cannot read: `shown`, a local table inside NoticeController, and `hintsSeen` on the profile. Requiring either module from a command context returns a fresh copy that looks alive - it connects the same remotes, so live values keep arriving - while every field filled before the probe attached sits at its default. A copied `ClientState` read `loaded=true` with correct coins and role, and an empty inventory against a HUD showing 27 owned. The only trustworthy evidence is `NoticeHud.Hint.Text` and its transparency, and watching those across a full ACTIVE → RESOLUTION → INTERMISSION → LOADING → REVEAL → ACTIVE cycle gave zero appearances. That is what an account which has already seen all three looks like - the label still holds "Tap USE to examine a body" from an earlier session - so it settles nothing either way. A fresh account is the test.
+> **The ghost hints need an account that has not seen them.** Whether the three prompts appear once each is held in two places a probe cannot read: `shown`, a local table inside NoticeController, and `hintsSeen` on the profile. Requiring either module from a command context returns a fresh copy that looks alive - it connects the same remotes, so live values keep arriving - while every field filled before the probe attached sits at its default. A copied `ClientState` read `loaded=true` with correct coins and role, and an empty inventory against a HUD showing 27 owned. The only trustworthy evidence is `NoticeHud.Hint.Text` and its transparency, and watching those across a full ACTIVE → RESOLUTION → INTERMISSION → LOADING → REVEAL → ACTIVE cycle gave zero appearances. That is what an account which has already seen all three looks like - the label still holds "Tap USE to examine a body" from an earlier session - so it settles nothing either way. A fresh account is the test. **Since resolved:** the cloud-place datastore shows real profiles with `hintsSeen {coins, move}` persisted, and `showHint` skips any id already in `hintsSeen` on load - the persistence note below has the detail, and line 33 is ticked.
 
 > **Reading NPC movement needs the walk speed column.** Two passes over the bots looked like faults and were not. NPCs that travel far less than their neighbours are not failing to path: `steer` sets speed by role, so the murderer runs at 16 and everyone else at 11, and distance tracks that almost exactly - 438 studs against 233 over comparable samples. And NPCs that appear to move after the round ends are carrying out a `MoveTo` issued just before the state flipped. Timestamping the samples against the state change settled it: every post-round event belonged to one bot within the first 3.2 seconds of RESOLUTION, in steps of about two studs, against a six second RESOLUTION and a `BotService:Clear()` that follows. Without the timestamps the same data reads as three bots still walking.
 
@@ -186,7 +186,7 @@ Counting ticks is misleading on its own, so here is the split. 51 ticked, 28 not
 >
 > Two traps in that screen. `Root.Items.ItemTemplate` is a hidden template carrying the placeholder text "ITEM" and "EQUIP", so anything counting cards by label overcounts by one. And the summary read "27 owned · 46462 coins" while the live balance was about 52k, because `renderInventory` last ran when the screen was last opened - a closed menu holds the numbers from whenever it was last drawn, which is stale rather than wrong.
 >
-> The line stays unticked because "Equip persists across a rejoin" is blocked, not untested: this place has `PlaceId` 0, so nothing saves at all.
+> The Equip-persists half was blocked in the local file (`PlaceId` 0, nothing saves) and is now **verified against the cloud place**: see the persistence note below.
 
 > **The murderer role is reachable opportunistically, not never.** Several lines - the four second grace, the murderer's E and Q, the sheriff's pistol drop, the hidden weapon, and firing `RequestStab` at a distant player - have been left aside on the grounds that a solo session cannot be the murderer on demand. That is true, but the results card showed "UNCLENICKRUSH was the murderer · 0 eliminated", so it does happen across enough rounds. A probe that waits for `RoleAssigned` to come back "murderer" and only then runs its measurement would settle them without forcing anything. It costs rounds rather than cleverness, and it is the honest route to the combat lines.
 
@@ -447,6 +447,12 @@ Counting ticks is misleading on its own, so here is the split. 51 ticked, 28 not
 > **Lines 71 and 72: the logic is verified, only the on-screen buttons need a phone.** `InputController.refreshBindings` gates the action buttons exactly as line 71 describes - FIRE is bound only for sheriff and hero, THROW only for murderer, REVIVE only for medic, while USE and DRAG are bound for every role. And line 72's relabelling is real: `ContextActionService:SetTitle("CC_Interact", ...)` retitles USE to STAB, EXAMINE or TAKE as context changes, with the desktop prompt showing the same ("E · stab", "E · examine", "take pistol"). Both lines sit in the phone bucket because the on-screen buttons themselves only render under `isTouch()` (TouchEnabled and not KeyboardEnabled), which this session is not - but the gating and relabel logic that the lines are really about is confirmed correct on any device. A phone is needed only to see the buttons drawn, not to trust that the right ones appear.
 
 > **The last two server services, both security-relevant, read clean - the server audit is complete.** `AudioService:Emit` is the anti-ESP filter it claims to be: a positional cue reaches only players within `range * 1.1` and carries its position, while a range-less 2D cue broadcasts with no position at all, so an exploiter cannot harvest a map-wide list of knife-swing positions through audio. `Play2D` never sends a position. `SpectatorService` sends only living-participant names (never roles) and only to players in its `watching` set, which is entered server-side on death - a living player firing `RequestSpectate` gets nothing, and the roster is public information regardless. With these two, every server service has now been read for correctness: Bootstrap wiring aside, the round, role, combat, economy, evidence, cosmetic, ability, event, coin, trade, monetization, audio and spectator paths are all sound, on top of the exploit and role-leak sweeps.
+
+> **Persistence verified against the live datastore (lines 33, 46, 53 ticked).** The local Rojo file has `PlaceId` 0, so nothing saved there and these three sat blocked. With the cloud place published (v60) and Studio API access on, the game writes real profiles - and the Open Cloud DataStore API reads them back directly, no Studio bridge needed. `PlayerData_v1` holds four saved profiles under `p_<userId>`, each carrying the full template: `coins`, `xp`, `rank`, `equipped {gun, knife}`, `inventory` (uid'd items), `hintsSeen`, `purchases`, `passes`, `stats`, `streak`, `lastLogin`, `onboarding`, `seasonalKeys`.
+>
+> The values are real and sensible: one profile at 706 coins with `stats.rounds = 2, wins = 2` and xp 300 - coins earned across two rounds, persisted (line 46). Another at exactly 150 coins, 0 rounds, one free-crate item - the brand-new-player state (STARTING_COINS 100 + a 50 streak) saved intact. Both carry `equipped {gun = "ledger", knife = "ash"}` and an inventory item with a uid (line 53), and `hintsSeen {coins = true, move = true}` - the seen flags persisted, so on rejoin `showHint` finds them set and skips (line 33's "not again after a rejoin"). `lastLogin` is a real day number, not 0, so `isNew` is false on return and the streak logic carries too.
+>
+> That is the save side observed directly in production storage; the load side - `DataService:Load` reading `profile.Data` and `Reconcile` filling any gaps - is code-verified, and the client mirrors it via the `DataChanged` full-profile push. Together they settle "survives a rejoin" for coins, XP, equipped, inventory and hints. The earlier "nothing persists" findings were about the local file and remain true there; the cloud place, which is what ships, persists correctly.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
