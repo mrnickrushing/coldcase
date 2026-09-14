@@ -60,7 +60,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] With `LiveOpsDay = 28`, TRADE opens a table between two players who both ask
 - [x] Dying puts the camera on a living player; ‹ › (or ← →) switches; respawning in the lobby keeps
       spectating; a revive or the end of the round hands the camera back
-- [ ] The murderer's knife and the sheriff's pistol stay hidden while walking about and appear in hand
+- [x] The murderer's knife and the sheriff's pistol stay hidden while walking about and appear in hand
       only on a stab, throw or shot
 - [ ] With the Radio pass a message reaches everyone; the dead cannot send one mid-round
 - [x] With the Emote pass the five emotes show over the player's head within 40 studs
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 41 ticked, 38 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 42 ticked, 37 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 16 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 15 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -286,6 +286,12 @@ Counting ticks is misleading on its own, so here is the split. 41 ticked, 38 not
 > And a number that meant nothing. A pistol dropped at t=71s, the round ended before I reached it, and the probe printed "966 studs away" - it had measured after the lobby teleport, from `(-2, 4, -897)` to a part still sitting on the map. Distances are only meaningful while the round is still ACTIVE, and a `math.huge` that never got assigned prints as `inf` rather than announcing itself.
 >
 > The common thread with the earlier list - the ancestor-blind visibility check, the `IsA("TextLabel")` filter on a TextButton, the isolation metric that was not the code's rule - is that the probe was wrong in a way that produced a plausible reading rather than an error. A probe that cannot fail loudly should at least report *why* it stopped.
+
+> **Both weapons are carried hidden and drawn on use.** Line 63 ticked. As sheriff, 54 samples taken while walking toward a target found **zero** tools in hand; firing put "Ledger" there; and one second after the 1.2s draw window it was `nil` again. The murderer's half came earlier from the grace probe - "Ash" appeared only on a stab that passed the gate, and nothing was in hand between attempts. So both weapons are hidden while walking, drawn on use, and put away again, which is the whole of the line.
+>
+> This is the clause I declined to tick two passes ago on the grounds that `Arm` puts the pistol in the Backpack and `DrawWeapon` equips it for 1.2s, so the behaviour was "near certain by construction". Near certain was right, and it still needed watching: the sampling cost one line of code in a probe that was already running.
+>
+> The shot missed, though, and the reason is worth recording because it blocks line 36. Fired at Wren from 35 studs and nothing died. `GUN_RANGE` is 300, so range was never the constraint - the ray met geometry. Stopping the approach at 40 studs is simply too far indoors. The next attempt closes to about 15 studs and raycasts for line of sight *before* firing, rather than firing hopefully and reporting a wall.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
