@@ -10,6 +10,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Config = require(ReplicatedStorage:WaitForChild("Shared").Config)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local ClientState = require(script.Parent.Parent.ClientState)
+local CombatFeel = require(script.Parent.CombatFeelController)
 
 local plr = Players.LocalPlayer
 local InputController = {}
@@ -114,6 +115,7 @@ local function interact()
         if target then
             if cooled("knife", Config.KNIFE_COOLDOWN) then
                 Remotes.RequestStab:FireServer(target)
+                CombatFeel.Kick(0.22, 0.12)
             end
             return
         end
@@ -141,6 +143,7 @@ local function fire()
         and cooled("gun", Config.GUN_COOLDOWN)
     then
         Remotes.RequestShoot:FireServer(aimPoint())
+        CombatFeel.Kick(0.4, 0.16)
     end
 end
 
@@ -152,6 +155,7 @@ local function throw()
         and cooled("throw", Config.THROW_COOLDOWN)
     then
         Remotes.RequestThrow:FireServer(aimPoint())
+        CombatFeel.Kick(0.28, 0.13)
     end
 end
 

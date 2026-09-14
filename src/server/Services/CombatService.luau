@@ -7,6 +7,8 @@ local AudioService = require(script.Parent.AudioService)
 local EvidenceService = require(script.Parent.EvidenceService)
 local CosmeticService = require(script.Parent.CosmeticService)
 local CombatFx = require(game.ReplicatedStorage.Shared.CombatFx)
+local Participant = require(script.Parent.Participant)
+local Remotes = game.ReplicatedStorage.Remotes
 
 local CombatService = {}
 local lastAction = {} -- [Player] = { [action] = os.clock() }
@@ -232,6 +234,12 @@ function CombatService:Eliminate(victim: Player, killer: Player, method: string)
     local hum = char:FindFirstChildOfClass("Humanoid")
     if hum then
         hum.Health = 0
+    end
+
+    -- Tell the killer they landed it (hitmarker, kill line, camera kick).
+    -- Never on a misfire suicide, and never to an NPC with no client.
+    if killer and killer ~= victim and not Participant.IsBot(killer) then
+        Remotes.KillConfirm:FireClient(killer, role)
     end
 end
 

@@ -25,6 +25,7 @@ local NAMES = {
     "Spectate",
     "RadioMessage",
     "EmotePlayed",
+    "KillConfirm",
     -- client -> server (every one is rate-limited and re-validated)
     "RequestStab",
     "RequestThrow",
