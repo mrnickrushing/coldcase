@@ -16,6 +16,36 @@ local CosmeticService = {}
 local DEFAULTS: { [string]: string } = { knife = "ash", gun = "ledger" }
 local drawToken: { [Player]: number } = {}
 
+-- Roblox's own public tool animations (no upload). A knife use plays the lunge
+-- so the arm thrusts on a stab or throw; if the id is ever unavailable it just
+-- no-ops and the weapon still flashes as before. Gun recoil is the camera kick.
+local LUNGE_ANIM = {
+    [Enum.HumanoidRigType.R15] = "rbxassetid://522638767",
+    [Enum.HumanoidRigType.R6] = "rbxassetid://129967478",
+}
+
+local function playSwing(hum: Humanoid)
+    local animator = hum:FindFirstChildOfClass("Animator")
+    local id = animator and LUNGE_ANIM[hum.RigType]
+    if not (animator and id) then
+        return
+    end
+    local anim = Instance.new("Animation")
+    anim.AnimationId = id
+    local ok, track = pcall(function()
+        return animator:LoadAnimation(anim)
+    end)
+    anim:Destroy()
+    if ok and track then
+        track.Priority = Enum.AnimationPriority.Action
+        track:Play(0.1)
+        task.delay(track.Length > 0 and track.Length or 1, function()
+            track:Stop(0.1)
+            track:Destroy()
+        end)
+    end
+end
+
 local function owns(data, id: string): boolean
     if Catalog[id] and Catalog[id].starter then
         return true -- starters are owned by everyone and never enter the inventory
@@ -244,6 +274,9 @@ local function flashForBot(bot, slot: string, seconds: number)
     weld.Part1 = handle
     weld.Parent = handle
     handle.Parent = char
+    if slot == "knife" then
+        playSwing(hum)
+    end
     task.delay(seconds, function()
         if handle.Parent == char then
             handle:Destroy()
@@ -263,6 +296,9 @@ function CosmeticService:DrawWeapon(plr: Player, slot: string, seconds: number)
         return
     end
     hum:EquipTool(tool)
+    if slot == "knife" then
+        playSwing(hum)
+    end
     local token = (drawToken[plr] or 0) + 1
     drawToken[plr] = token
     task.delay(seconds, function()
