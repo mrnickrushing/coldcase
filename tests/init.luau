@@ -331,6 +331,35 @@ test("every purchasable product has an id and a price", function()
     end
 end)
 
+-- productById (MonetizationService) resolves a dev product by matching its id,
+-- and pass ownership is checked by id too. A duplicate id within either group
+-- would grant the wrong thing on a real-money purchase; a placeholder id of 0
+-- (the template the file's comment says is "never offered or granted") shipping
+-- live would be a dead or mis-granted product. The test above checks each id is
+-- numeric - this pins non-zero and unique within the group.
+test("real-money product ids are non-zero and unique within their group", function()
+    for _, group in { "PASSES", "PRODUCTS" } do
+        local seen = {}
+        for key, def in pairs(Products[group]) do
+            local id = def.id
+            assert(
+                type(id) == "number" and id ~= 0,
+                ("%s.%s has a placeholder or missing id (0)"):format(group, key)
+            )
+            assert(
+                not seen[id],
+                ("%s.%s reuses id %d (already %s) - a purchase would grant the wrong item"):format(
+                    group,
+                    key,
+                    id,
+                    tostring(seen[id])
+                )
+            )
+            seen[id] = key
+        end
+    end
+end)
+
 test("no analytics field value carries a character Roblox rejects", function()
     -- A comma, quote or apostrophe in a custom field makes Roblox discard the
     -- whole event. This bit us once: the death heatmap cell read "map:4,4" and
