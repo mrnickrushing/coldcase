@@ -16,9 +16,14 @@ local LiveOpsClock = require(script.Parent.LiveOpsClock)
 local EconomyService = {}
 local TIER_ORDER = { "Common", "Uncommon", "Rare", "Legendary", "Godly" }
 
--- Gameplay faucets that Last Call doubles. Streaks, gifts and Robux purchases
--- never multiply.
-local LAST_CALL_SOURCES = { round = true, pickup = true, examine = true, revive = true }
+-- Gameplay faucets that Last Call doubles: coins earned DURING the final
+-- thirty seconds - a pickup, an examine, a revive. The end-of-round
+-- settlement is deliberately not here; `round` was removed so a win pays the
+-- same whether or not the round reached Last Call. Doubling the settlement
+-- rewarded lasting longer rather than playing better, and since lastCallFired
+-- resets each round it made identical wins pay 1.25x or 2.5x on round length
+-- alone. Streaks, gifts and Robux purchases never multiply either.
+local LAST_CALL_SOURCES = { pickup = true, examine = true, revive = true }
 local lastCall = false
 
 -- Pre-bucket the catalog by rarity so a pull is O(1). The Locker and crafting

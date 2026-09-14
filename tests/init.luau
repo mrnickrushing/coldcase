@@ -978,42 +978,32 @@ test("a round against NPCs pays the same as one against people", function()
 end)
 
 ------------------------------------------------------- Last Call settlement
--- Last Call doubles coins for the final thirty seconds. The end-of-round
--- settlement is granted while it is still set - PayOut runs one line before
--- SetLastCall(false) - and `round` is listed in LAST_CALL_SOURCES, so the
--- win/loss/survive coins double too. Observed: 130 base paid out at 325, and
--- a loss round's 30 paid at 75, both exactly 2.5x with VIP's 1.25.
---
--- lastCallFired resets each round, so a round that ends before the thirty
--- second mark settles at 1.25x while the same win in a longer round settles
--- at 2.5x. Identical outcomes pay double on round length alone. That is a
--- call about the economy, not a bug, so this pins the behaviour rather than
--- arguing with it - swap the two lines and the test says what changed.
-test("the round settlement is paid before Last Call is cleared", function()
-    local round = fs.readFile("src/server/Services/RoundService.luau")
-    local body = round:match("function RoundService:Resolve%(.-\nend")
-    assert(body, "could not find RoundService:Resolve")
-
-    local payAt = body:find("PayOut", 1, true)
-    local clearAt = body:find("SetLastCall(false)", 1, true)
-    assert(payAt, "Resolve no longer pays the round out")
-    assert(clearAt, "Resolve no longer clears the Last Call multiplier")
-    assert(
-        payAt < clearAt,
-        "Last Call is now cleared before the settlement is paid, so end-of-round "
-            .. "coins no longer inherit the 2x. That may well be the right call - "
-            .. "it removes a win paying double purely for lasting longer - but it "
-            .. "changes every payout, so update docs/playtest.md with it."
-    )
-
+-- Last Call doubles coins earned DURING the final thirty seconds - pickups,
+-- examines, revives - but NOT the end-of-round settlement. `round` was
+-- deliberately removed from LAST_CALL_SOURCES (owner decision): doubling the
+-- settlement rewarded a round lasting past the thirty-second mark rather than
+-- playing better, and since lastCallFired resets each round it made identical
+-- wins pay 1.25x or 2.5x on length alone. This pins the fix: `round` must stay
+-- out, and the in-round faucets must stay in.
+test("Last Call doubles in-round faucets but not the settlement", function()
     local economy = fs.readFile("src/server/Services/EconomyService.luau")
     local sources = economy:match("LAST_CALL_SOURCES = {(.-)}")
     assert(sources, "could not find LAST_CALL_SOURCES")
+
     assert(
-        sources:find("round", 1, true),
-        "the settlement no longer takes the Last Call multiplier - see the note "
-            .. "in docs/playtest.md, which describes the doubled payout as current"
+        not sources:find("round", 1, true),
+        "`round` is back in LAST_CALL_SOURCES - the end-of-round settlement would "
+            .. "double again during Last Call, paying identical wins 2.5x or 1.25x "
+            .. "purely on how long the round ran. It was removed on purpose."
     )
+    for _, faucet in { "pickup", "examine", "revive" } do
+        assert(
+            sources:find(faucet, 1, true),
+            faucet
+                .. " no longer doubles during Last Call - the in-round faucets "
+                .. "are meant to, only the settlement is excluded"
+        )
+    end
 end)
 
 --------------------------------------------------- onboarding economy
