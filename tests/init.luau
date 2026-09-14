@@ -764,7 +764,25 @@ end)
 -- it was in until it shuts down, for every player on it. Nothing watches it,
 -- so the tick has to be wrapped - and the wrapping is the kind of thing a
 -- later refactor quietly drops, because nothing looks wrong without it.
-test("the round loop cannot be killed by one bad tick", function()
+-- KNOWN BLIND SPOT, found the hard way. This test was called "the round loop
+-- cannot be killed by one bad tick", and a live server was then watched dying
+-- with the test still passing:
+--
+--   Script timeout: exhausted allowed execution time
+--   Script 'ServerScriptService.Services.RoundService', Line 379
+--
+-- Line 379 is the `while true` below. A thread that exhausts its execution
+-- budget is not raising an error - it is terminated, so xpcall never returns
+-- and recover() never runs. RoundState sat on LOADING for eight minutes with
+-- the map cloned, three of five NPCs built and movement never locked, while
+-- Heartbeat kept firing sixty times a second: the scheduler was fine, only
+-- this coroutine was gone.
+--
+-- So what follows verifies that the guard is present and sits inside the loop.
+-- It does NOT verify that the loop survives, and no static test can. Renamed
+-- to say only what it checks, because the old name was a claim this file had
+-- no business making.
+test("the round loop guards each tick against errors", function()
     local src = fs.readFile("src/server/Services/RoundService.luau")
 
     local body = src:match("function RoundService:Start%(%)(.-)\nend")
