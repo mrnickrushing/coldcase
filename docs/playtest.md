@@ -32,7 +32,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] A player on their first round is never murderer or sheriff (when veterans are present)
 - [ ] Ghost hints appear once each: move, coins, examine — and not again after a rejoin
 - [x] Nobody can be killed in the first 4 seconds
-- [ ] Murderer's E kills at close range, not at distance; Q throws with an 8s cooldown
+- [x] Murderer's E kills at close range, not at distance; Q throws with an 8s cooldown
 - [ ] Sheriff click fires; hitting an innocent kills the sheriff too
 - [ ] Sheriff death drops a pistol; an innocent can take it and becomes Hero
 - [x] Body appears; E within 14 studs, after a 1.5s channel, returns three or four clue lines
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 39 ticked, 40 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 40 ticked, 39 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 18 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 17 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -224,6 +224,23 @@ Counting ticks is misleading on its own, so here is the split. 39 ticked, 40 not
 > Regional policy (line 96) resolved to the permissive branch on this account - `PaidRandomItemsRestricted = false`, `PaidItemTradingAllowed = true` - so what I observed is the unrestricted case. The line asks about the *restricted* branch and about the window before `PlayerPolicy` resolves, when both attributes are still nil and `MenuController` falls back on `~= false`. The line's own text rules out the shortcut: "attributes set by hand only" is not evidence. It needs a VPN or an account in a restricted region.
 >
 > Moving two lines between buckets leaves the sum unchanged, so the guard test cannot check this. Reasoned rather than tested: 20 → 18 in Studio, 8 → 10 in the second-client bucket, both still unticked, total still 40.
+
+> **The murderer's knife, all three claims from one round.** Murderer draws are expensive here - eleven draws for two, thanks to the snitch lean - so the probe was written to harvest the whole line at once rather than one clause per round.
+>
+> The Q cooldown uses the same trick as the grace window. On the throw path `ready(plr, "throw", THROW_COOLDOWN)` sits *before* `DrawWeapon`, so a refused throw equips no knife and an allowed one does, and the cooldown is readable without anything being hit. Throws were aimed straight down: a legal throw, but the ray meets the floor on its first step and `playerFromPart` finds nobody, so no stray knife could kill.
+>
+> ```
+>   throw 1  at  6.07s -> drawn: true
+>   throw 2  at  9.74s -> drawn: false    (+3.67s)
+>   throw 3  at 13.15s -> drawn: false    (+7.08s)
+>   throw 4  at 17.90s -> drawn: true     (+11.83s)
+> ```
+>
+> Refused at +7.08 and allowed at +11.83, which brackets the cooldown rather than pinning it - consistent with 8, and the lower bound is within a second of it. Same caveat as the grace window, and for the same reason.
+>
+> Then E: walked to an NPC and stabbed at 2 studs, health 100 → 0. The other half of that clause was already evidenced by the grace probe, where four stabs at 189 studs left the target at 100 throughout. Close kills, distant ones do not.
+>
+> Two other lines gained evidence here without becoming tickable. Line 63's murderer half held - the knife was absent from the character except during the 1.2s draw, so it is carried hidden and appears on use - but the sheriff's pistol is still unseen. And line 23's "stabbing works on NPCs" is now observed, though shooting, spectating and examining are not.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
