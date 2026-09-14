@@ -86,7 +86,7 @@ Run from a LocalScript or the client command bar.
 - [x] Offer a uid you do not own, or the same uid twice, in a trade — rejected
 - [x] Change an offer after both locked — both locks and confirms reset
 - [x] Fire `RequestRevive` as a non-medic, or on an examined body — nothing happens
-- [ ] Fire `RequestDrag` on a body across the map — nothing happens
+- [x] Fire `RequestDrag` on a body across the map — nothing happens
 - [x] Fire `RequestEquip` with a uid you do not own — nothing changes
 - [x] Fire `RequestBuy` for an item not on the shelf, or without the coins — nothing granted
 - [x] Deliver the same developer-product receipt twice — coins granted once
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 42 ticked, 37 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 43 ticked, 36 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 15 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 14 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -292,6 +292,12 @@ Counting ticks is misleading on its own, so here is the split. 42 ticked, 37 not
 > This is the clause I declined to tick two passes ago on the grounds that `Arm` puts the pistol in the Backpack and `DrawWeapon` equips it for 1.2s, so the behaviour was "near certain by construction". Near certain was right, and it still needed watching: the sampling cost one line of code in a probe that was already running.
 >
 > The shot missed, though, and the reason is worth recording because it blocks line 36. Fired at Wren from 35 studs and nothing died. `GUN_RANGE` is 300, so range was never the constraint - the ray met geometry. Stopping the approach at 40 studs is simply too far indoors. The next attempt closes to about 15 studs and raycasts for line of sight *before* firing, rather than firing hopefully and reporting a wall.
+
+> **A drag request from across the map does nothing.** Line 89 ticked. Fired `RequestDrag` at a body 60 studs off, against a `near()` threshold of 14 - `Reach.Within` at `EXAMINE_RANGE`, with no ping allowance because dragging starts from standing still. WalkSpeed stayed at 16 and no `AbilityState` arrived across a 3 second wait, which is longer than the 2 second `DRAG_TIME`, so a late grab would have shown.
+>
+> The null result is worth something here only because the same remote plainly works up close in ordinary play, and because `AbilityState` is a real server message rather than something inferred - a silent refusal and a working drag look completely different on it. Firing an exploit remote and seeing nothing proves the guard only when the unguarded path is known to produce a visible effect.
+>
+> Line 56, the actual dragging, went untested that round: the NPC murderer killed me 56 studs from the body. Not a fault - but the probe exited on its "I died" branch without capturing the spectator state, and that is the very event line 23's spectating clause has been waiting several rounds for. Every other branch of this probe calls `captureSpectator`; the drag walk loop was the one place it was not wired in. An opportunity spent chasing something, missed by not handling the case where it arrives unannounced.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
