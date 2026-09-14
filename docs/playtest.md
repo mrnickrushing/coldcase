@@ -335,6 +335,12 @@ Counting ticks is misleading on its own, so here is the split. 46 ticked, 33 not
 >
 > **Line 11 is in the same position for a duller reason.** The server is up by every check available: Bootstrap enabled, 41 of 41 RemoteEvents created, `RoundState` and `LiveOpsDay` both published, `[ColdCase]` analytics streaming continuously. What the line asks for is the string `[ColdCase] server up`, printed as Bootstrap's last statement - and it has scrolled past the console tool's truncation limit. Re-running the print would prove nothing about the original boot. A human scrolling the Output window settles it in a second; adjacent evidence is not the claim, so it stays unticked.
 
+> **All twenty-two sound assets load.** The console carried one `Failed to load sound rbxassetid://9113480917: HttpError: NetFail`, which is `body_drop`. Loading every cue in `SoundCues` directly and waiting on `IsLoaded`: 22 loaded, 0 failed, `body_drop` among them at `IsLoaded=true TimeLength=0.38`. So that NetFail was a transient fetch, not a bad id, and there are 22 distinct ids with no accidental duplicates.
+>
+> This does not tick line 115, which asks whether the cues *match the brief* - that is taste and needs ears. It removes a confound from that test, though: a cue that sounds wrong cannot be blamed on a dead asset, because none of them are dead.
+>
+> Worth recording how nearly this went wrong. The first check printed `pcall ok=true` and I read it as the sound loading. It was not: `pcall` returning true only means nothing was thrown, and the value that mattered - `s.IsLoaded` - was returned by the inner function and thrown away. Creating a `Sound` instance never errors, so that check would have passed for a completely invalid id. It looked like a verification and measured nothing, which is the same substitution this file keeps collecting, committed here by me two calls after writing the warning.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
