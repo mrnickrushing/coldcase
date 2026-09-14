@@ -128,8 +128,8 @@ Counting ticks is misleading on its own, so here is the split. 39 ticked, 40 not
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 20 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
-| Needs two or more real players | 8 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
+| Testable in Studio, not yet done | 18 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
 | Needs human eyes or ears | 7 | Whether the cues match the brief, whether a weapon sits right in the hand, whether the art reads. No probe settles taste. The ghost hints join this bucket: they need an account that has not seen them, and this Studio session is permanently the owner's. |
@@ -216,6 +216,14 @@ Counting ticks is misleading on its own, so here is the split. 39 ticked, 40 not
 > **A solo tester draws snitch far more often than one in six, by design.** Waiting for a particular role means counting draws, and the first seven came out snitch, snitch, innocent, murderer, innocent, snitch, innocent - three snitches in seven, which looks like a biased shuffle. It is not. `drawPreferHuman` in `RoleService:Assign` takes a human from the pool half the time, because an NPC snitch's reveal reaches no screen. The medic uses the same draw but is gated on `humans >= 2`, so it never fires in a solo round; the snitch is deliberately ungated, and the comment there says why. With one human among six participants that hands the snitch to the only real player about half the time it is drawn at all.
 >
 > Two things follow. The tally is documented behaviour rather than something to investigate - worth knowing before someone spends a session on it. And any line needing a *specific* role in a solo session costs more rounds than the headcount suggests, because the snitch lean keeps consuming the one human slot. Murderer draws in particular are rarer than one in six here, which is the real cost of the wait-for-role approach to the combat lines.
+
+> **Two lines move out of the Studio bucket, because a solo session cannot reach them at all.**
+>
+> The medic (line 55) is impossible here for two independent reasons. `RoleService:94` gates it on `count >= MEDIC_AT and #pool > 2 and humans >= 2`, so a one-human round never assigns a medic; and `AbilityService:54` refuses an NPC victim outright, because an NPC has no player to bring back. So even if a medic were somehow assigned there would be nobody it could revive. This was sitting in the Studio backlog as though more rounds would eventually produce it. They will not.
+>
+> Regional policy (line 96) resolved to the permissive branch on this account - `PaidRandomItemsRestricted = false`, `PaidItemTradingAllowed = true` - so what I observed is the unrestricted case. The line asks about the *restricted* branch and about the window before `PlayerPolicy` resolves, when both attributes are still nil and `MenuController` falls back on `~= false`. The line's own text rules out the shortcut: "attributes set by hand only" is not evidence. It needs a VPN or an account in a restricted region.
+>
+> Moving two lines between buckets leaves the sum unchanged, so the guard test cannot check this. Reasoned rather than tested: 20 → 18 in Studio, 8 → 10 in the second-client bucket, both still unticked, total still 40.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
