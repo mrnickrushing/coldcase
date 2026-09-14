@@ -1162,6 +1162,30 @@ test("the crafting tier order matches the rarity table", function()
     end
 end)
 
+------------------------------------------------------ snitch reveal (two murderers)
+-- A full round can hold two murderers (SECOND_MURDERER_AT). RevealSnitch used
+-- to keep a single `murderer` variable, which named only whichever the table
+-- iterated last and left the other murderer unwarned. The fix collects all
+-- murderers and reveals each. RoleService requires Roblox services and cannot
+-- load under Lune, so this guards the shape in source: a plural collection and
+-- a loop, never a lone assignment.
+test("the snitch reveal handles more than one murderer", function()
+    local src = fs.readFile("src/server/Services/RoleService.luau")
+    local body = src:match("function RoleService:RevealSnitch%(%)(.-)\nend")
+    assert(body, "could not find RoleService:RevealSnitch")
+
+    assert(
+        body:find("table.insert(murderers", 1, true),
+        "RevealSnitch no longer collects every murderer - a single one would be "
+            .. "revealed and the other left unwarned at twelve players"
+    )
+    -- it must loop to fire at each murderer, not fire once
+    assert(
+        body:find("for _, murderer in murderers", 1, true),
+        "RevealSnitch no longer loops over the murderers to warn each of them"
+    )
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")

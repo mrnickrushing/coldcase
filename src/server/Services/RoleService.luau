@@ -156,21 +156,32 @@ function RoleService:MakeHero(plr: Player): boolean
     return true
 end
 
--- Snitch: at 30s remaining, the snitch and the murderer learn each other
+-- Snitch: at 30s remaining, the snitch and the murderer(s) learn each other.
+-- A full round can hold two murderers (SECOND_MURDERER_AT), so the snitch
+-- learns every murderer and every murderer learns the snitch - a single
+-- `murderer` variable would have named only whichever the table iterated last
+-- and left the other unwarned.
 function RoleService:RevealSnitch()
-    local snitch, murderer
+    local snitch
+    local murderers = {}
     for plr, role in roles do
         if role == "snitch" then
             snitch = plr
-        end
-        if role == "murderer" then
-            murderer = plr
+        elseif role == "murderer" then
+            table.insert(murderers, plr)
         end
     end
-    if snitch and murderer then
-        if not Participant.IsBot(snitch) then
-            Remotes.RoleAssigned:FireClient(snitch, "snitch", murderer.Name)
+    if not (snitch and #murderers > 0) then
+        return
+    end
+    if not Participant.IsBot(snitch) then
+        local names = {}
+        for _, murderer in murderers do
+            table.insert(names, murderer.Name)
         end
+        Remotes.RoleAssigned:FireClient(snitch, "snitch", table.concat(names, " and "))
+    end
+    for _, murderer in murderers do
         if not Participant.IsBot(murderer) then
             Remotes.RoleAssigned:FireClient(murderer, "murderer", snitch.Name)
         end

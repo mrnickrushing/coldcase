@@ -46,7 +46,6 @@ local function setState(new: string, duration: number)
     -- while the map clones, it was nearly four seconds out of date.
     ReplicatedStorage:SetAttribute("RoundEnds", workspace:GetServerTimeNow() + duration)
     ReplicatedStorage:SetAttribute("RoundState", new)
-    Remotes.RoundState:FireAllClients(new, duration)
     for _, plr in Players:GetPlayers() do
         DataService:SetScreen(plr, (new == "ACTIVE" and not alive[plr]) and "SPECTATING" or new)
     end

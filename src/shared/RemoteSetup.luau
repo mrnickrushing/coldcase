@@ -4,7 +4,8 @@
 --   require(game.ReplicatedStorage.Shared.RemoteSetup)()
 local NAMES = {
     -- server -> client
-    "RoundState",
+    -- (RoundState is not a remote: the round phase is a ReplicatedStorage
+    -- attribute, which every client reads via GetAttributeChangedSignal.)
     "RoleAssigned",
     "Clue",
     "RoundOver",
