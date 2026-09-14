@@ -19,6 +19,7 @@ local OnboardingService = require(script.Parent.OnboardingService)
 local SpectatorService = require(script.Parent.SpectatorService)
 local BotService = require(script.Parent.BotService)
 local Participant = require(script.Parent.Participant)
+local LightingMood = require(script.Parent.LightingMood)
 local Lobby = require(ReplicatedStorage.Shared.Lobby)
 
 local RoundService = {}
@@ -187,6 +188,7 @@ function RoundService:BuildVotedMap()
     else
         warn("[ColdCase] missing map " .. currentMapName)
     end
+    LightingMood.Apply(currentMapName)
     votes = {}
     broadcastTally()
 end
@@ -570,6 +572,7 @@ end
 function RoundService:ReturnToLobby()
     EvidenceService:Clear()
     RoleService:Clear()
+    LightingMood.Apply("Lobby")
     local round = workspace:FindFirstChild("Round")
     if round then
         round:Destroy()
