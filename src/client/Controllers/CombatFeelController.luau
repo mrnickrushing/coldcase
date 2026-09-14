@@ -17,6 +17,15 @@ local Theme = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("The
 local plr = Players.LocalPlayer
 local playerGui = plr:WaitForChild("PlayerGui")
 
+-- A crisp 2D tick on a confirmed kill. Built-in sound so it is always
+-- present; swap SoundId for a curated asset later (as the fonts note).
+local SoundService = game:GetService("SoundService")
+local killTick = Instance.new("Sound")
+killTick.Name = "KillConfirmTick"
+killTick.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+killTick.Volume = 0.55
+killTick.Parent = SoundService
+
 local CombatFeel = {}
 
 ---------------------------------------------------------------- camera kick
@@ -142,6 +151,8 @@ plr.CharacterAdded:Connect(watchCharacter)
 ---------------------------------------------------------------- kill confirm
 local function confirmKill(victimRole: string?)
     CombatFeel.Kick(0.35, 0.16)
+    killTick.TimePosition = 0
+    killTick:Play()
     -- hitmarker pop
     marker.Visible = true
     marker.Size = UDim2.fromOffset(20, 20)
