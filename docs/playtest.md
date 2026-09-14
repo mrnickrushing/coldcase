@@ -31,7 +31,7 @@ workflow — no manual Studio setup is needed.)
 - [x] Role card shows for 4s, movement locked during it
 - [ ] A player on their first round is never murderer or sheriff (when veterans are present)
 - [ ] Ghost hints appear once each: move, coins, examine — and not again after a rejoin
-- [ ] Nobody can be killed in the first 4 seconds
+- [x] Nobody can be killed in the first 4 seconds
 - [ ] Murderer's E kills at close range, not at distance; Q throws with an 8s cooldown
 - [ ] Sheriff click fires; hitting an innocent kills the sheriff too
 - [ ] Sheriff death drops a pistol; an innocent can take it and becomes Hero
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 38 ticked, 41 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 39 ticked, 40 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 21 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 20 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 8 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -195,6 +195,23 @@ Counting ticks is misleading on its own, so here is the split. 38 ticked, 41 not
 > **Which exploit lines are second-client work, and why.** Four sit unticked for different reasons and only one of them is risky. Line 79 needs another player's role to exist before "no other player's role appears" can mean anything. Line 80 says a distant *player*, so aiming at an NPC does not settle it - an NPC reaches `CombatService` through `BotFromCharacter` as a bot table, which is a different argument shape from a `Player`, and a solo server has nobody else to aim at. Line 89 needs a body, so somebody has to have died with a drag target left behind. Only line 81's "sustained spam disconnects" clause is genuinely unsafe to run here, because being kicked ends the Play session and every probe with it. The rate limits make the shape of that clear anyway: `RequestStab` and `RequestShoot` allow 4 a second, a strike is recorded only for exceeding the limit and at most once per second, and five strikes inside ten seconds kick.
 >
 > **The two range rules are deliberate and have not drifted.** `Reach.Within` is used only by `EvidenceService` and `AbilityService`, both with `EXAMINE_RANGE` and neither with `PING_ALLOWANCE`, because examining and reviving are done standing still. The moving-player paths add the slack inline instead - the knife at `CombatService:100`, the gun pickup at `:187`, coins at `CoinService:49`. `BotService:574` gives NPCs `KNIFE_RANGE - 2`, tighter than a human needs, which is intentional rather than a mismatch.
+
+> **The grace window, tested properly at last.** An earlier pass watched the first ten seconds of a round, saw six humanoids at full health, and proved nothing: the NPC murderer waits at least nine seconds before striking, so no kill was ever attempted inside the window. A quiet window is not evidence of a guard.
+>
+> The working version waits for `RoleAssigned` to come back "murderer" and only then measures, because as anyone else `RequestStab` returns on the role check at `CombatService:84` before `inGrace()` is ever reached - a null result would prove the role guard and nothing else. Reaching a victim inside four seconds is impossible anyway: spawns are sixty-plus studs apart and movement unlocks exactly at ACTIVE, so no in-range attempt exists. The way through is the guard order - role and grace, then `liveCharacter`, then `ready()`, then `DrawWeapon`, then range, then the kill. `DrawWeapon` calls `hum:EquipTool`, which parents a Tool into the character, so a stab at a *distant* NPC equips nothing while the grace holds and equips the knife once it lifts, dying harmlessly on the range check either way.
+>
+> Measured as the murderer, anchored to `RoundEnds`, against Ada at 189 studs with a knife that reaches 14:
+>
+> ```
+>   INSIDE grace  at 1.91s -> knife drawn: false
+>   INSIDE grace  at 3.53s -> knife drawn: false
+>   AFTER  grace  at 5.60s -> knife drawn: true  Ash
+>   AFTER  grace  at 7.10s -> knife drawn: true  Ash
+> ```
+>
+> Target health 100 throughout, so nothing died to establish this. Four passes were needed to draw the role - snitch, snitch, innocent, murderer - each costing one round rather than the whole sampling run.
+>
+> What this shows is that the gate is real and that it is the *grace* doing the blocking, not some other guard. It does not pin the boundary at exactly 4.0 seconds: the samples bracket it at 3.53 and 5.60, so the gate is closed before ~3.5s and open after ~5.6s. Tightening that would mean sampling either side of 4.0 on a later murderer draw.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
