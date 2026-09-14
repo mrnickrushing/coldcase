@@ -242,6 +242,25 @@ Counting ticks is misleading on its own, so here is the split. 40 ticked, 39 not
 >
 > Two other lines gained evidence here without becoming tickable. Line 63's murderer half held - the knife was absent from the character except during the 1.2s draw, so it is carried hidden and appears on use - but the sheriff's pistol is still unseen. And line 23's "stabbing works on NPCs" is now observed, though shooting, spectating and examining are not.
 
+> **The fibre clue is real, and the witness clue gives the killer away.** Line 23 has five clauses and two more are now observed - examining works on NPCs, and the fibre matches. Shooting and spectating do not, so the line stays unticked.
+>
+> It took four attempts and the first three failed on walking rather than on anything about examining, which is why each said so instead of reporting a null result. Raw `Humanoid:MoveTo` walks a straight line and stalls on geometry; the NPCs get around because `BotService` paths with `ComputeAsync` and recomputes every 2.5 seconds. Copying that closed 187 studs in 14 seconds. But the real error was strategic: a body 187 studs away costs ~16s of travel against a 20 second `BODY_CLUE_WINDOW`, so chasing distant bodies can only ever return "cold". The fix was to shadow the NPC pack and be near a kill when it happens, which is what a player does anyway.
+>
+> That produced a warm examine at 17s into the window:
+>
+> ```
+>   direction  June (NPC) was struck from the north.
+>   fibre      Fibre trace: olive fabric.
+>   time       Time of death: 17s ago.
+>   witness    Partial name on the lips: Ir…
+> ```
+>
+> The fibre names the *killer's* torso colour, not the victim's - `EvidenceService:133` records `ColourBandOf(killer)` at death, and `:38` reads the torso part colour because shirt textures are not readable. The body itself does not record who killed it, so I expected only to show the band was plausible. Two independent clues settled it instead. Banding every living NPC's torso locally with the same rule put exactly one in olive: Iris. The witness clue independently gives "Ir…". Two separate server-derived facts agree on the same NPC, so the fibre does name the killer's real colour.
+>
+> **Which is also the problem.** The witness clue prints `killer:sub(1, 2)`, and all twelve NPC names have distinct two-character prefixes, so those two characters identify one NPC outright. That has been noted before from reading the code; this is the first time it has been watched happening. A witness clue that names the murderer removes the deduction it exists to support. Not changed - how much a body should give away is a design call - but it is worth deciding deliberately rather than by `sub(1, 2)`.
+>
+> One sanity check worth keeping: the server said "17s ago" where my own first sight of the tag was ~15s earlier, a ~2s lag between the kill and the tag reaching me. Consistent, and a reminder that client-side body age runs slightly behind the server's.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
