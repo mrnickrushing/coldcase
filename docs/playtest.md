@@ -20,7 +20,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] If the NPCs cannot be built, the lobby shows "The NPCs could not join" and no one is dropped into a round alone
 - [ ] An NPC murderer waits at least 12s, then picks off whoever is alone
 - [ ] An NPC sheriff shoots only a killer it saw, or the outlined murderer at Last Call
-- [ ] Stabbing, shooting, spectating and examining work on NPCs; the fibre clue matches their shirt
+- [x] Stabbing, shooting, spectating and examining work on NPCs; the fibre clue matches their shirt
 - [x] Round rewards are paid in full with NPCs, and the NPCs are gone once everyone is back in the lobby
 
 ## First playtest — Test → Clients and Servers, 4 players
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 44 ticked, 35 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 45 ticked, 34 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 13 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 12 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -304,6 +304,12 @@ Counting ticks is misleading on its own, so here is the split. 44 ticked, 35 not
 > What makes this more than a single reading is that two independent channels agree. The speed and the corpse position are datamodel state, while `AbilityState` is a server message, and it arrived as `drag_start(2)` - carrying `DRAG_TIME` - then `dragging(0)`, then `drag_stop(0)`. Neither was derived from the other, so a coincidence would have to line up across both.
 >
 > Paired with line 89 from the same probe, that is the whole drag surface: refused from 60 studs against a `near()` of 14, working at 8.8. The exploit line and the feature line are the same code path tested from either side, which is worth more than testing either alone.
+
+> **All five of line 23's clauses, gathered across five rounds.** Ticked. Stabbing took an NPC from 100 to 0 at 2 studs; shooting did the same to Cyril as Hero; examining returned four warm clues inside the twenty second window; the fibre named olive and cross-checked against the witness prefix to the same NPC; and spectating came last - killed at t=30s, `SpectatorGui` enabled, watching "ADA (NPC)".
+>
+> The spectating clause is the one worth explaining, because it was never the hard part technically. It needs the murderer to kill me, which cannot be arranged, and the round before this one it *did* happen - 56 studs from a body during the drag test - and went unrecorded because that branch was the only one without a spectator capture. Wiring the handler into every exit that can be a death cost three lines and caught it on the next occurrence.
+>
+> One thing deliberately not claimed: `RequestSpectate` cycled to the same NPC, "ADA (NPC)" before and after. By t=30s several NPCs may already be dead, leaving a single valid target, in which case returning the same one is correct behaviour. The line asks whether spectating works on NPCs, not whether the cycle advances, so this is recorded as ambiguous rather than counted either way.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
