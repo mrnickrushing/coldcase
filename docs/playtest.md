@@ -14,7 +14,7 @@ workflow — no manual Studio setup is needed.)
 
 - [x] Lobby countdown reads "STARTS IN Ns · 5 NPCS JOIN" and the round starts with five NPCs
 - [x] WAIT FOR PLAYERS highlights, the countdown switches to "WAITING FOR PLAYERS · 1/4", no round starts, and the choice is still set after a rejoin
-- [ ] PLAY NOW · NPCS switches back and the next intermission starts an NPC round
+- [x] PLAY NOW · NPCS switches back and the next intermission starts an NPC round
 - [ ] With two players, one waiting: the other plays with NPCs, the waiter stays in the lobby and shows "WAITING" in the player list
 - [x] NPCs walk the map on paths rather than into walls, climb the stairs to other floors, and stop when the round ends
 - [ ] If the NPCs cannot be built, the lobby shows "The NPCs could not join" and no one is dropped into a round alone
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 37 ticked, 42 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 38 ticked, 41 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 22 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 21 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 8 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -169,6 +169,8 @@ Counting ticks is misleading on its own, so here is the split. 37 ticked, 42 not
 > The fourth clause - that the choice survives a rejoin - was **not** observed; it needs a Play restart. It is guaranteed by construction instead: `SetWaitForPlayers` writes `data.settings.waitForPlayers` on the persisted profile, and `DataService:80` re-applies `plr:SetAttribute("WaitForPlayers", data.settings.waitForPlayers)` on load. Cited rather than seen, and the tick should be read with that attached.
 >
 > One thing worth knowing for any later probe: `renderMode` is driven by `GetAttributeChangedSignal("WaitForPlayers")`, not by the click. Firing the remote directly still repaints the buttons, because the UI follows the server's attribute rather than the local press. That is the right direction of authority, and it is why this was testable without clicking anything.
+
+> **Count the NPCs at REVEAL, not at the state change.** Line 17 was measured starting from "wait" so the switch back was a real transition rather than incidental cleanup: the attribute went false and the countdown changed from "WAITING FOR PLAYERS · 1/4" to "STARTS IN 18s · 5 NPCS JOIN", and the very next intermission ran through to a round with five NPCs. But the count at the INTERMISSION → LOADING flip was **zero**, and only reached five by REVEAL, because `PlaceParticipants` runs inside the LOADING branch. A probe that samples on the state change sees no NPCs and can report that none joined. Same shape as the role card and the post-round movement: the number is right, the moment is wrong.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
