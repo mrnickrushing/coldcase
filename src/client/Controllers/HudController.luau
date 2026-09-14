@@ -47,6 +47,43 @@ local banner = gui.EventBanner
 local evidence = gui.Evidence
 local action = gui.Action
 
+-- A brief colour-coded pulse when an event fires, on its own full-screen
+-- layer so it covers the top inset too. Fades fast; it dramatises the onset
+-- without hiding anything.
+local EVENT_TINT = {
+    LIGHTS_OUT = Color3.fromRGB(4, 6, 12),
+    POWER_SURGE = Theme.AMBER,
+    LOCKDOWN = Theme.DANGER,
+    FOG_BANK = Color3.fromRGB(150, 170, 186),
+    LAST_CALL = Theme.DANGER,
+}
+local flashGui = Instance.new("ScreenGui")
+flashGui.Name = "EventFlash"
+flashGui.ResetOnSpawn = false
+flashGui.IgnoreGuiInset = true
+flashGui.DisplayOrder = 5
+flashGui.Parent = playerGui
+local flash = Instance.new("Frame")
+flash.Size = UDim2.fromScale(1, 1)
+flash.BackgroundColor3 = Color3.new(0, 0, 0)
+flash.BackgroundTransparency = 1
+flash.BorderSizePixel = 0
+flash.Parent = flashGui
+
+local function pulseEvent(id: string)
+    local tint = EVENT_TINT[id]
+    if not tint then
+        return
+    end
+    flash.BackgroundColor3 = tint
+    flash.BackgroundTransparency = 0.5
+    TweenService:Create(
+        flash,
+        TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { BackgroundTransparency = 1 }
+    ):Play()
+end
+
 ---------------------------------------------------------------- Evidence log
 -- Four lines max (two on narrow screens), newest on top, clears on round start
 local entries: { { text: string, kind: string } } = {}
@@ -205,6 +242,7 @@ Remotes.EventFired.OnClientEvent:Connect(function(id: string)
     if id == "CLEAR" then
         return
     end
+    pulseEvent(id)
     bannerToken += 1
     local mine = bannerToken
     local label = banner.Label
