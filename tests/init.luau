@@ -879,6 +879,62 @@ test("every lethal path checks the weapon grace", function()
     end
 end)
 
+-------------------------------------------------------------- witness clue
+-- The witness clue prints the first two characters of the killer's name:
+--   ("Partial name on the lips: %s…"):format(data.killer:sub(1, 2))
+-- Every NPC name has a distinct two-character prefix, so those two characters
+-- identify one NPC outright. Watched happening in a live round: a clue reading
+-- "Ir…" alongside a fibre band that matched exactly one NPC, and both pointed
+-- at Iris.
+--
+-- This test does NOT assert that prefixes should collide - that would be
+-- pinning the problem in place as though it were intended. It asserts the
+-- property that makes the clue name rather than narrow, so the decision stays
+-- visible. If the prefix length changes, or the name pool gains a collision,
+-- or the clue stops being a raw prefix, this fails and someone re-reads it.
+test("the witness clue names one NPC rather than narrowing the field", function()
+    local bot = fs.readFile("src/server/Services/BotService.luau")
+    local evidence = fs.readFile("src/server/Services/EvidenceService.luau")
+
+    local names = {}
+    local block = bot:match("local NAMES = {(.-)}")
+    assert(block, "could not find the NPC name pool")
+    for name in block:gmatch('"([^"]+)"') do
+        table.insert(names, name)
+    end
+    assert(#names > 1, "expected several NPC names, found " .. #names)
+
+    local n = tonumber(evidence:match("data%.killer:sub%(1,%s*(%d+)%)"))
+    assert(n, "the witness clue no longer takes a plain prefix of the killer's name")
+
+    local seen, collisions = {}, 0
+    for _, name in names do
+        local prefix = name:sub(1, n)
+        if seen[prefix] then
+            collisions += 1
+        end
+        seen[prefix] = true
+    end
+
+    -- Pinned as it stands today: every prefix distinct, so the clue names one
+    -- NPC. This passes now on purpose. A test that failed against shipping code
+    -- would leave the suite permanently red, and a red suite gets ignored - it
+    -- would cost more than the finding is worth, and the finding is already
+    -- written down in docs/playtest.md with the round it was observed in.
+    --
+    -- What this catches is a silent change: a different prefix length, a name
+    -- added that collides, or the clue ceasing to be a plain prefix. Any of
+    -- those flips this and sends someone back to the design question, which is
+    -- whether a body should give the murderer away outright.
+    eq(collisions, 0, "NPC name prefix collisions at " .. n .. " characters")
+    eq(#names, 12, "NPC name pool size")
+    assert(
+        n == 2,
+        "the witness clue prefix length changed from 2 - re-read whether the clue "
+            .. "still names one NPC outright, and update docs/playtest.md"
+    )
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")
