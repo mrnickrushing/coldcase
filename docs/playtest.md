@@ -385,6 +385,25 @@ Counting ticks is misleading on its own, so here is the split. 50 ticked, 29 not
 > **Line 32 now has two independent samples**, one per Play session, because `session.rounds` increments immediately and a session only ever has one first round. Both drew innocent, and the server logged the first as `role_assigned 1 innocent <2 true`. The mechanism is not chance: `RoleService:53` pulls newcomers into the special pool only when `#pool < murderers + sheriffs`, and five veteran NPCs against two slots leaves the single newcomer out of it every time.
 >
 > **Line 33's first half is partly observed.** Attaching at 0.0s this time caught "Tap USE to examine a body" *appearing* at 40.6s - an actual appearance, not a label that had changed while I was not looking. But only one of the three: "move" fires on the `RoundState` change into ACTIVE and "coins" six seconds later, and I saw neither despite attaching immediately, which suggests both had already run before the client finished building rather than that they did not fire.
+>
+> **Correction to how that gets settled.** A commit claimed `HintSeen` was "a real server message" and that listening to it from the client would separate a probe limitation from a defect. It is the other direction: `RemoteSetup` lists it in the client → server block, `NoticeController:110` calls `FireServer(id)` once a hint finishes displaying, and `Bootstrap:148` receives it. A `RemoteEvent`'s `OnClientEvent` only fires for server → client sends, so a client-side listener on it can never fire at all - this client is the sender. The distinction is still reachable, but only from the **server** datamodel via `OnServerEvent`, which sees each hint reported as it completes. From the client, the label is the sole witness and shows only the most recent hint.
+
+> **The round loop can die outright, and nothing brings it back.** A Play restart landed the server in a state it never left: `RoundState` stuck on LOADING for over eight minutes against a `LOADING_TIME` of 3, `RoundEnds` expired 520 seconds earlier, the map cloned and standing, three of five NPCs built, my character unlocked at WalkSpeed 16 because `SetMovementLocked(true)` never ran. Two probes on different datamodels agreed, and the console named it:
+>
+> ```
+> Script timeout: exhausted allowed execution time
+> Stack Begin
+> Script 'ServerScriptService.Services.RoundService', Line 379
+> Stack End
+> ```
+>
+> Line 379 is the `while true` driver inside `RoundService:Start`. A `Heartbeat` connection still fired 60 times a second afterwards, so the scheduler was healthy - only the round loop's own coroutine was terminated.
+>
+> **The guard I added earlier does not cover this.** `Start` wraps `Tick` in `xpcall` so one bad tick cannot kill the loop, and that works for *errors*. "Exhausted allowed execution time" is not an error: it terminates the thread, `xpcall` never returns, and `recover()` never runs. Worse, the test pinning that guard asserts only that `xpcall`, `debug.traceback` and `while true` appear in `Start` - it passes cleanly against this dead server. It pins the shape of the guard while proving nothing about whether the loop survives.
+>
+> **What I could not establish, having tried:** I suspected `rig()`, which calls the yielding `Players:CreateHumanoidModelFromDescription` and retries three times with `task.wait(attempt)` between them - plausible, given this session had already logged "Roblox API services unavailable". Timing it directly returned **0.01s** on both attempts, so the retry ladder never ran and that is not the cause. What remains is that `BotService:Spawn` contains no `task.wait` at all: cloning a rig, recolouring every part, and calling `SetNetworkOwner` sixteen times per bot all run synchronously inside a single tick of a loop that yields only every `SIGHTLINE_SAMPLE`. No one slow call is needed, only enough accumulated work in one resumption. Which iteration exhausted the budget, I do not know.
+>
+> It is intermittent - two earlier restarts ran rounds normally - and that is the argument for a watchdog rather than for chasing the arithmetic. A loop that can be terminated from outside needs something outside it to notice.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
