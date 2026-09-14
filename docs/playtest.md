@@ -277,6 +277,16 @@ Counting ticks is misleading on its own, so here is the split. 41 ticked, 38 not
 > - **Line 23** is at four clauses of five: stabbing, shooting, examining and the fibre all observed. Spectating is not, because I survived.
 > - **Line 63** is half observed and stays unticked. The pistol appeared in hand on use and the murderer's knife did the same earlier, but I only polled for a Tool *after* firing - the "stay hidden while walking about" half was never watched for the pistol. `Arm` puts it in the Backpack and `DrawWeapon` equips it for 1.2s, so the behaviour is near certain by construction. Near certain is not observed, and this file's rule is observed.
 
+> **Three rounds lost to my own loop guards, not to the game.** Worth writing down together, because each looked like a result and none was.
+>
+> A watch loop conditioned on `state() == "ACTIVE"` was started while still in REVEAL. `RoleAssigned` fires during REVEAL, so the condition was already false and the loop exited after zero seconds reporting "no pistol". Every earlier probe waited for ACTIVE before measuring; the step was dropped while restructuring, and it cost a **sheriff** draw - one of the two scarce roles, and the one that unlocks three separate clauses.
+>
+> Then the opposite: nested budget guards. A probe starting mid-round spent its allowance waiting for RESOLUTION under one clause, then refused to keep waiting for the role under another, and exited during INTERMISSION - the moment *before* the assignment it wanted. A full cycle is ~110s of round plus intermission, loading and reveal, so any budget that assumes it can wait out a round and still have time is wrong more often than not. The fix was to delete a guard rather than enlarge one: listen for the next assignment with the whole budget.
+>
+> And a number that meant nothing. A pistol dropped at t=71s, the round ended before I reached it, and the probe printed "966 studs away" - it had measured after the lobby teleport, from `(-2, 4, -897)` to a part still sitting on the map. Distances are only meaningful while the round is still ACTIVE, and a `math.huge` that never got assigned prints as `inf` rather than announcing itself.
+>
+> The common thread with the earlier list - the ancestor-blind visibility check, the `IsA("TextLabel")` filter on a TextButton, the isolation metric that was not the code's rule - is that the probe was wrong in a way that produced a plausible reading rather than an error. A probe that cannot fail loudly should at least report *why* it stopped.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
