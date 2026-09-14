@@ -41,7 +41,7 @@ workflow — no manual Studio setup is needed.)
 - [x] Event fires at the 45% mark, once, banner fades in and out, lighting restores after
 - [x] Round ends on murderer death, wipe, or timeout; results card names the murderer
 - [x] When a murderer killed, the round ends on a 2.5s kill-cam circling the last kill, then results
-- [ ] Results show "You were N coins short." when the balance is under 250
+- [x] Results show "You were N coins short." when the balance is under 250
 - [ ] Locker shows `coins / 250` and reads NEED N MORE until affordable
 - [ ] Everyone returns to the lobby; coins and XP survive a rejoin (with API access on)
 - [x] Results screen names the murderer, lists the roster with the dead struck through, shows the
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 50 ticked, 29 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 51 ticked, 28 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 8 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 7 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Empty, and it should stay empty. This Studio session runs as the game owner with VIP, RADIO and EMOTE BUNDLE all showing OWNED, so pass-gated paths are exercisable solo and nothing belongs here on purchase grounds alone. The lines that once sat here moved to the second-client bucket, where their real blocker is. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -412,6 +412,12 @@ Counting ticks is misleading on its own, so here is the split. 50 ticked, 29 not
 > And the host explains the failing. At the time: swap **9.0 GiB used of 9.0 GiB** - fully exhausted - memory 26 GiB of 30 in use, load average above 3 for a quarter of an hour, and a `Main <defunct>` zombie still at 111% CPU beside the live Studio `Main` at 67% CPU and 23.5% of RAM, all running under Wine. A Lua scheduler on a thrashing host does not get its time slices, the engine's own UI modules time out first, and the longest-running coroutine in the place is the one that gets terminated. That coroutine is the round loop. The "defect" was the machine, and further Studio observations are unreliable until the zombie is gone and swap is freed - which is why probing stopped here rather than restarting Play a fourth time.
 >
 > What survives independently of the cause, because it is a property of the code rather than the environment: `xpcall` cannot catch a thread termination, so `recover()` never runs; and the test pinning that guard passes against a server whose loop is already dead. Those two remain true whatever starved the scheduler, and they are why the test was renamed rather than deleted.
+
+> **Line 44 reached by spending, not by restarting.** I had twice recorded this as needing a fresh session with a lost first round - a coin flip per restart, on a host that could not be restarted safely. That framing missed a drain hiding in plain sight: coins can be *spent* down. From a balance of 1631, one shelf buy of ivory (1360) dropped me to 271 and one locker crate (250) to 21. `short` is computed as `CRATE_COST - balance` after the round payout is added, so from 21 anything but a surviving win lands under 250. The very next round did: a loss where I survived paid `COINS_LOSS 30 + COINS_SURVIVE 40 = 70`, times 1.25 for VIP and 2 for Last Call = 175, balance 196, `short` 54, and the card reads "You were 54 coins short."
+>
+> That the payout arithmetic came out to exactly 175 is one more incidental confirmation of the Last Call settlement multiplier, from a completely different starting balance than the earlier crafting and reward checks.
+>
+> The lesson is the one this file keeps relearning from the other side. A blocker written down as "needs a restart" went unquestioned for two sessions, when the real state - balance too high - had a direct lever I already knew existed. Spending is to line 44 what the Play restart was to lines 29 and 32: the constraint was mine, not the game's.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
