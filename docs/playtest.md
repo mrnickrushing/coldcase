@@ -442,6 +442,8 @@ Counting ticks is misleading on its own, so here is the split. 51 ticked, 28 not
 >
 > `VisionController` also reads clean and corroborates the fog name-tag tick: `visible = d <= radius and not (event == "FOG_BANK" and d > FOG_NAMETAG_RANGE)` is exactly the two-gate behaviour measured live, a real distance-fog radius plus the 40-stud fog cap.
 
+> **Client controllers reviewed; cue-name integrity confirmed.** Beyond the role-leak and vision checks above, the logic-bearing client controllers read clean: KillCamController (post-round only, orbits the murderer's last kill, restores the camera), SpectatorController (roster from the server, cycling client-side, handles all-dead and lobby respawn), PetController (pet follows/hides/dims exactly as line 119 describes), and SoundController. Reading SoundController finished the sound-cue-name check that grep could not: every cue name triggered anywhere - server `AudioService:Emit` and client `SoundController.Play` alike - is a real key in the 22-cue table, so no cue plays silently from a typo. `timer_30` fades in correctly over the last thirty seconds. The remaining unread controllers are pure UI layout (Hud, Menu, Social, Notice, Input, Trade), where the logic-critical paths were already covered from the server side.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
