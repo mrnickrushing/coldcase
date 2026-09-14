@@ -311,6 +311,12 @@ Counting ticks is misleading on its own, so here is the split. 45 ticked, 34 not
 >
 > One thing deliberately not claimed: `RequestSpectate` cycled to the same NPC, "ADA (NPC)" before and after. By t=30s several NPCs may already be dead, leaving a single valid target, in which case returning the same one is correct behaviour. The line asks whether spectating works on NPCs, not whether the cycle advances, so this is recorded as ambiguous rather than counted either way.
 
+> **Read the role from the HUD, not from the remote.** `HudController:96` writes `roleTag.RoleName.Text = upper(role)` and the tag persists all round, so `RoundHud.RoleTag.RoleName` gives a probe its role the instant it starts, anywhere in a round. Waiting on `RoleAssigned` cannot do that: the remote fires once during REVEAL, so a probe starting mid-round has already missed it and must wait out a whole cycle - about 140 seconds - for the next one. One pass did exactly that and returned with nothing. Reading the HUD instead, the next pass knew it was the snitch with 174 seconds of budget still in hand.
+>
+> **A second spectator sample disagreed with the first, and it is not settled.** The death that ticked line 23 read `SpectatorGui.Enabled = true` watching "ADA (NPC)". A later death read `Enabled = false` while the label still said "OTTO (NPC)". Closed screens hold their last render, so that text may be stale from an earlier round rather than current. Two readings, one sample each, taken two seconds after death - not enough to tell "the view never came up" from "it came up later than I looked". The tick stands on the clean reading; this is recorded so the next probe polls across several seconds and reports a timeline instead of a snapshot.
+>
+> **Lines 71 and 72 belong in the phone bucket, but only their labels do.** `isTouch()` is `TouchEnabled and not KeyboardEnabled`, which is false in this session because both are true, so the FIRE / THROW / REVIVE buttons are genuinely not built here. The logic deciding *which* actions a role is offered is shared, and on desktop it surfaces as prompt text - "E · stab", "R · revive   E · examine", "Q · throw knife", "E · take pistol". So the role gating is observable without a phone even though the buttons named in the line are not.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
