@@ -113,22 +113,34 @@ return {
     REMOTE_CALLS_PER_SEC = 20, -- hard ceiling per player, across every RemoteEvent
     REMOTE_STRIKES_TO_KICK = 5, -- seconds over the ceiling...
     REMOTE_STRIKE_WINDOW = 10, -- ...within this many seconds
-    -- Tighter ceilings for single remotes, on top of the global one (calls/sec)
+    -- Tighter ceilings for single remotes, on top of the global one (calls/sec).
+    -- Every client->server remote carries one, as defence in depth: each already
+    -- has a stronger server-side gate (a role, a cooldown, a coin cost, a
+    -- channel), but a dedicated cap is a backstop if a gate is ever weakened, and
+    -- keeps one spammed remote from eating the whole global 20/sec budget. Values
+    -- sit well above any legitimate rate, so real play never trips them.
     REMOTE_LIMITS = {
         RequestStab = 4,
         RequestShoot = 4,
         RequestThrow = 2,
         RequestExamine = 6,
+        RequestPickup = 4,
         RequestCoin = 30,
         RequestVote = 4,
         RequestCrate = 3,
         RequestBuy = 3,
+        RequestReroll = 3,
+        RequestCraft = 3,
+        RequestEquip = 8,
         RequestTrade = 10,
         RequestRadio = 2,
         RequestEmote = 3,
         RequestReport = 2,
+        RequestRevive = 4,
+        RequestDrag = 6,
         RequestSpectate = 4,
         RequestLobbyMode = 4,
+        HintSeen = 5,
     },
 
     -- Social: Radio and Emote passes, reports

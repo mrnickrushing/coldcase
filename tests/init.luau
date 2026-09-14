@@ -1102,6 +1102,49 @@ test("every client-to-server remote has a server handler", function()
     )
 end)
 
+-- Defence in depth: every client->server remote should carry its own per-remote
+-- rate cap, not lean on the global 20/sec ceiling alone. An adversarial audit
+-- found seven remotes (pickup, revive, drag, craft, equip, reroll, HintSeen)
+-- with no dedicated cap - each safe today behind a role/cooldown/cost gate, but
+-- a dead backstop if one of those gates is ever weakened. This pins the whole
+-- set so a newly added client->server remote cannot quietly ship uncapped.
+test("every client-to-server remote has a per-remote rate cap", function()
+    local setup = fs.readFile("src/shared/RemoteSetup.luau")
+    local marker = setup:find("client %-> server")
+    assert(marker, "RemoteSetup no longer marks its client->server block")
+    local tail = setup:sub(marker)
+    local limits = Config.REMOTE_LIMITS
+
+    local uncapped = {}
+    local n = 0
+    for name in tail:gmatch('"(Request%w+)"') do
+        n += 1
+        if not limits[name] then
+            table.insert(uncapped, name)
+        end
+    end
+    if tail:find('"HintSeen"', 1, true) then
+        n += 1
+        if not limits["HintSeen"] then
+            table.insert(uncapped, "HintSeen")
+        end
+    end
+
+    assert(n >= 20, "expected the full client->server block, found only " .. n)
+    assert(
+        #uncapped == 0,
+        "client->server remotes with no per-remote rate cap (they fall back to "
+            .. "the global ceiling only): "
+            .. table.concat(uncapped, ", ")
+    )
+    for name, cap in limits do
+        assert(
+            type(cap) == "number" and cap > 0,
+            ("REMOTE_LIMITS.%s = %s is not a positive rate cap"):format(name, tostring(cap))
+        )
+    end
+end)
+
 ------------------------------------------------- rarity odds and integrity
 -- Roblox requires accurate published odds on paid random items, and
 -- RarityTable's own comment says so. The Locker's pull weights must sum to
