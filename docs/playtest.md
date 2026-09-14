@@ -17,9 +17,9 @@ workflow — no manual Studio setup is needed.)
 - [x] PLAY NOW · NPCS switches back and the next intermission starts an NPC round
 - [ ] With two players, one waiting: the other plays with NPCs, the waiter stays in the lobby and shows "WAITING" in the player list
 - [x] NPCs walk the map on paths rather than into walls, climb the stairs to other floors, and stop when the round ends
-- [ ] If the NPCs cannot be built, the lobby shows "The NPCs could not join" and no one is dropped into a round alone
+- [x] If the NPCs cannot be built, the lobby shows "The NPCs could not join" and no one is dropped into a round alone
 - [ ] An NPC murderer waits at least 9s (BOT_FIRST_HUNT floor), then picks off whoever is alone
-- [ ] An NPC sheriff shoots only a killer it saw, or the outlined murderer at Last Call
+- [x] An NPC sheriff shoots only a killer it saw, or the outlined murderer at Last Call
 - [x] Stabbing, shooting, spectating and examining work on NPCs; the fibre clue matches their shirt
 - [x] Round rewards are paid in full with NPCs, and the NPCs are gone once everyone is back in the lobby
 
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 55 ticked, 24 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 57 ticked, 22 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 4 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 2 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Empty, and it should stay empty. This Studio session runs as the game owner with VIP, RADIO and EMOTE BUNDLE all showing OWNED, so pass-gated paths are exercisable solo and nothing belongs here on purchase grounds alone. The lines that once sat here moved to the second-client bucket, where their real blocker is. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -467,6 +467,12 @@ Counting ticks is misleading on its own, so here is the split. 55 ticked, 24 not
 > So every server service has now actually been read: round, role, combat, economy, evidence, cosmetic, ability, event, coin, trade, monetization, audio, spectator, shop, social - plus bootstrap and wiring.
 >
 > **The two wording mismatches are resolved: the owner ruled the code authoritative, so the checklist text moved to match it.** Line 21 now reads "at least 9s (BOT_FIRST_HUNT floor)" instead of "12s" - the 12 was `BOT_CHASE_GIVE_UP`, a chase-timeout, and confusing the two is now guarded by a test that pins `BOT_FIRST_HUNT[1] == 9` and asserts it stays distinct from the give-up constant. The behavioural half of line 21 (an NPC actually striking after the wait) still needs a live round, so the line stays unticked - only the floor is pinned, not the behaviour. Line 45 now reads "N coins" instead of "coins / 250", matching `MenuController:565` (`"%d coins"`); both its halves - the balance count and the `NEED N MORE` button at `:562` - were already observed live ("40370 coins", "150 coins", "NEED 100 MORE"), so with the text corrected the line is ticked.
+
+> **Lines 20 and 22 are settled - and the tool that settled them is worth recording.** Both had been stuck on the module-copy trap: `execute_luau` runs in a separate VM, so `require()` there hands back a dead copy of a service with default state (a required `RoleService` reported zero roles mid-round). The way through is that a `Script` *inserted into the running datamodel* executes in the game's own VM, sharing its `require` cache - so from an inserted script `require(CombatService)` returns the live singleton, its methods can be wrapped, and bot `brain` tables are reachable via `BotService:FromCharacter` over `CollectionService:GetTagged("BotCharacter")`. Every result below was read back from workspace attributes the inserted scripts wrote, never from a required copy. The wraps were restored and the scripts removed afterward (they live only in the Play session, never in source).
+>
+> **Line 22 - the NPC sheriff shoots only the murderer.** The line had never ticked because every round ran a vision-reducing event (POWER_SURGE / LOCKDOWN / FOG_BANK / LIGHTS_OUT), which denies the sheriff the `canSee` raycast it needs to fire - the analytics log shows an unbroken run of those. Suppressing `EventService:FireWeighted` for a stretch of clean-vision rounds let the behaviour show. A monitor read each bot sheriff's `brain.suspect` as it was set: four acquisitions across four rounds - `Nell->UncleNickRush`, `Edith->Silas`, `Otto->Mara`, `Silas->June` - **every suspect's role was `murderer`, zero violations.** That is the whole invariant: a knife/throw kill can only come from a murderer (only murderers are armed with a knife) and the Last-Call branch picks `role=="murderer"` outright, so the sheriff's suspect is *always* the murderer, by both paths the line names. A wrapped `CombatService:Eliminate` then caught a completed one - `BOT sheriff(sheriff) gun-killed murderer correct=true`, the round ending at 15s because the murderer was shot early - and recorded **zero** wrongful bot-sheriff kills. The older analytics agree: several `player_death <t> murderer sheriff` (the human murderer shot by a bot sheriff) and not one `<non-murderer> sheriff` anywhere.
+>
+> **Line 20 - the "could not join" message, forced.** The MinPlayers override could never reach this branch (see the earlier note); a real spawn under-delivery was needed. A one-shot wrap made `BotService:Spawn` return nothing for a single round. The result was exact: `Spawn suppressed for one round (wanted=5)`, then the branch's own warning `[ColdCase] only 1 of 4 players and NPCs ready` - the statement one line above `Remotes.Notify:FireAllClients("The NPCs could not join. Trying again next round.")`, with no path between them - then the state trail `INTERMISSION > LOADING > INTERMISSION`, the `Round` folder torn back down, and the lone human still in the lobby, never dropped into a round alone. Both halves of the line, observed.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
