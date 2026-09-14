@@ -59,7 +59,7 @@ local THEMES = {
                 wall = "a89f92",
                 floor = "9a958c",
                 floorMaterial = M.SmoothPlastic,
-                props = { "Barrel" },
+                props = { "Barrel", "CrateStack" },
                 density = 0.2,
             },
             cellar = {
@@ -285,7 +285,7 @@ local THEMES = {
                 wall = "e0d8c0",
                 floor = "b8b1a2",
                 floorMaterial = M.SmoothPlastic,
-                props = { "FilingCabinet" },
+                props = { "FilingCabinet", "Plant" },
                 density = 0.12,
             },
             storage = {
@@ -1292,7 +1292,7 @@ local function dressRooms(
         end
 
         -- Framed paintings on the bare inside walls of rooms
-        if theme.paintings and not region.hall and not region.outdoor then
+        if theme.paintings and not region.outdoor then
             for _, side in SIDES do
                 if info.kinds[side] ~= "wall" or against[side] or rng:NextNumber() > 0.3 then
                     continue

@@ -6,6 +6,7 @@ local RoleService = require(script.Parent.RoleService)
 local AudioService = require(script.Parent.AudioService)
 local EvidenceService = require(script.Parent.EvidenceService)
 local CosmeticService = require(script.Parent.CosmeticService)
+local CombatFx = require(game.ReplicatedStorage.Shared.CombatFx)
 
 local CombatService = {}
 local lastAction = {} -- [Player] = { [action] = os.clock() }
@@ -162,6 +163,7 @@ function CombatService:RequestShoot(plr: Player, aimPoint: Vector3)
         return
     end
     AudioService:Emit("gun_fire", origin)
+    CombatFx.Muzzle(origin, toAim.Unit)
 
     local hit = workspace:Raycast(origin, toAim.Unit * Config.GUN_RANGE, rayParams(char))
     local victim = hit and playerFromPart(hit.Instance)
@@ -201,6 +203,7 @@ function CombatService:Eliminate(victim: Player, killer: Player, method: string)
         return
     end
     local pos = char:GetPivot().Position
+    CombatFx.Impact(pos)
 
     local role = RoleService:Get(victim)
     local roundFolder = workspace:FindFirstChild("Round")
