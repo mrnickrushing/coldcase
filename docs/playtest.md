@@ -438,6 +438,10 @@ Counting ticks is misleading on its own, so here is the split. 51 ticked, 28 not
 > - **RoleService** - covered above; the only nuance is the two-murderer snitch reveal.
 > - **MonetizationService** - `ProcessReceipt` is safe without an explicit pre-save, which I nearly flagged and was wrong to. The classic double-grant needs the granted goods to persist while the dedup record does not; here the coins/keys and `data.purchases[PurchaseId]` are the same profile blob, saved atomically, so they persist together or not at all. On a crash before autosave the player simply gets the coins once on Roblox's redelivery. Purchases correctly bypass the coin multiplier (raw grant).
 
+> **Client-side role-leak audit (line 79), verified by reading.** Line 79 - "print every value the client holds; no other player's role appears" - needs a second client to *observe*, but the client end can be checked statically, and it is clean. Every client reference to a role reads `ClientState.role`, which is the local player's own. The only two paths that carry another player's role are both intended: `RoundOver`'s `reveal` table (the public roster, delivered after the round, used by the kill cam) and the `counterpart` on `RoleAssigned` (the snitch learns the murderer and vice versa - the mechanic itself, and only the two involved receive it). No controller stores or shows an arbitrary player's role during a round. Combined with the server side - every `RoleAssigned` a per-player `FireClient`, never a broadcast - the leak surface is closed on both ends; only the live two-client observation is outstanding.
+>
+> `VisionController` also reads clean and corroborates the fog name-tag tick: `visible = d <= radius and not (event == "FOG_BANK" and d > FOG_NAMETAG_RANGE)` is exactly the two-gate behaviour measured live, a real distance-fog radius plus the 40-stud fog cap.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
