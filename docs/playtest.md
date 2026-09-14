@@ -378,6 +378,14 @@ Counting ticks is misleading on its own, so here is the split. 50 ticked, 29 not
 >
 > Three lines stay open for reasons this restart also clarified. Line 33's "not again after a rejoin" is **unreachable** here, because `hintsSeen` lives in the profile and every restart clears it - hints will always reappear, so the claim needs real persistence to test at all. Line 44 wants a balance under 250 at the results card, and the first round's payout took 150 to 375 in one step - `COINS_WIN` 90 at 1.25 for VIP and 2 for Last Call - so it needs a short *losing* round from a fresh start. And line 45's `coins / 250` is not a format the code produces: the balance renders as "150 coins" and the button as "NEED 100 MORE", the latter observed and correct.
 
+> **Line 44 needs a lost first round, and the arithmetic says how likely that is.** A second fresh session paid `won=true coins=225 balance=375 short=0` - `COINS_WIN` 90 at 1.25 for VIP and 2 for Last Call, clearing 250 in a single step, so the near-miss line never renders. A loss is the only route: 30 at 1.25 leaves 188 and a `short` of 62, and even a Last Call loss at 2.5 leaves 225 and a `short` of 25. Both show the card. So the line turns entirely on whether the first round is *lost*, and since a first-rounder is forced innocent, that means the murderer has to win - near enough a coin flip per restart, one restart per attempt.
+>
+> Worth reading `short` from the `RoundReward` payload rather than the results card: the card is up for roughly three and a half seconds after the kill-cam, and a closed screen holds a stale render.
+>
+> **Line 32 now has two independent samples**, one per Play session, because `session.rounds` increments immediately and a session only ever has one first round. Both drew innocent, and the server logged the first as `role_assigned 1 innocent <2 true`. The mechanism is not chance: `RoleService:53` pulls newcomers into the special pool only when `#pool < murderers + sheriffs`, and five veteran NPCs against two slots leaves the single newcomer out of it every time.
+>
+> **Line 33's first half is partly observed.** Attaching at 0.0s this time caught "Tap USE to examine a body" *appearing* at 40.6s - an actual appearance, not a label that had changed while I was not looking. But only one of the three: "move" fires on the `RoundState` change into ACTIVE and "coins" six seconds later, and I saw neither despite attaching immediately, which suggests both had already run before the client finished building rather than that they did not fire.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
