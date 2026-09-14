@@ -8,7 +8,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] `rokit install`, then `rojo serve` and connect, or open `build/ColdCase.rbxlx`
 - [ ] Optional: Game Settings → Security → **Enable Studio Access to API Services** (without it data
       does not persist between sessions)
-- [ ] Output shows `[ColdCase] server up`
+- [x] Output shows `[ColdCase] server up`
 
 ## Solo with NPCs — press Play, no attributes
 
@@ -26,10 +26,10 @@ workflow — no manual Studio setup is needed.)
 ## First playtest — Test → Clients and Servers, 4 players
 
 - [ ] Map vote panel is open on arrival; votes update for everyone
-- [ ] A brand-new player gets a free Locker pull about five seconds after landing
+- [x] A brand-new player gets a free Locker pull about five seconds after landing
 - [x] Intermission counts down; the round starts; everyone teleports to separated spawns
 - [x] Role card shows for 4s, movement locked during it
-- [ ] A player on their first round is never murderer or sheriff (when veterans are present)
+- [x] A player on their first round is never murderer or sheriff (when veterans are present)
 - [ ] Ghost hints appear once each: move, coins, examine — and not again after a rejoin
 - [x] Nobody can be killed in the first 4 seconds
 - [x] Murderer's E kills at close range, not at distance; Q throws with an 8s cooldown
@@ -124,16 +124,16 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 47 ticked, 32 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 50 ticked, 29 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 10 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 8 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Empty, and it should stay empty. This Studio session runs as the game owner with VIP, RADIO and EMOTE BUNDLE all showing OWNED, so pass-gated paths are exercisable solo and nothing belongs here on purchase grounds alone. The lines that once sat here moved to the second-client bucket, where their real blocker is. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
 | Needs human eyes or ears | 7 | Whether the cues match the brief, whether a weapon sits right in the hand, whether the art reads. No probe settles taste. The ghost hints join this bucket: they need an account that has not seen them, and this Studio session is permanently the owner's. |
-| Setup step, not a claim | 3 | `rokit install`, API access, `[ColdCase] server up`. |
+| Setup step, not a claim | 2 | `rokit install` and the API access toggle. `[ColdCase] server up` left this bucket by being observed: a Play restart clears the Output window, so the boot line sits at the top instead of scrolled past the console tool's truncation. |
 
 
 > **The lobby menus have a twenty-second window.** The collection, crate and trade screens only exist during INTERMISSION - `onState` shows the lobby there, `LOADING` and `REVEAL` call `show(nil)`, and `RESOLUTION` belongs to the results card. Anything that needs to click a menu button and then read what rendered has to do both inside that window. Driving it from two separate tool calls does not fit: a click and a read took about twenty-eight seconds of round trips against a twenty-second window, three times running. A human at the keyboard settles these in seconds, so they are grouped here rather than left looking untested.
@@ -356,6 +356,27 @@ Counting ticks is misleading on its own, so here is the split. 47 ticked, 32 not
 > All five were filed as needing a fresh account or an unreachable balance. Neither was true. `ApplyLoginStreak` writes `lastLogin` on the first load, so `isNew` is spent for the rest of a session once used - but it is restored by the next restart, not by a new account.
 >
 > **And line 45's wording does not match the code.** `MenuController:565` renders `Balance.Text = ("%d coins"):format(coins)` - a plain count, seen live as "40370 coins" - not the `coins / 250` the line describes. The `NEED %d MORE` half at `:562` is real and correctly worded. Same shape as line 21's "at least 12s" against a constant of nine: the spec and the code drifted, and which one is authoritative is not mine to decide.
+
+> **A Play restart settled three lines and confirmed the persistence finding in ProfileStore's own words.** Stopping and starting Play resets everything, because nothing was ever saved. The before-and-after is stark: 70,888 coins and 29 inventory cards became 150 coins and an empty inventory, and the crate button went from "SPIN · 250 COINS" to "NEED 100 MORE". Those numbers were predicted and written down *before* the restart, so the match is a test rather than a story fitted afterwards.
+>
+> The fresh Output window then carried what hours of scrolled-past console could not:
+>
+> ```
+> [ProfileStore]: Roblox API services unavailable - data will not be saved
+> [ColdCase] server up
+> [Analytics] coins_earned streak 50 150 0
+> [Analytics] funnel 1 joined
+> [Analytics] crate_opened 150 locker Uncommon brassnine
+> [Analytics] funnel 2 free_crate
+> [Analytics] role_assigned 1 innocent <2 true
+> [Analytics] funnel 3 first_round_start
+> ```
+>
+> Line 11 is the second line, observed rather than inferred from neighbouring output. Line 29 is the free pull: a locker crate granting Brass Nine with the balance still reading 150, so it cost nothing, and `funnel 2 free_crate` logged behind it. Line 32 is `role_assigned 1 innocent <2 true` - that trailing `true` is `isFirstRound`, so the server itself records that a first round drew innocent. The mechanism is deterministic rather than lucky: `RoleService:53` only pulls newcomers into the special pool when `#pool < murderers + sheriffs`, and five veteran NPCs against two slots means the one newcomer is never drawn.
+>
+> Two things fell out unasked. ProfileStore prints "data will not be saved" outright, which is a stronger statement of the persistence gap than my inference from `PlaceId` being 0. And the funnel fired 1 through 5 in order across two rounds, which is live confirmation of the renumbering done earlier in this project.
+>
+> Three lines stay open for reasons this restart also clarified. Line 33's "not again after a rejoin" is **unreachable** here, because `hintsSeen` lives in the profile and every restart clears it - hints will always reappear, so the claim needs real persistence to test at all. Line 44 wants a balance under 250 at the results card, and the first round's payout took 150 to 375 in one step - `COINS_WIN` 90 at 1.25 for VIP and 2 for Last Call - so it needs a short *losing* round from a fresh start. And line 45's `coins / 250` is not a format the code produces: the balance renders as "150 coins" and the button as "NEED 100 MORE", the latter observed and correct.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
