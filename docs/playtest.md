@@ -53,7 +53,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] Inventory lists starters and owned items; Equip persists across a rejoin
 - [ ] Crafting five duplicates yields one item of the next tier
 - [ ] Medic R revives an unexamined body once per round; moving during the 3s breaks it
-- [ ] Holding F for 2s drags a body at reduced walk speed; releasing drops it
+- [x] Holding F for 2s drags a body at reduced walk speed; releasing drops it
 - [x] Last Call fires at 30s: banner, coins double, murderer outlined through walls
 - [x] Lights Out shrinks the vision radius (fog at 88 studs), not just brightness
 - [x] Fog Bank hides name tags past 40 studs
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 43 ticked, 36 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 44 ticked, 35 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 14 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 13 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -298,6 +298,12 @@ Counting ticks is misleading on its own, so here is the split. 43 ticked, 36 not
 > The null result is worth something here only because the same remote plainly works up close in ordinary play, and because `AbilityState` is a real server message rather than something inferred - a silent refusal and a working drag look completely different on it. Firing an exploit remote and seeing nothing proves the guard only when the unguarded path is known to produce a visible effect.
 >
 > Line 56, the actual dragging, went untested that round: the NPC murderer killed me 56 studs from the body. Not a fault - but the probe exited on its "I died" branch without capturing the spectator state, and that is the very event line 23's spectating clause has been waiting several rounds for. Every other branch of this probe calls `captureSpectator`; the drag walk loop was the one place it was not wired in. An opportunity spent chasing something, missed by not handling the case where it arrives unannounced.
+
+> **Dragging works, and the server's own messages agree with it.** Line 56 ticked. Reached Hugo's body at 8.8 studs; `WalkSpeed` went 16 to **8** after the two second hold, matching `DRAG_WALKSPEED`; the corpse moved **6.2 studs** while I walked; releasing put the speed back to 16.
+>
+> What makes this more than a single reading is that two independent channels agree. The speed and the corpse position are datamodel state, while `AbilityState` is a server message, and it arrived as `drag_start(2)` - carrying `DRAG_TIME` - then `dragging(0)`, then `drag_stop(0)`. Neither was derived from the other, so a coincidence would have to line up across both.
+>
+> Paired with line 89 from the same probe, that is the whole drag surface: refused from 60 studs against a `near()` of 14, working at 8.8. The exploit line and the feature line are the same code path tested from either side, which is worth more than testing either alone.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
