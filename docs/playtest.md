@@ -261,6 +261,12 @@ Counting ticks is misleading on its own, so here is the split. 40 ticked, 39 not
 >
 > One sanity check worth keeping: the server said "17s ago" where my own first sight of the tag was ~15s earlier, a ~2s lag between the kill and the tag reaching me. Consistent, and a reminder that client-side body age runs slightly behind the server's.
 
+> **The sheriff's pistol does drop, and only a plain innocent can pick it up.** Line 37's first half is observed: a Part named `DroppedPistol` appeared in `workspace.Round` after the NPC sheriff died, 37 studs away, seen directly rather than inferred. `Eliminate` spawns it for a dying sheriff or hero, so it needs no particular role of mine to witness - only that the NPC sheriff dies, which the NPC murderer sees to on its own schedule.
+>
+> The second half is narrower than it reads. `RoleService:MakeHero` opens with `if roles[plr] ~= "innocent" then return false end`, so the promotion is refused for the snitch, the medic, the murderer and the sheriff alike - not just for the sheriff. Walking to the pistol as the snitch and firing `RequestPickup` did exactly nothing, correctly: the part stayed on the floor and no `RoleAssigned` arrived. So "an innocent can take it" means *innocent*, and testing it needs that draw specifically, in a round where the sheriff also dies. Two opportunistic conditions at once, which is why the line is still open.
+>
+> Worth keeping for the next probe: the inventory's `Equip` element is a **TextButton**, not a TextLabel - `MenuController:806` connects `card.Equip.Activated`, which is a button event. Two passes read the equipped pistol's name as nil purely because an `IsA("TextLabel")` filter excluded it.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
