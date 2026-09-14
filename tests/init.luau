@@ -998,6 +998,44 @@ test("the round settlement is paid before Last Call is cleared", function()
     )
 end)
 
+--------------------------------------------------- onboarding economy
+-- Config calls STARTING_COINS "below CRATE_COST so the second crate is locked
+-- in round two". The first crate is free - OnboardingService grants a Locker
+-- pull five seconds after a new player lands - so what that comment protects
+-- is that the *second* one has to be earned.
+--
+-- A brand-new profile does not hold STARTING_COINS alone. lastLogin starts at
+-- 0, so ApplyLoginStreak sets the streak to 1 and pays STREAK_COINS_PER_DAY
+-- before the player ever reaches the lobby. Watched live on a fresh session:
+-- 150 coins, and the Locker reading "NEED 100 MORE" against a 250 crate.
+--
+-- Raise either number past the crate price and that opening beat disappears
+-- with nothing looking wrong anywhere.
+test("a new player cannot afford the second crate", function()
+    assert(
+        Config.STARTING_COINS < Config.CRATE_COST,
+        ("STARTING_COINS %d is no longer below CRATE_COST %d, so the crate after "):format(
+            Config.STARTING_COINS,
+            Config.CRATE_COST
+        ) .. "the free one is affordable immediately"
+    )
+
+    -- What a new player actually holds on their first day.
+    local dayOne = Config.STARTING_COINS + Config.STREAK_COINS_PER_DAY
+    assert(
+        dayOne < Config.CRATE_COST,
+        ("a new player holds %d on day one - STARTING_COINS %d plus a first streak of %d - "):format(
+            dayOne,
+            Config.STARTING_COINS,
+            Config.STREAK_COINS_PER_DAY
+        )
+            .. ("which is not below CRATE_COST %d. The second crate is no longer locked, and "):format(
+                Config.CRATE_COST
+            )
+            .. "the NEED N MORE state on the Locker becomes unreachable."
+    )
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")
