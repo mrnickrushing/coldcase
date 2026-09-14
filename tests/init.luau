@@ -1054,6 +1054,45 @@ test("a new player cannot afford the second crate", function()
     )
 end)
 
+-------------------------------------------------- remote handler coverage
+-- Every client -> server remote must have a server handler. RemoteSetup
+-- declares the remotes in two blocks split by a "client -> server" comment;
+-- the ones below it are player actions, and each is fired by the client. A
+-- declared client->server remote with no RemoteGuard.Connect is a player
+-- action the server silently ignores - a bug that looks like nothing.
+-- (Verified live: all 21 currently have handlers, all in Bootstrap.)
+test("every client-to-server remote has a server handler", function()
+    local setup = fs.readFile("src/shared/RemoteSetup.luau")
+    local boot = fs.readFile("src/server/Bootstrap.server.luau")
+
+    local marker = setup:find("client %-> server")
+    assert(marker, "RemoteSetup no longer marks its client->server block")
+    local tail = setup:sub(marker)
+
+    local missing = {}
+    local n = 0
+    for name in tail:gmatch('"(Request%w+)"') do
+        n += 1
+        if not boot:find('RemoteGuard.Connect("' .. name .. '"', 1, true) then
+            table.insert(missing, name)
+        end
+    end
+    -- HintSeen is the one client->server remote not named Request*
+    if tail:find('"HintSeen"', 1, true) then
+        n += 1
+        if not boot:find('RemoteGuard.Connect("HintSeen"', 1, true) then
+            table.insert(missing, "HintSeen")
+        end
+    end
+
+    assert(n >= 20, "expected the full client->server block, found only " .. n)
+    assert(
+        #missing == 0,
+        "client->server remotes with no server handler (fired by the client, "
+            .. "ignored by the server): " .. table.concat(missing, ", ")
+    )
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")

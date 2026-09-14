@@ -419,6 +419,13 @@ Counting ticks is misleading on its own, so here is the split. 51 ticked, 28 not
 >
 > The lesson is the one this file keeps relearning from the other side. A blocker written down as "needs a restart" went unquestioned for two sessions, when the real state - balance too high - had a direct lever I already knew existed. Spending is to line 44 what the Play restart was to lines 29 and 32: the constraint was mine, not the game's.
 
+> **Two server-to-client remotes are fired with nobody listening.** Cross-checking all 41 declared remotes against handlers and consumers: every client-to-server remote (21 of them) has a `RemoteGuard.Connect` handler and is fired by the client - clean, now pinned by a test. But two of the twenty server-to-client remotes are fired and never received:
+>
+> - `RoundState` - `RoundService:49` does `Remotes.RoundState:FireAllClients(new, duration)`, but every client reads the **attribute** `RoundState` via `GetAttributeChangedSignal` (eleven places) and none listens to the remote. The remote fire, and the `duration` argument it alone carries, are vestigial - superseded by the attribute plus `RoundEnds`. Harmless, but dead: a `FireAllClients` on every state change that reaches no one.
+> - `CosmeticChanged` - `CosmeticService:61` fires `FireAllClients(plr, slot, id)` when a player equips a cosmetic, and **nothing anywhere consumes it**. The signature - a player, a slot, an id, broadcast to everyone - reads as "tell the other clients that this player changed a cosmetic", so other players could reflect an equip live. As it stands they do not: a lobby equip does not propagate, and a weapon's look only updates on other screens when the tool is next drawn (which re-equips it). Dead remote, or an unfinished feature - that is the owner's call, but the fire currently does nothing.
+>
+> Neither is a crash. Both are wasted broadcasts, and `CosmeticChanged` in particular looks like a listener someone meant to write. The client-to-server coverage is the safety-critical direction and it is complete; a test now guards it, since a `Request*` remote with no handler would be a player action the server silently drops.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
