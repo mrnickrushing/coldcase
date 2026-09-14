@@ -349,6 +349,14 @@ Counting ticks is misleading on its own, so here is the split. 47 ticked, 32 not
 >
 > **This line sat shelved for hours as "destructive - it spends the user's real items".** It is not. `PlaceId` is 0, there is no DataStore, and ProfileStore runs on its in-memory fallback, so every item and coin here evaporates with the Play session. The finding that blocks lines 46 and 53 is exactly what makes this one safe to run. That is the third blocker in this file that turned out to be mine rather than the game's, and all three were of the same kind - a reason to stop that was never re-examined once written down.
 
+> **Five "blocked" lines are one Play restart away, for the same reason nothing persists.** `PlaceId` is 0, so there is no DataStore and ProfileStore runs in memory - which means every Play session begins from the template, not from saved data. The template has `lastLogin = 0`, and `DataService:75` sets `isNew = data.lastLogin == 0`. A fresh Play session therefore *is* a brand-new player, in the only sense the code recognises.
+>
+> That reaches line 29 (the free Locker pull five seconds after landing, gated on `isNew` and the one-shot `onboarding.freeCrate`), line 32 (a first round never murderer or sheriff), line 33 (ghost hints, since `hintsSeen` resets with everything else), and lines 44 and 45 - because `STARTING_COINS` is 100, deliberately set below `CRATE_COST` of 250 so "the second crate is locked in round two". A hundred coins is exactly the state "NEED N MORE" and "You were N coins short." describe, and the reason I could not reach it is that this session's balance climbed past 70,000 hours ago.
+>
+> All five were filed as needing a fresh account or an unreachable balance. Neither was true. `ApplyLoginStreak` writes `lastLogin` on the first load, so `isNew` is spent for the rest of a session once used - but it is restored by the next restart, not by a new account.
+>
+> **And line 45's wording does not match the code.** `MenuController:565` renders `Balance.Text = ("%d coins"):format(coins)` - a plain count, seen live as "40370 coins" - not the `coins / 250` the line describes. The `NEED %d MORE` half at `:562` is real and correctly worded. Same shape as line 21's "at least 12s" against a constant of nine: the spec and the code drifted, and which one is authoritative is not mine to decide.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
