@@ -13,7 +13,7 @@ workflow — no manual Studio setup is needed.)
 ## Solo with NPCs — press Play, no attributes
 
 - [x] Lobby countdown reads "STARTS IN Ns · 5 NPCS JOIN" and the round starts with five NPCs
-- [ ] WAIT FOR PLAYERS highlights, the countdown switches to "WAITING FOR PLAYERS · 1/4", no round starts, and the choice is still set after a rejoin
+- [x] WAIT FOR PLAYERS highlights, the countdown switches to "WAITING FOR PLAYERS · 1/4", no round starts, and the choice is still set after a rejoin
 - [ ] PLAY NOW · NPCS switches back and the next intermission starts an NPC round
 - [ ] With two players, one waiting: the other plays with NPCs, the waiter stays in the lobby and shows "WAITING" in the player list
 - [x] NPCs walk the map on paths rather than into walls, climb the stairs to other floors, and stop when the round ends
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 36 ticked, 43 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 37 ticked, 42 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 23 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 22 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 8 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -163,6 +163,12 @@ Counting ticks is misleading on its own, so here is the split. 36 ticked, 43 not
 > **The vote panel is open on arrival, and the tally renders - only "for everyone" is left.** At +0.00s into INTERMISSION, the instant the lobby opened, all three maps were on screen with their vote buttons and counts: Blackwood Manor, Rusted Pier and City Archive, each showing VOTE and 0. Visibility was checked by walking ancestors, not by trusting a label's own `Visible`. Casting one real vote moved Rusted Pier from 0 to 1 in 0.12s, so the update path renders locally. The remaining claim is that other clients see it, and `RoundService:82` sends the tally with `VoteTally:FireAllClients`, not `FireClient` - there is no per-voter path, so the obvious way for this to fail cannot happen. That is still not an observation of a second client drawing it, so the line stays unticked.
 >
 > It also stays in the multiplayer bucket, where it already was - "vote tallies across clients" is listed there. Worth stating plainly: the triage guard test only checks that the buckets *sum* to the unticked count, and moving a line between buckets leaves the sum unchanged. A wrong reclassification is invisible to it, so that has to be reasoned about each time. This table drifted once already for exactly that kind of reason.
+
+> **The lobby mode toggle, with one clause read rather than seen.** Three of line 16's four claims were observed. The highlight is a full swap, not one button lighting up: `renderMode` paints the selected button `Theme.AMBER` on background, text and stroke and the other `RAISED`/`SOFT`/`QUIET_STROKE`, and both were measured changing places and changing back - amber `(0.949, 0.651, 0.231)` moving from PLAY NOW to WAIT and returning. The countdown read exactly "WAITING FOR PLAYERS · 1/4". And no round started across 30 seconds, which is the part that needed patience rather than cleverness: "no round starts" is an absence, so it only means something watched past a full 20 second INTERMISSION.
+>
+> The fourth clause - that the choice survives a rejoin - was **not** observed; it needs a Play restart. It is guaranteed by construction instead: `SetWaitForPlayers` writes `data.settings.waitForPlayers` on the persisted profile, and `DataService:80` re-applies `plr:SetAttribute("WaitForPlayers", data.settings.waitForPlayers)` on load. Cited rather than seen, and the tick should be read with that attached.
+>
+> One thing worth knowing for any later probe: `renderMode` is driven by `GetAttributeChangedSignal("WaitForPlayers")`, not by the click. Firing the remote directly still repaints the buttons, because the UI follows the server's attribute rather than the local press. That is the right direction of authority, and it is why this was testable without clicking anything.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
