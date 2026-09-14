@@ -34,7 +34,7 @@ workflow — no manual Studio setup is needed.)
 - [x] Nobody can be killed in the first 4 seconds
 - [x] Murderer's E kills at close range, not at distance; Q throws with an 8s cooldown
 - [ ] Sheriff click fires; hitting an innocent kills the sheriff too
-- [ ] Sheriff death drops a pistol; an innocent can take it and becomes Hero
+- [x] Sheriff death drops a pistol; an innocent can take it and becomes Hero
 - [x] Body appears; E within 14 studs, after a 1.5s channel, returns three or four clue lines
 - [x] Examining after 20s, or during Lights Out, returns "The trail has gone cold."
 - [x] Walking over a coin collects it once; coins land on the HUD
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 40 ticked, 39 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 41 ticked, 38 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 17 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 16 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -266,6 +266,16 @@ Counting ticks is misleading on its own, so here is the split. 40 ticked, 39 not
 > The second half is narrower than it reads. `RoleService:MakeHero` opens with `if roles[plr] ~= "innocent" then return false end`, so the promotion is refused for the snitch, the medic, the murderer and the sheriff alike - not just for the sheriff. Walking to the pistol as the snitch and firing `RequestPickup` did exactly nothing, correctly: the part stayed on the floor and no `RoleAssigned` arrived. So "an innocent can take it" means *innocent*, and testing it needs that draw specifically, in a round where the sheriff also dies. Two opportunistic conditions at once, which is why the line is still open.
 >
 > Worth keeping for the next probe: the inventory's `Equip` element is a **TextButton**, not a TextLabel - `MenuController:806` connects `card.Equip.Activated`, which is a button event. Two passes read the equipped pistol's name as nil purely because an `IsA("TextLabel")` filter excluded it.
+
+> **One round carried the whole hero chain.** Drew innocent; the NPC sheriff died at t=26s leaving a `DroppedPistol` 144 studs off; pathed to 8.1 studs; `RequestPickup` promoted me and the part left the floor; then a shot at Cyril from 39 studs put the pistol "Ledger" in hand and took him from 100 to 0 while I stayed at 100. Line 37 is ticked on both halves.
+>
+> The reason it worked is that the probe branched on whatever role it drew rather than asking for one. Sheriff and murderer are both scarce under the snitch lean, and every role-specific probe before this discarded the draw it got. This one had a path for innocent, for sheriff, and for everything else, so the round paid out instead of being spent.
+>
+> What it did *not* settle, kept separate on purpose:
+>
+> - **Line 36** is still open. I hit Cyril and lived, which means Cyril was the murderer - a correct kill draws no misfire penalty. The line needs a shot that lands on an *innocent*, and with one murderer among five that is roughly four times in five next attempt.
+> - **Line 23** is at four clauses of five: stabbing, shooting, examining and the fibre all observed. Spectating is not, because I survived.
+> - **Line 63** is half observed and stays unticked. The pistol appeared in hand on use and the murderer's knife did the same earlier, but I only polled for a Tool *after* firing - the "stay hidden while walking about" half was never watched for the pistol. `Arm` puts it in the Backpack and `DrawWeapon` equips it for 1.2s, so the behaviour is near certain by construction. Near certain is not observed, and this file's rule is observed.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
