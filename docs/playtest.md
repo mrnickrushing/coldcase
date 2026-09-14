@@ -213,6 +213,10 @@ Counting ticks is misleading on its own, so here is the split. 39 ticked, 40 not
 >
 > What this shows is that the gate is real and that it is the *grace* doing the blocking, not some other guard. It does not pin the boundary at exactly 4.0 seconds: the samples bracket it at 3.53 and 5.60, so the gate is closed before ~3.5s and open after ~5.6s. Tightening that would mean sampling either side of 4.0 on a later murderer draw.
 
+> **A solo tester draws snitch far more often than one in six, by design.** Waiting for a particular role means counting draws, and the first seven came out snitch, snitch, innocent, murderer, innocent, snitch, innocent - three snitches in seven, which looks like a biased shuffle. It is not. `drawPreferHuman` in `RoleService:Assign` takes a human from the pool half the time, because an NPC snitch's reveal reaches no screen. The medic uses the same draw but is gated on `humans >= 2`, so it never fires in a solo round; the snitch is deliberately ungated, and the comment there says why. With one human among six participants that hands the snitch to the only real player about half the time it is drawn at all.
+>
+> Two things follow. The tally is documented behaviour rather than something to investigate - worth knowing before someone spends a session on it. And any line needing a *specific* role in a solo session costs more rounds than the headcount suggests, because the snitch lean keeps consuming the one human slot. Murderer draws in particular are rarer than one in six here, which is the real cost of the wait-for-role approach to the combat lines.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
