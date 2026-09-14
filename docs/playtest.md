@@ -18,7 +18,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] With two players, one waiting: the other plays with NPCs, the waiter stays in the lobby and shows "WAITING" in the player list
 - [x] NPCs walk the map on paths rather than into walls, climb the stairs to other floors, and stop when the round ends
 - [ ] If the NPCs cannot be built, the lobby shows "The NPCs could not join" and no one is dropped into a round alone
-- [ ] An NPC murderer waits at least 12s, then picks off whoever is alone
+- [ ] An NPC murderer waits at least 9s (BOT_FIRST_HUNT floor), then picks off whoever is alone
 - [ ] An NPC sheriff shoots only a killer it saw, or the outlined murderer at Last Call
 - [x] Stabbing, shooting, spectating and examining work on NPCs; the fibre clue matches their shirt
 - [x] Round rewards are paid in full with NPCs, and the NPCs are gone once everyone is back in the lobby
@@ -42,7 +42,7 @@ workflow — no manual Studio setup is needed.)
 - [x] Round ends on murderer death, wipe, or timeout; results card names the murderer
 - [x] When a murderer killed, the round ends on a 2.5s kill-cam circling the last kill, then results
 - [x] Results show "You were N coins short." when the balance is under 250
-- [ ] Locker shows `coins / 250` and reads NEED N MORE until affordable
+- [x] Locker shows `N coins` and reads NEED N MORE until affordable
 - [x] Everyone returns to the lobby; coins and XP survive a rejoin (with API access on)
 - [x] Results screen names the murderer, lists the roster with the dead struck through, shows the
       kill timeline and the payout
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 54 ticked, 25 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 55 ticked, 24 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 5 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 4 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Empty, and it should stay empty. This Studio session runs as the game owner with VIP, RADIO and EMOTE BUNDLE all showing OWNED, so pass-gated paths are exercisable solo and nothing belongs here on purchase grounds alone. The lines that once sat here moved to the second-client bucket, where their real blocker is. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -465,6 +465,8 @@ Counting ticks is misleading on its own, so here is the split. 54 ticked, 25 not
 > `SocialService` - and this resolves two things live testing could not. **Line 65's "the dead cannot send a radio message mid-round"** is code-verified: `Radio` checks `mayTransmit` (not ACTIVE, or alive) at entry *and again after* `FilterStringAsync` yields, so a player who dies during the filter still cannot broadcast - the exact race the three earlier inconclusive attempts were chasing. **Line 67's "reporting the same player twice is refused"** is the `reportedBy[plr][target.UserId]` dedup: a second report returns "You already reported X" and never double-counts. Both lines stay unticked because their other halves - a message *reaching everyone*, a report *against another player* - need a second client, but the safety logic behind each is sound. Radio also respects `CanUserChatAsync` and filters through `GetNonChatStringForBroadcastAsync`, as Roblox requires.
 >
 > So every server service has now actually been read: round, role, combat, economy, evidence, cosmetic, ability, event, coin, trade, monetization, audio, spectator, shop, social - plus bootstrap and wiring.
+>
+> **The two wording mismatches are resolved: the owner ruled the code authoritative, so the checklist text moved to match it.** Line 21 now reads "at least 9s (BOT_FIRST_HUNT floor)" instead of "12s" - the 12 was `BOT_CHASE_GIVE_UP`, a chase-timeout, and confusing the two is now guarded by a test that pins `BOT_FIRST_HUNT[1] == 9` and asserts it stays distinct from the give-up constant. The behavioural half of line 21 (an NPC actually striking after the wait) still needs a live round, so the line stays unticked - only the floor is pinned, not the behaviour. Line 45 now reads "N coins" instead of "coins / 250", matching `MenuController:565` (`"%d coins"`); both its halves - the balance count and the `NEED N MORE` button at `:562` - were already observed live ("40370 coins", "150 coins", "NEED 100 MORE"), so with the text corrected the line is ticked.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
