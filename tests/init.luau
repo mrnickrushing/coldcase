@@ -935,6 +935,69 @@ test("the witness clue names one NPC rather than narrowing the field", function(
     )
 end)
 
+--------------------------------------------------------- NPC round payouts
+-- The playtest checklist ticks "Round rewards are paid in full with NPCs" on
+-- the strength of BOT_ROUND_REWARD being 1, which makes the withBots multiply
+-- a no-op. Turn that constant down and the tick quietly becomes false: nothing
+-- in the code looks wrong, and the doc still claims full pay.
+--
+-- Reconciled live once, so the claim is not only structural: a win with
+-- survival paid floor((COINS_WIN + COINS_SURVIVE) * 2.5 + 0.5) = 325 with no
+-- bot reduction anywhere in it.
+test("a round against NPCs pays the same as one against people", function()
+    eq(Config.BOT_ROUND_REWARD, 1, "BOT_ROUND_REWARD (1 = full pay)")
+
+    -- The lever has to still be wired, or the constant means nothing.
+    local src = fs.readFile("src/server/Services/EconomyService.luau")
+    assert(
+        src:find("Config.BOT_ROUND_REWARD", 1, true),
+        "EconomyService no longer scales NPC-round pay, so the constant is dead"
+    )
+    assert(
+        src:find("withBots", 1, true),
+        "EconomyService no longer distinguishes a round containing NPCs"
+    )
+end)
+
+------------------------------------------------------- Last Call settlement
+-- Last Call doubles coins for the final thirty seconds. The end-of-round
+-- settlement is granted while it is still set - PayOut runs one line before
+-- SetLastCall(false) - and `round` is listed in LAST_CALL_SOURCES, so the
+-- win/loss/survive coins double too. Observed: 130 base paid out at 325, and
+-- a loss round's 30 paid at 75, both exactly 2.5x with VIP's 1.25.
+--
+-- lastCallFired resets each round, so a round that ends before the thirty
+-- second mark settles at 1.25x while the same win in a longer round settles
+-- at 2.5x. Identical outcomes pay double on round length alone. That is a
+-- call about the economy, not a bug, so this pins the behaviour rather than
+-- arguing with it - swap the two lines and the test says what changed.
+test("the round settlement is paid before Last Call is cleared", function()
+    local round = fs.readFile("src/server/Services/RoundService.luau")
+    local body = round:match("function RoundService:Resolve%(.-\nend")
+    assert(body, "could not find RoundService:Resolve")
+
+    local payAt = body:find("PayOut", 1, true)
+    local clearAt = body:find("SetLastCall(false)", 1, true)
+    assert(payAt, "Resolve no longer pays the round out")
+    assert(clearAt, "Resolve no longer clears the Last Call multiplier")
+    assert(
+        payAt < clearAt,
+        "Last Call is now cleared before the settlement is paid, so end-of-round "
+            .. "coins no longer inherit the 2x. That may well be the right call - "
+            .. "it removes a win paying double purely for lasting longer - but it "
+            .. "changes every payout, so update docs/playtest.md with it."
+    )
+
+    local economy = fs.readFile("src/server/Services/EconomyService.luau")
+    local sources = economy:match("LAST_CALL_SOURCES = {(.-)}")
+    assert(sources, "could not find LAST_CALL_SOURCES")
+    assert(
+        sources:find("round", 1, true),
+        "the settlement no longer takes the Last Call multiplier - see the note "
+            .. "in docs/playtest.md, which describes the doubled payout as current"
+    )
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")
