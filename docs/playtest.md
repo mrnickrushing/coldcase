@@ -172,6 +172,12 @@ Counting ticks is misleading on its own, so here is the split. 38 ticked, 41 not
 
 > **Count the NPCs at REVEAL, not at the state change.** Line 17 was measured starting from "wait" so the switch back was a real transition rather than incidental cleanup: the attribute went false and the countdown changed from "WAITING FOR PLAYERS · 1/4" to "STARTS IN 18s · 5 NPCS JOIN", and the very next intermission ran through to a round with five NPCs. But the count at the INTERMISSION → LOADING flip was **zero**, and only reached five by REVEAL, because `PlaceParticipants` runs inside the LOADING branch. A probe that samples on the state change sees no NPCs and can report that none joined. Same shape as the role card and the post-round movement: the number is right, the moment is wrong.
 
+> **Nothing has ever persisted in these sessions, and the API toggle is not why.** Line 46's first half is observed: a round ended at RESOLUTION and by INTERMISSION seven seconds later `LobbyGui.Enabled` was true, the NPC count was zero, the `Round` model was destroyed, and the player had moved from the map at (50, 35, -10) to the lobby at (-2, 4, -897). Everyone does return to the lobby.
+>
+> The second half cannot be tested here at all. A DataStore read fails with "You must publish this place to the web to access DataStore", and `game.PlaceId` and `game.GameId` are both **0** - this Studio session is the Rojo-built local `.rbxlx` opened as a file, never associated with the cloud place. So DataStore is unavailable because there is no place id, not because of Studio API access. Enabling line 9's setting would change nothing, and "API access is off" would have been a confident wrong answer: the error text is a different message from the API-access one, which is the only reason I did not record it that way.
+>
+> Two things follow. Testing persistence needs Studio to open the published place (131836757915254) rather than the local build - a different setup, not a different setting. And every coin and XP figure in these notes lived in ProfileStore's in-memory fallback and vanished with each Play session. That does not affect the payout arithmetic, which is in-memory maths and reconciled exactly, but it means persistence itself has never once been observed here.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
