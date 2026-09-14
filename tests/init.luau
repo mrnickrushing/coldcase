@@ -1145,6 +1145,66 @@ test("every client-to-server remote has a per-remote rate cap", function()
     end
 end)
 
+------------------------------------------------- shop integrity
+-- Shop.luau requires its siblings with the Roblox `script.Parent` form, which
+-- Lune cannot resolve, so it is read as text here (as RarityTable is) and its
+-- SHELF / SLOT_FOR_KIND literals parsed. Catalog and Config load normally.
+--
+-- The direct-buy shelf sells SHELF ids through the Catalog. A shelf id missing
+-- from the Catalog makes PriceOf return nil and the buy path dead; the markup
+-- (DIRECT_BUY_MARKUP, "the impatience tax") is the whole point of the shelf, so
+-- a price at or below raw value is a regression too. Nothing pinned this.
+test("every direct-buy shelf item is a real Catalog item priced above its value", function()
+    local src = fs.readFile("src/shared/Shop.luau")
+    local block = src:match("SHELF = {(.-)}")
+    assert(block, "Shop.luau no longer declares SHELF as a literal list")
+    local shelf = {}
+    for id in block:gmatch('"([%w_]+)"') do
+        table.insert(shelf, id)
+    end
+    assert(#shelf > 0, "parsed an empty direct-buy shelf")
+    for _, id in shelf do
+        local item = Catalog[id]
+        assert(item, ("shelf item %q is not in the Catalog"):format(id))
+        local price = math.floor(item.value * Config.DIRECT_BUY_MARKUP)
+        assert(price > 0, ("shelf item %q has no positive price"):format(id))
+        assert(
+            price > item.value,
+            ("shelf item %q priced %d at or below its raw value %d - the markup is gone"):format(
+                id,
+                price,
+                item.value
+            )
+        )
+    end
+end)
+
+-- Every item kind the Catalog uses must map to an equip slot in SLOT_FOR_KIND, or
+-- an item of that kind equips on the server but the client never draws it as
+-- equipped - Shop.luau's own warning. A new kind added to the Catalog without a
+-- slot ships that silent break; this catches it in CI instead.
+test("every Catalog item kind has an equip slot", function()
+    local src = fs.readFile("src/shared/Shop.luau")
+    local block = src:match("SLOT_FOR_KIND = {(.-)}")
+    assert(block, "Shop.luau no longer declares SLOT_FOR_KIND as a literal")
+    local slots = {}
+    for kind in block:gmatch('(%w+) = "') do
+        slots[kind] = true
+    end
+    assert(next(slots), "parsed no equip slots from SLOT_FOR_KIND")
+    local orphan = {}
+    for id, item in Catalog do
+        if item.kind and not slots[item.kind] then
+            table.insert(orphan, ("%s (%s)"):format(item.kind, id))
+        end
+    end
+    assert(
+        #orphan == 0,
+        "Catalog kinds with no SLOT_FOR_KIND entry (equip but never look equipped): "
+            .. table.concat(orphan, ", ")
+    )
+end)
+
 ------------------------------------------------- rarity odds and integrity
 -- Roblox requires accurate published odds on paid random items, and
 -- RarityTable's own comment says so. The Locker's pull weights must sum to
