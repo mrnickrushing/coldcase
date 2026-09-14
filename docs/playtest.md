@@ -51,7 +51,7 @@ workflow — no manual Studio setup is needed.)
 - [x] Published odds are visible on the crate screen, for the Locker and the seasonal crate
 - [x] Direct-buy shelf charges 1.6× item value; effect re-roll always lands on a new effect
 - [ ] Inventory lists starters and owned items; Equip persists across a rejoin
-- [ ] Crafting five duplicates yields one item of the next tier
+- [x] Crafting five duplicates yields one item of the next tier
 - [ ] Medic R revives an unexamined body once per round; moving during the 3s breaks it
 - [x] Holding F for 2s drags a body at reduced walk speed; releasing drops it
 - [x] Last Call fires at 30s: banner, coins double, murderer outlined through walls
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 46 ticked, 33 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 47 ticked, 32 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 11 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 10 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Empty, and it should stay empty. This Studio session runs as the game owner with VIP, RADIO and EMOTE BUNDLE all showing OWNED, so pass-gated paths are exercisable solo and nothing belongs here on purchase grounds alone. The lines that once sat here moved to the second-client bucket, where their real blocker is. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -340,6 +340,14 @@ Counting ticks is misleading on its own, so here is the split. 46 ticked, 33 not
 > This does not tick line 115, which asks whether the cues *match the brief* - that is taste and needs ears. It removes a confound from that test, though: a cue that sounds wrong cannot be blamed on a dead asset, because none of them are dead.
 >
 > Worth recording how nearly this went wrong. The first check printed `pcall ok=true` and I read it as the sound loading. It was not: `pcall` returning true only means nothing was thrown, and the value that mattered - `s.IsLoaded` - was returned by the inner function and thrown away. Creating a `Sound` instance never errors, so that check would have passed for a completely invalid id. It looked like a verification and measured nothing, which is the same substitution this file keeps collecting, committed here by me two calls after writing the warning.
+
+> **Crafting, and a blocker of my own that was never real.** Line 54 ticked on three separate observations. Five Common Matchsticks produced one Uncommon Pale Fox, and five Common Gutters produced one Uncommon Hollow - two independent promotions of exactly one step along `TIER_ORDER`. The fee showed as 70488 to 70338, precisely the 150 of `CRAFT_FEE`, with the HUD pill and the `DataChanged` payload arriving at the same number by different routes.
+>
+> Consumption needed its own proof, because `CrateResult` names only what came *out* and a closed inventory screen never re-renders. Crafting matchstick a second time answered it: "Crafting needs 5 of the same item." A refusal is the cleanest evidence the first five were gone.
+>
+> The arithmetic then reconciled without being asked to. `DataChanged` reported `inventory=19`. The stale summary had read "27 owned" against 29 cards I counted, the two extra being `ash` and `ledger` - starters drawn by id rather than uid, and not inventory entries at all. Two crafts remove ten and add two: 27 − 10 + 2 = 19. That confirms the count consumed and settles what the card total means.
+>
+> **This line sat shelved for hours as "destructive - it spends the user's real items".** It is not. `PlaceId` is 0, there is no DataStore, and ProfileStore runs on its in-memory fallback, so every item and coin here evaporates with the Play session. The finding that blocks lines 46 and 53 is exactly what makes this one safe to run. That is the third blocker in this file that turned out to be mine rather than the game's, and all three were of the same kind - a reason to stop that was never re-examined once written down.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
