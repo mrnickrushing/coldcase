@@ -178,6 +178,12 @@ Counting ticks is misleading on its own, so here is the split. 38 ticked, 41 not
 >
 > Two things follow. Testing persistence needs Studio to open the published place (131836757915254) rather than the local build - a different setup, not a different setting. And every coin and XP figure in these notes lived in ProfileStore's in-memory fallback and vanished with each Play session. That does not affect the payout arithmetic, which is in-memory maths and reconciled exactly, but it means persistence itself has never once been observed here.
 
+> **A closed menu can still be read, and that is the safest way to read one.** Line 53's first half is confirmed without opening anything: `InventoryGui` is fully populated behind `Enabled = false`, with "YOUR COLLECTION", a summary line, both starters - `ash` as "STARTER · KNIFE" and `ledger` as "STARTER · PISTOL", each marked EQUIPPED - and the owned items keyed by uid with rarity and effect rows. Starters and owned items are both listed, and starters are labelled as such rather than folded in. No click and no module require, so no dead copy could mislead it. My first attempt did try to click, with `Activated:Fire()`; `RBXScriptSignal` has no `Fire`, that is a `BindableEvent` method, and the probe aborted having read nothing.
+>
+> Two traps in that screen. `Root.Items.ItemTemplate` is a hidden template carrying the placeholder text "ITEM" and "EQUIP", so anything counting cards by label overcounts by one. And the summary read "27 owned · 46462 coins" while the live balance was about 52k, because `renderInventory` last ran when the screen was last opened - a closed menu holds the numbers from whenever it was last drawn, which is stale rather than wrong.
+>
+> The line stays unticked because "Equip persists across a rejoin" is blocked, not untested: this place has `PlaceId` 0, so nothing saves at all.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
