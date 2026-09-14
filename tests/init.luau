@@ -1089,7 +1089,8 @@ test("every client-to-server remote has a server handler", function()
     assert(
         #missing == 0,
         "client->server remotes with no server handler (fired by the client, "
-            .. "ignored by the server): " .. table.concat(missing, ", ")
+            .. "ignored by the server): "
+            .. table.concat(missing, ", ")
     )
 end)
 
