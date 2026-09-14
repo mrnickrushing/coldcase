@@ -33,7 +33,7 @@ workflow — no manual Studio setup is needed.)
 - [ ] Ghost hints appear once each: move, coins, examine — and not again after a rejoin
 - [x] Nobody can be killed in the first 4 seconds
 - [x] Murderer's E kills at close range, not at distance; Q throws with an 8s cooldown
-- [ ] Sheriff click fires; hitting an innocent kills the sheriff too
+- [x] Sheriff click fires; hitting an innocent kills the sheriff too
 - [x] Sheriff death drops a pistol; an innocent can take it and becomes Hero
 - [x] Body appears; E within 14 studs, after a 1.5s channel, returns three or four clue lines
 - [x] Examining after 20s, or during Lights Out, returns "The trail has gone cold."
@@ -124,11 +124,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 45 ticked, 34 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 46 ticked, 33 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 12 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 11 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
 | Needs two or more real players | 10 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Emotes. I filed this as impossible and it is not: this Studio session runs as the game owner, and the lobby shows VIP, RADIO and EMOTE BUNDLE all OWNED, so the pass-gated paths are exercisable solo. Only "reaches everyone" still needs a second client. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
@@ -320,6 +320,12 @@ Counting ticks is misleading on its own, so here is the split. 45 ticked, 34 not
 > Still unexplained, and now seen twice: `RequestSpectate` returned the same target both times. A single living NPC left at t=74s of a 110s round would make that correct, but I have never recorded how many were alive at the moment of the cycle, so the obvious check has simply not been done. Counting them is one line and turns a guess into an answer.
 >
 > **Lines 71 and 72 belong in the phone bucket, but only their labels do.** `isTouch()` is `TouchEnabled and not KeyboardEnabled`, which is false in this session because both are true, so the FIRE / THROW / REVIVE buttons are genuinely not built here. The logic deciding *which* actions a role is offered is shared, and on desktop it surfaces as prompt text - "E · stab", "R · revive   E · examine", "Q · throw knife", "E · take pistol". So the role gating is observable without a phone even though the buttons named in the line are not.
+
+> **The misfire is real, and one change to the probe earned it.** Line 36 ticked. As sheriff, fired at June from 10 studs with line of sight confirmed first: target 100 to 0, and me 100 to 0 in the same instant. `SHERIFF_MISFIRE_KILLS_SELF` is true and it behaves as written - shooting an innocent kills the sheriff with them.
+>
+> The probe change is the part worth carrying forward. Every earlier version handled one round and returned, discarding whatever budget was left; one quit with 109 seconds unused because the round ended early. Looping across rounds until something is observed cost a few lines and paid immediately: round one drew snitch and would have ended any previous probe empty-handed, round two drew sheriff and settled the line, and it still finished with 115 seconds spare. Against a role that turns up roughly one time in six, doubling the draws per call is worth more than any amount of cleverness inside a single round.
+>
+> **An open question, not a finding.** With **four** NPCs alive - Iris, Otto, Silas, Wren - `RequestSpectate` was fired three times and the view stayed on "IRIS (NPC)" throughout. That kills the earlier explanation that a single remaining target made an unchanged view correct. But the spectator bar has **Prev** and **Next** buttons, so the handler may well expect a direction argument that my bare `FireServer()` never supplies, in which case the view is right to stay put and the fault is in my call. Recorded as unattributed until the handler is read - twice already this session a "bug" of this shape has turned out to be the probe.
 
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
