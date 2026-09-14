@@ -426,6 +426,10 @@ Counting ticks is misleading on its own, so here is the split. 51 ticked, 28 not
 >
 > Neither is a crash. Both are wasted broadcasts, and `CosmeticChanged` in particular looks like a listener someone meant to write. The client-to-server coverage is the safety-critical direction and it is complete; a test now guards it, since a `Request*` remote with no handler would be a player action the server silently drops.
 
+> **The snitch reveal assumes a single murderer, but at twelve players there are two.** `RoleService:RevealSnitch` iterates the roles table and keeps one `snitch` and one `murderer`, then tells each other's name. With `SECOND_MURDERER_AT` at 12, a full round has two murderers, and the one this picks is whichever the dictionary happens to iterate last - arbitrary. The consequences at 12 players: the snitch is handed only one of the two murderers, only that murderer is warned a snitch exists, and the second murderer learns nothing. The code comment describes it in the singular - "the snitch and the murderer learn each other" - so this may be the intended reading, but it resolves the two-murderer case by accident rather than design. It only manifests at the exact headcount that is hardest to test live, which is why it is a reading rather than an observation. Not changed; flagged for the owner, alongside the other things that fire only at twelve (two murderers, two sheriffs, the spawn shortfall).
+>
+> The rest of `RoleService` is sound where it matters most: every `RoleAssigned` is a per-player `FireClient`, never a broadcast, so a role never reaches a client that should not know it; hero promotion is innocent-only; and the murderer draw is weighted by rounds-since to stop the knife landing on one player repeatedly.
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
