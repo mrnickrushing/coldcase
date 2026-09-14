@@ -430,6 +430,14 @@ Counting ticks is misleading on its own, so here is the split. 51 ticked, 28 not
 >
 > The rest of `RoleService` is sound where it matters most: every `RoleAssigned` is a per-player `FireClient`, never a broadcast, so a role never reaches a client that should not know it; hero promotion is innocent-only; and the murderer draw is weighted by rounds-since to stop the knife landing on one player repeatedly.
 
+> **Static review pass: five core services read for correctness, all sound.** Recording the non-obvious reason each holds, so the next reviewer does not start over. None of these produced a defect; the codebase is well-built where money and items move.
+>
+> - **TradeService** - the escrow is correct because `Execute` re-pulls both offers synchronously, aborts and restores if either side's count no longer matches, and never yields between the ownership re-check and the transfer. Its exploit lines (offer-unowned, dup-uid, change-after-lock) are already ticked.
+> - **CoinService** - no double-collect because `RequestCoin` sets `nodes[nodeId] = nil` *before* `Grant` can yield, so a re-entrant claim on the same node finds it gone.
+> - **EventService** - lighting always ends restored: both the POWER_SURGE flicker loop and the LOCKDOWN door stagger guard on `active == event`, and `Clear` relights unconditionally. `TakeRoundEvent` is called twice per round on purpose - a defensive reset at REVEAL so an error-aborted round cannot misattribute its event, and the real read at `round_complete`.
+> - **RoleService** - covered above; the only nuance is the two-murderer snitch reveal.
+> - **MonetizationService** - `ProcessReceipt` is safe without an explicit pre-save, which I nearly flagged and was wrong to. The classic double-grant needs the granted goods to persist while the dedup record does not; here the coins/keys and `data.purchases[PurchaseId]` are the same profile blob, saved atomically, so they persist together or not at all. On a crash before autosave the player simply gets the coins once on Roblox's redelivery. Purchases correctly bypass the coin multiplier (raw grant).
+
 A tick here means observed, not inferred. Where something is verified by reading the code but never
 seen to happen, the box stays empty and the commit says so - the role card timing and the hidden
 weapon are both in that state.
