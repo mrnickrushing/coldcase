@@ -1094,6 +1094,74 @@ test("every client-to-server remote has a server handler", function()
     )
 end)
 
+------------------------------------------------- rarity odds and integrity
+-- Roblox requires accurate published odds on paid random items, and
+-- RarityTable's own comment says so. The Locker's pull weights must sum to
+-- 100, or the disclosed percentages the game shows are wrong - a compliance
+-- problem, not just a balance one. Nothing pinned this.
+--
+-- RarityTable uses Color3.fromHex, which Lune has no datatype for, so it
+-- cannot be required here; parse it as text instead. Catalog is pure data and
+-- loads normally.
+test("Locker pull weights sum to 100 and cover every rarity", function()
+    local src = fs.readFile("src/shared/RarityTable.luau")
+
+    local names, weights, total = {}, {}, 0
+    for name, weight in src:gmatch('name = "(%w+)",%s*weight = ([%d.]+)') do
+        names[name] = true
+        weights[name] = tonumber(weight)
+        total += tonumber(weight)
+    end
+    local n = 0
+    for _ in pairs(names) do
+        n += 1
+    end
+    assert(n >= 3, "parsed only " .. n .. " rarities from RarityTable - format changed?")
+
+    -- floating point: 56 + 24 + 13 + 5.5 + 1.5 should be exactly 100
+    assert(
+        math.abs(total - 100) < 0.001,
+        ("Locker pull weights sum to %.3f, not 100 - the published odds the game "):format(total)
+            .. "discloses are now inaccurate, which Roblox requires to be correct"
+    )
+
+    -- every rarity an item can have must be a rarity that can be pulled/priced
+    local unknown = {}
+    for id, def in Catalog do
+        if type(def) == "table" and def.rarity and not names[def.rarity] then
+            table.insert(unknown, id .. "=" .. tostring(def.rarity))
+        end
+    end
+    assert(
+        #unknown == 0,
+        "Catalog items with a rarity absent from RarityTable: " .. table.concat(unknown, ", ")
+    )
+end)
+
+-- Crafting steps an item up one tier, so TIER_ORDER must list exactly the
+-- rarities RarityTable defines, in ascending order. A rarity in one table but
+-- not the other means crafting either dead-ends or skips a tier.
+test("the crafting tier order matches the rarity table", function()
+    local rt = fs.readFile("src/shared/RarityTable.luau")
+    local eco = fs.readFile("src/server/Services/EconomyService.luau")
+
+    local rarOrder = {}
+    for name in rt:gmatch('name = "(%w+)"') do
+        table.insert(rarOrder, name)
+    end
+    local tierBlock = eco:match("TIER_ORDER = {(.-)}")
+    assert(tierBlock, "could not find TIER_ORDER in EconomyService")
+    local tiers = {}
+    for name in tierBlock:gmatch('"(%w+)"') do
+        table.insert(tiers, name)
+    end
+
+    eq(#tiers, #rarOrder, "TIER_ORDER length vs RarityTable length")
+    for i, name in rarOrder do
+        eq(tiers[i], name, "tier " .. i)
+    end
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")
