@@ -6,6 +6,7 @@
 -- node is gone or the player walks away.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Config = require(ReplicatedStorage:WaitForChild("Shared").Config)
@@ -43,8 +44,35 @@ task.spawn(function()
     end
 end)
 
+-- Spin and bob every coin node, purely local. The disc turns about the vertical
+-- axis so it shows a face then its edge, and rides a slow sine so it reads as a
+-- floating pickup, not a decal. Anchored server parts, so this stays on the
+-- client and never touches the server's static pickup position. Runs only while
+-- a round is live - the only time coin nodes exist - so the lobby pays nothing.
+local baseY: { [BasePart]: number } = {}
+RunService.Heartbeat:Connect(function()
+    if ClientState.GetRoundState() ~= "ACTIVE" then
+        return
+    end
+    local t = os.clock()
+    for _, node in CollectionService:GetTagged("CoinNode") do
+        if node:IsA("BasePart") and node:IsDescendantOf(workspace) then
+            local by = baseY[node]
+            if not by then
+                by = node.Position.Y
+                baseY[node] = by
+            end
+            local bob = math.sin(t * 2.2 + node.Position.X * 0.1) * 0.4
+            node.CFrame = CFrame.new(node.Position.X, by + bob, node.Position.Z)
+                * CFrame.Angles(0, t * 2.4, 0)
+        end
+    end
+end)
+
+-- One handler clears both per-node tables when a coin is collected or the round ends.
 CollectionService:GetInstanceRemovedSignal("CoinNode"):Connect(function(node)
-    lastAsked[node] = nil
+    lastAsked[node :: BasePart] = nil
+    baseY[node :: BasePart] = nil
 end)
 
 return CoinController

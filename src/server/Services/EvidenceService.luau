@@ -9,6 +9,7 @@ local EventService = require(script.Parent.EventService)
 local AudioService = require(script.Parent.AudioService)
 local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
+local Participant = require(script.Parent.Participant)
 
 local EvidenceService = {}
 local bodies = {} -- [Model] = clueData
@@ -118,12 +119,13 @@ local TweenService = game:GetService("TweenService")
 -- shows in daylight and stays dark during Lights Out, so it reveals nothing a
 -- blackout is meant to hide. Non-colliding and non-query, so it never blocks
 -- movement or the examine raycast.
-local function bloodPool(pos: Vector3, roundFolder: Instance, body: Instance)
-    -- Raycast to the floor, ignoring the body just laid down, every character,
-    -- and any other corpse, so the pool lands on the ground and never on a body.
+-- Everything a floor raycast in a crime scene must skip so it finds the ground,
+-- not a person or a body: every character, every corpse, every NPC, plus any
+-- extras the caller names (the body or victim being placed).
+local function floorRayParams(extra: { Instance }): RaycastParams
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
-    local exclude: { Instance } = { body }
+    local exclude: { Instance } = table.clone(extra)
     for _, plr in Players:GetPlayers() do
         if plr.Character then
             table.insert(exclude, plr.Character)
@@ -136,25 +138,100 @@ local function bloodPool(pos: Vector3, roundFolder: Instance, body: Instance)
         table.insert(exclude, botChar)
     end
     params.FilterDescendantsInstances = exclude
+    return params
+end
+
+local function bloodPool(pos: Vector3, roundFolder: Instance, body: Instance)
+    -- Raycast to the floor, ignoring the body just laid down, every character,
+    -- and any other corpse, so the pool lands on the ground and never on a body.
+    local params = floorRayParams({ body })
     local hit = workspace:Raycast(pos + Vector3.new(0, 4, 0), Vector3.new(0, -16, 0), params)
     local floorY = hit and hit.Position.Y or (pos.Y - 2.5)
-    local pool = Instance.new("Part")
-    pool.Name = "BloodPool"
-    pool.Shape = Enum.PartType.Cylinder
-    pool.Anchored = true
-    pool.CanCollide = false
-    pool.CanQuery = false
-    pool.CanTouch = false
-    pool.Material = Enum.Material.SmoothPlastic
-    pool.Color = Color3.fromRGB(78, 10, 10)
-    pool.Size = Vector3.new(0.1, 1.5, 1.5)
-    pool.CFrame = CFrame.new(pos.X, floorY + 0.06, pos.Z) * CFrame.Angles(0, 0, math.rad(90))
-    pool.Parent = roundFolder
-    TweenService:Create(
-        pool,
-        TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        { Size = Vector3.new(0.1, 4.6, 4.6) }
-    ):Play()
+
+    -- A spreading disc with a darker core reads as a pool with depth rather than
+    -- a flat decal. Both are scene-lit and never glow, so like the impact spray
+    -- they show in daylight and stay dark in Lights Out, and both are
+    -- non-colliding and non-query so they block neither movement nor the examine
+    -- ray. The core rides just above the spread so it always wins the z-fight.
+    local function disc(colour: Color3, lift: number, grown: number)
+        local d = Instance.new("Part")
+        d.Name = "BloodPool"
+        d.Shape = Enum.PartType.Cylinder
+        d.Anchored = true
+        d.CanCollide = false
+        d.CanQuery = false
+        d.CanTouch = false
+        d.Material = Enum.Material.SmoothPlastic
+        d.Color = colour
+        d.Size = Vector3.new(0.1, 1.5 * (grown / 4.6), 1.5 * (grown / 4.6))
+        d.CFrame = CFrame.new(pos.X, floorY + lift, pos.Z) * CFrame.Angles(0, 0, math.rad(90))
+        d.Parent = roundFolder
+        TweenService:Create(
+            d,
+            TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Size = Vector3.new(0.1, grown, grown) }
+        ):Play()
+    end
+    disc(Color3.fromRGB(78, 10, 10), 0.06, 4.6)
+    disc(Color3.fromRGB(46, 4, 4), 0.08, 2.7)
+end
+
+-- A fallen player reads best as their own avatar. Clone the living character,
+-- strip anything that would move or label it - the Animate script, the
+-- Humanoid's name/health gui, any carried Tool - anchor every part so the pose
+-- freezes, and hand it back for DropBody to lay flat. Returns nil if the
+-- character has no root to pivot by, so the caller can fall back to the generic
+-- figure. NPCs never come here: their avatars are flat solid-colour dummies, so
+-- the built figure (a head, torso and limbs in real tones) reads better.
+local function buildAvatarCorpse(char: Model): Model?
+    if not char.PrimaryPart then
+        return nil
+    end
+    local wasArchivable = char.Archivable
+    char.Archivable = true
+    local clone = char:Clone()
+    char.Archivable = wasArchivable
+    local root = clone and clone.PrimaryPart
+    if not clone or not root then
+        if clone then
+            clone:Destroy()
+        end
+        return nil
+    end
+    -- One pass strips, anchors and poses. The root (the model's pivot) is left
+    -- upright and the rest pitch onto the floor around it. The generic figure is
+    -- authored the same way, so dropping and dragging - both of which set the
+    -- pivot to an upright frame - keep the body flat instead of standing it up.
+    -- A small random roll and pitch keep two bodies from landing as one plank.
+    local base = root.CFrame
+    local upright = CFrame.new(base.Position)
+    local lie = CFrame.Angles(
+        -math.pi / 2 + (math.random() - 0.5) * math.rad(14),
+        0,
+        (math.random() - 0.5) * math.rad(22)
+    )
+    for _, d in clone:GetDescendants() do
+        if d:IsA("BaseScript") or d:IsA("Tool") or d:IsA("ForceField") then
+            d:Destroy() -- the Animate loop, any behaviour, a carried weapon, a spawn shield
+        elseif d:IsA("BasePart") and d.Parent then
+            -- `d.Parent` guards a part whose Tool ancestor was just destroyed.
+            d.Anchored = true
+            d.CanCollide = false
+            d.CanQuery = false -- never block a shot, an examine ray or a sightline
+            d.Massless = true
+            d.CFrame = if d == root then upright else upright * lie * base:ToObjectSpace(d.CFrame)
+        end
+    end
+    local hum = clone:FindFirstChildOfClass("Humanoid")
+    if hum then
+        -- DropBody clones the still-living victim; make the copy plainly a corpse
+        -- so nothing counts it as an active character.
+        hum.Health = 0
+        hum.EvaluateStateMachine = false
+        hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+        hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+    end
+    return clone
 end
 
 function EvidenceService:DropBody(victim: Player, killer: Player)
@@ -166,11 +243,29 @@ function EvidenceService:DropBody(victim: Player, killer: Player)
     local pos = char:GetPivot().Position
     local killerPos = killer.Character and killer.Character:GetPivot().Position or pos
 
-    local model = game.ServerStorage.BodyTemplate:Clone()
-    model.Name = victim.DisplayName -- a body on the floor is a person, not a template
-    model:PivotTo(CFrame.new(pos - Vector3.new(0, 2.5, 0)))
-    model:AddTag("Body")
-    model.Parent = roundFolder
+    -- A real player falls as their own avatar, laid flat at the death spot; an
+    -- NPC (or a clone that could not be made) falls back to the generic figure.
+    local model: any = if not Participant.IsBot(victim) then buildAvatarCorpse(char) else nil
+    if model then
+        model.Name = victim.DisplayName
+        model:AddTag("Body")
+        model.Parent = roundFolder
+        -- Rest on the ground, not on a nearby character or another corpse.
+        local params = floorRayParams({ char, model })
+        local hit = workspace:Raycast(pos + Vector3.new(0, 3, 0), Vector3.new(0, -20, 0), params)
+        local floorY = hit and hit.Position.Y or (pos.Y - 2.5)
+        -- The pivot is the upright root; rest the body's underside on the floor.
+        local cf, size = model:GetBoundingBox()
+        local gap = model:GetPivot().Position.Y - (cf.Position.Y - size.Y / 2)
+        local yaw = math.random() * math.pi * 2
+        model:PivotTo(CFrame.new(pos.X, floorY + gap, pos.Z) * CFrame.Angles(0, yaw, 0))
+    else
+        model = game.ServerStorage.BodyTemplate:Clone()
+        model.Name = victim.DisplayName -- a body on the floor is a person, not a template
+        model:PivotTo(CFrame.new(pos - Vector3.new(0, 2.5, 0)))
+        model:AddTag("Body")
+        model.Parent = roundFolder
+    end
     bloodPool(pos, roundFolder, model)
 
     -- Facts the client is NEVER told until it earns them

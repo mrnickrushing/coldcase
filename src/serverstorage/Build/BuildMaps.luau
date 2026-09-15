@@ -54,7 +54,7 @@ local THEMES = {
         dado = "8a5a3a",
         liner = true,
         ceiling = "f2efe6",
-        ceilingMaterial = M.SmoothPlastic,
+        ceilingMaterial = M.Plaster,
         rail = "8a5a3a",
         railMaterial = M.Wood,
         stair = "a9855c",
@@ -281,7 +281,7 @@ local THEMES = {
         dado = "8a6a44",
         liner = true,
         ceiling = "f4f2ea",
-        ceilingMaterial = M.SmoothPlastic,
+        ceilingMaterial = M.Plaster,
         rail = "9aa4ac",
         railMaterial = M.Metal,
         stair = "d8d2c4",
@@ -1455,14 +1455,18 @@ local function build(mapName: string, plan, theme): Model
     for i, c in points.coins do
         reserved[MapPlan.Key(c.f, c.x, c.z)] = true
         local x, y, z = MapPlan.Position(plan, c.f, c.x, c.z)
+        -- A real coin, not a flat marker: a thin gold disc stood on edge, its
+        -- round faces pointing along X so it shows a face then its edge as the
+        -- client spins it. Still Neon so it stays findable across a dark room.
         local p = part(
             ("Coin_%02d"):format(i),
             model,
-            Vector3.new(2, 2, 0.4),
-            CFrame.new(x, y + 3, z),
+            Vector3.new(0.4, 2.2, 2.2),
+            CFrame.new(x, y + 2.7, z),
             Color3.fromHex("f2a63b"),
             M.Neon
         )
+        p.Shape = Enum.PartType.Cylinder
         p.CanCollide = false
         p.CanQuery = false
         p:SetAttribute("NodeId", i)
@@ -1496,16 +1500,53 @@ return function(opts: { force: boolean? }?)
     end
 
     if not ServerStorage:FindFirstChild("BodyTemplate") then
+        -- A body reads as a person, not a red brick: a figure collapsed on its
+        -- back, head, torso, two arms and two legs in skin and clothing tones,
+        -- lying flat with a little asymmetry so it looks fallen, not laid out.
+        -- Cloned whole by EvidenceService and dropped at the death spot; the
+        -- Torso stays the PrimaryPart so the existing pivot maths is unchanged.
         local body = Instance.new("Model")
         body.Name = "BodyTemplate"
-        local torso = part(
-            "Torso",
-            body,
-            Vector3.new(4, 1, 2),
-            CFrame.new(0, 0.5, 0),
-            Color3.fromHex("8c3330")
+        local SKIN = Color3.fromHex("e0a878")
+        local SHIRT = Color3.fromHex("59616e")
+        local PANTS = Color3.fromHex("32363c")
+        local limbs: { BasePart } = {}
+        local function limb(name: string, size: Vector3, cf: CFrame, colour: Color3)
+            local p = part(name, body, size, cf, colour)
+            table.insert(limbs, p)
+            return p
+        end
+        -- The figure lies along Z: head toward -Z, feet toward +Z, thin in Y.
+        local torso = limb("Torso", Vector3.new(2, 0.9, 2.7), CFrame.new(0, 0.5, 0), SHIRT)
+        limb("Head", Vector3.new(1.3, 1.2, 1.3), CFrame.new(0.15, 0.55, -2.1), SKIN).Shape =
+            Enum.PartType.Ball
+        limb(
+            "ArmLeft",
+            Vector3.new(0.7, 0.65, 2.3),
+            CFrame.new(-1.35, 0.45, -0.4) * CFrame.Angles(0, math.rad(18), 0),
+            SKIN
         )
-        torso.CanCollide = false
+        limb(
+            "ArmRight",
+            Vector3.new(0.7, 0.65, 2.3),
+            CFrame.new(1.4, 0.45, 0.2) * CFrame.Angles(0, math.rad(-9), 0),
+            SKIN
+        )
+        limb(
+            "LegLeft",
+            Vector3.new(0.8, 0.75, 2.7),
+            CFrame.new(-0.55, 0.45, 2.6) * CFrame.Angles(0, math.rad(11), 0),
+            PANTS
+        )
+        limb(
+            "LegRight",
+            Vector3.new(0.8, 0.75, 2.7),
+            CFrame.new(0.65, 0.45, 2.5) * CFrame.Angles(0, math.rad(-6), 0),
+            PANTS
+        )
+        for _, p in limbs do
+            p.CanCollide = false
+        end
         body.PrimaryPart = torso
         body.Parent = ServerStorage
     end

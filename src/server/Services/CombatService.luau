@@ -26,6 +26,46 @@ function CombatService:MarkRoundStart()
     droppedGun = nil
 end
 
+-- The gun a fallen sheriff leaves behind for someone to pick up and become the
+-- hero. Uses the real revolver mesh from Cosmetics, scaled up a little and given
+-- a soft in-sight outline so it is unmistakably a gun and still easy to spot,
+-- with a plain gold part as the fallback if the cosmetic is missing. Stays a
+-- single BasePart, so RequestPickup's position and destroy logic is unchanged.
+local function makeDroppedGun(pos: Vector3): BasePart
+    local cos = game:GetService("ServerStorage"):FindFirstChild("Cosmetics")
+    local template = cos and cos:FindFirstChild("gun")
+    local handle = template and template:FindFirstChild("Handle")
+    local gun: BasePart
+    if handle and handle:IsA("BasePart") then
+        gun = handle:Clone()
+        for _, d in gun:GetChildren() do
+            if not d:IsA("DataModelMesh") then
+                d:Destroy() -- shed any emitters or outlines carried by the cosmetic
+            end
+        end
+        gun.Size = gun.Size * 1.5
+    else
+        gun = Instance.new("Part")
+        gun.Size = Vector3.new(2, 0.6, 1)
+        gun.Color = Color3.fromHex("f2a63b")
+        gun.Material = Enum.Material.SmoothPlastic
+    end
+    gun.Name = "DroppedPistol"
+    gun.Anchored = true
+    gun.CanCollide = false
+    gun.CanQuery = false
+    gun.Massless = true
+    gun.CFrame = CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(20))
+    gun:AddTag("DroppedPistol")
+    local glow = Instance.new("Highlight")
+    glow.FillTransparency = 1
+    glow.OutlineColor = Color3.fromHex("ffd98a")
+    glow.OutlineTransparency = 0.15
+    glow.DepthMode = Enum.HighlightDepthMode.Occluded
+    glow.Parent = gun
+    return gun
+end
+
 local function inGrace(): boolean
     return os.clock() - roundStart < Config.WEAPON_GRACE
 end
@@ -211,14 +251,7 @@ function CombatService:Eliminate(victim: Player, killer: Player, method: string)
     local role = RoleService:Get(victim)
     local roundFolder = workspace:FindFirstChild("Round")
     if roundFolder and (role == "sheriff" or role == "hero") and not droppedGun then
-        local gun = Instance.new("Part")
-        gun.Name = "DroppedPistol"
-        gun.Size = Vector3.new(2, 0.6, 1)
-        gun.Color = Color3.fromHex("f2a63b")
-        gun.Anchored = true
-        gun.CanCollide = false
-        gun.Position = pos
-        gun:AddTag("DroppedPistol")
+        local gun = makeDroppedGun(pos)
         gun.Parent = roundFolder
         droppedGun = gun
     end
