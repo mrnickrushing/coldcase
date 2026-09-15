@@ -927,14 +927,18 @@ local function windows(model: Model, plan, analysis, theme)
             model,
             boxSize(along, 8, 8, 0.2),
             CFrame.new(at),
-            Color3.fromHex("6f8fb3"),
+            Color3.fromHex("aecbe8"),
             M.Glass
         )
-        glass.Transparency = 0.2
+        -- Real daytime glass: see partly through it, a glassy sheen, and soft
+        -- cool daylight rather than a saturated blue "moonlit" panel. Kept
+        -- semi-opaque so a blackout does not blow out through it.
+        glass.Transparency = 0.42
+        glass.Reflectance = 0.12
         local light = Instance.new("SurfaceLight")
         light.Face = faceToward(inward)
-        light.Color = Color3.fromHex("a9c7ff")
-        light.Brightness = 1.2
+        light.Color = Color3.fromHex("dbe8f7")
+        light.Brightness = 1
         light.Range = 22
         light.Angle = 80
         light.Parent = glass
