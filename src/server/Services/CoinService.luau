@@ -3,6 +3,7 @@
 -- taken flag, the range check and the amount.
 local Config = require(game.ReplicatedStorage.Shared.Config)
 local EconomyService = require(script.Parent.EconomyService)
+local CombatFx = require(game.ReplicatedStorage.Shared.CombatFx)
 
 local CoinService = {}
 local nodes: { [number]: BasePart } = {}
@@ -52,6 +53,7 @@ function CoinService:RequestCoin(plr: Player, nodeId: any)
     end
 
     nodes[nodeId] = nil -- one-time flag, set before anything can yield
+    CombatFx.Pickup(node.Position)
     node:Destroy()
     EconomyService:Grant(plr, Config.COIN_PICKUP, 0, "pickup")
 end

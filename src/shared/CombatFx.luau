@@ -71,4 +71,26 @@ function CombatFx.Muzzle(origin: Vector3, direction: Vector3)
     Debris:AddItem(p, 0.2)
 end
 
+-- A small gold sparkle when a coin is collected. Self-bright so it reads as a
+-- reward pop; brief and self-cleaning.
+function CombatFx.Pickup(position: Vector3)
+    local pt = anchor(position + Vector3.new(0, 1, 0))
+    local e = Instance.new("ParticleEmitter")
+    e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    e.Color = ColorSequence.new(Color3.fromRGB(255, 214, 92), Color3.fromRGB(242, 166, 59))
+    e.Transparency = NumberSequence.new(0.05, 1)
+    e.Size = NumberSequence.new(0.5, 0.05)
+    e.Lifetime = NumberRange.new(0.25, 0.5)
+    e.Speed = NumberRange.new(3, 6)
+    e.SpreadAngle = Vector2.new(180, 180)
+    e.Acceleration = Vector3.new(0, -12, 0)
+    e.Rate = 0
+    e.LightEmission = 0.6
+    e.LightInfluence = 0
+    e.Parent = pt
+    pt.Parent = Workspace
+    e:Emit(12)
+    Debris:AddItem(pt, 0.6)
+end
+
 return CombatFx
