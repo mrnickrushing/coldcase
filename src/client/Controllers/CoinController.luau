@@ -44,16 +44,16 @@ task.spawn(function()
     end
 end)
 
-CollectionService:GetInstanceRemovedSignal("CoinNode"):Connect(function(node)
-    lastAsked[node] = nil
-end)
-
 -- Spin and bob every coin node, purely local. The disc turns about the vertical
 -- axis so it shows a face then its edge, and rides a slow sine so it reads as a
 -- floating pickup, not a decal. Anchored server parts, so this stays on the
--- client and never touches the server's static pickup position.
+-- client and never touches the server's static pickup position. Runs only while
+-- a round is live - the only time coin nodes exist - so the lobby pays nothing.
 local baseY: { [BasePart]: number } = {}
 RunService.Heartbeat:Connect(function()
+    if ClientState.GetRoundState() ~= "ACTIVE" then
+        return
+    end
     local t = os.clock()
     for _, node in CollectionService:GetTagged("CoinNode") do
         if node:IsA("BasePart") and node:IsDescendantOf(workspace) then
@@ -69,7 +69,9 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+-- One handler clears both per-node tables when a coin is collected or the round ends.
 CollectionService:GetInstanceRemovedSignal("CoinNode"):Connect(function(node)
+    lastAsked[node :: BasePart] = nil
     baseY[node :: BasePart] = nil
 end)
 

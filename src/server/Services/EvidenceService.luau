@@ -119,12 +119,13 @@ local TweenService = game:GetService("TweenService")
 -- shows in daylight and stays dark during Lights Out, so it reveals nothing a
 -- blackout is meant to hide. Non-colliding and non-query, so it never blocks
 -- movement or the examine raycast.
-local function bloodPool(pos: Vector3, roundFolder: Instance, body: Instance)
-    -- Raycast to the floor, ignoring the body just laid down, every character,
-    -- and any other corpse, so the pool lands on the ground and never on a body.
+-- Everything a floor raycast in a crime scene must skip so it finds the ground,
+-- not a person or a body: every character, every corpse, every NPC, plus any
+-- extras the caller names (the body or victim being placed).
+local function floorRayParams(extra: { Instance }): RaycastParams
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
-    local exclude: { Instance } = { body }
+    local exclude: { Instance } = table.clone(extra)
     for _, plr in Players:GetPlayers() do
         if plr.Character then
             table.insert(exclude, plr.Character)
@@ -137,6 +138,13 @@ local function bloodPool(pos: Vector3, roundFolder: Instance, body: Instance)
         table.insert(exclude, botChar)
     end
     params.FilterDescendantsInstances = exclude
+    return params
+end
+
+local function bloodPool(pos: Vector3, roundFolder: Instance, body: Instance)
+    -- Raycast to the floor, ignoring the body just laid down, every character,
+    -- and any other corpse, so the pool lands on the ground and never on a body.
+    local params = floorRayParams({ body })
     local hit = workspace:Raycast(pos + Vector3.new(0, 4, 0), Vector3.new(0, -16, 0), params)
     local floorY = hit and hit.Position.Y or (pos.Y - 2.5)
 
@@ -183,48 +191,45 @@ local function buildAvatarCorpse(char: Model): Model?
     char.Archivable = true
     local clone = char:Clone()
     char.Archivable = wasArchivable
-    if not clone or not clone.PrimaryPart then
+    local root = clone and clone.PrimaryPart
+    if not clone or not root then
         if clone then
             clone:Destroy()
         end
         return nil
     end
+    -- One pass strips, anchors and poses. The root (the model's pivot) is left
+    -- upright and the rest pitch onto the floor around it. The generic figure is
+    -- authored the same way, so dropping and dragging - both of which set the
+    -- pivot to an upright frame - keep the body flat instead of standing it up.
+    -- A small random roll and pitch keep two bodies from landing as one plank.
+    local base = root.CFrame
+    local upright = CFrame.new(base.Position)
+    local lie = CFrame.Angles(
+        -math.pi / 2 + (math.random() - 0.5) * math.rad(14),
+        0,
+        (math.random() - 0.5) * math.rad(22)
+    )
     for _, d in clone:GetDescendants() do
         if d:IsA("BaseScript") or d:IsA("Tool") or d:IsA("ForceField") then
             d:Destroy() -- the Animate loop, any behaviour, a carried weapon, a spawn shield
-        elseif d:IsA("BasePart") then
+        elseif d:IsA("BasePart") and d.Parent then
+            -- `d.Parent` guards a part whose Tool ancestor was just destroyed.
             d.Anchored = true
             d.CanCollide = false
             d.CanQuery = false -- never block a shot, an examine ray or a sightline
             d.Massless = true
+            d.CFrame = if d == root then upright else upright * lie * base:ToObjectSpace(d.CFrame)
         end
     end
     local hum = clone:FindFirstChildOfClass("Humanoid")
     if hum then
+        -- DropBody clones the still-living victim; make the copy plainly a corpse
+        -- so nothing counts it as an active character.
+        hum.Health = 0
+        hum.EvaluateStateMachine = false
         hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
         hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
-        pcall(function()
-            hum:ChangeState(Enum.HumanoidStateType.Physics)
-        end)
-        hum.PlatformStand = true
-    end
-    -- Bake the collapse into the parts: the root (the model's pivot) is left
-    -- upright and the rest pitch onto the floor around it. The generic figure is
-    -- authored the same way, so dropping and dragging - both of which set the
-    -- pivot to an upright frame - keep the body flat instead of standing it up.
-    local root = clone.PrimaryPart :: BasePart
-    local base = root.CFrame
-    local upright = CFrame.new(base.Position)
-    -- Face-down, but nudged off dead-flat by a small random roll and pitch so no
-    -- two bodies land as the same stiff plank; the floor rest below lifts the
-    -- lowest point onto the ground whatever the tilt.
-    local roll = (math.random() - 0.5) * math.rad(22)
-    local pitchJitter = (math.random() - 0.5) * math.rad(14)
-    local lie = CFrame.Angles(-math.pi / 2 + pitchJitter, 0, roll)
-    for _, p in clone:GetDescendants() do
-        if p:IsA("BasePart") then
-            p.CFrame = if p == root then upright else upright * lie * base:ToObjectSpace(p.CFrame)
-        end
     end
     return clone
 end
@@ -245,9 +250,8 @@ function EvidenceService:DropBody(victim: Player, killer: Player)
         model.Name = victim.DisplayName
         model:AddTag("Body")
         model.Parent = roundFolder
-        local params = RaycastParams.new()
-        params.FilterType = Enum.RaycastFilterType.Exclude
-        params.FilterDescendantsInstances = { char, model }
+        -- Rest on the ground, not on a nearby character or another corpse.
+        local params = floorRayParams({ char, model })
         local hit = workspace:Raycast(pos + Vector3.new(0, 3, 0), Vector3.new(0, -20, 0), params)
         local floorY = hit and hit.Position.Y or (pos.Y - 2.5)
         -- The pivot is the upright root; rest the body's underside on the floor.

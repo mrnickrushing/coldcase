@@ -138,7 +138,22 @@ function AbilityService:StartDrag(plr: Player, model: Instance)
                 return
             end
             local pivot = char:GetPivot()
-            local spot = pivot.Position - pivot.LookVector * 4 - Vector3.new(0, 2.5, 0)
+            local behind = pivot.Position - pivot.LookVector * 4
+            -- Rest the body's underside on the ground behind the dragger, whether
+            -- it is the generic figure or a full avatar: their pivots sit at
+            -- different heights above the body, so a fixed drop is wrong for one.
+            local cf, size = corpse:GetBoundingBox()
+            local pivotToBottom = corpse:GetPivot().Position.Y - (cf.Position.Y - size.Y / 2)
+            local rp = RaycastParams.new()
+            rp.FilterType = Enum.RaycastFilterType.Exclude
+            rp.FilterDescendantsInstances = { char, corpse }
+            local hit = workspace:Raycast(
+                Vector3.new(behind.X, pivot.Position.Y + 3, behind.Z),
+                Vector3.new(0, -40, 0),
+                rp
+            )
+            local floorY = hit and hit.Position.Y or (pivot.Position.Y - 2.5)
+            local spot = Vector3.new(behind.X, floorY + pivotToBottom, behind.Z)
             corpse:PivotTo(CFrame.new(spot) * pivot.Rotation)
             local now = os.clock()
             if now - lastSound >= Config.DRAG_SOUND_INTERVAL then
