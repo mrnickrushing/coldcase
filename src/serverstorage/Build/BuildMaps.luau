@@ -1016,17 +1016,28 @@ local function lamps(model: Model, plan, analysis, theme)
         local cx, base, cz = MapPlan.Position(plan, f, x, z)
         local ceiling = base + H - SLAB
         local y = ceiling - drop
-        local lamp =
-            deco("Lamp", model, Vector3.new(1.4, 0.6, 1.4), CFrame.new(cx, y, cz), colour, M.Neon)
+        -- A warm bulb under a shade, not a bare glowing cube. The bulb keeps the
+        -- MapLight tag (light() tags it) so Lights Out still douses it.
+        local bulb =
+            deco("Lamp", model, Vector3.new(1, 1, 1), CFrame.new(cx, y, cz), colour, M.Neon)
+        bulb.Shape = Enum.PartType.Ball
+        deco(
+            "LampShade",
+            model,
+            Vector3.new(2.1, 0.45, 2.1),
+            CFrame.new(cx, y + 0.6, cz),
+            Color3.fromHex("2a2018"),
+            M.Metal
+        )
         deco(
             "LampCord",
             model,
             Vector3.new(0.15, drop - 0.3, 0.15),
-            CFrame.new(cx, (ceiling + y + 0.3) / 2, cz),
+            CFrame.new(cx, (ceiling + y + 0.85) / 2, cz),
             Color3.fromHex("1a1a1a"),
             M.Metal
         )
-        light(lamp, range)
+        light(bulb, range)
     end
 
     local lit, fallback = {}, {}
@@ -1069,10 +1080,19 @@ local function lamps(model: Model, plan, analysis, theme)
                             local lamp = deco(
                                 "Lamp",
                                 model,
-                                Vector3.new(1.4, 0.8, 1.4),
-                                CFrame.new(at + Vector3.new(0, 10.4, 0)),
+                                Vector3.new(1.3, 1.3, 1.3),
+                                CFrame.new(at + Vector3.new(0, 10.3, 0)),
                                 colour,
                                 M.Neon
+                            )
+                            lamp.Shape = Enum.PartType.Ball
+                            deco(
+                                "LampCap",
+                                model,
+                                Vector3.new(1.7, 0.4, 1.7),
+                                CFrame.new(at + Vector3.new(0, 11.15, 0)),
+                                Color3.fromHex("2b2f33"),
+                                M.Metal
                             )
                             light(lamp, 36)
                             break
