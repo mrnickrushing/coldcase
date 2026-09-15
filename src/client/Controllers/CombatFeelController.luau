@@ -23,7 +23,7 @@ local SoundService = game:GetService("SoundService")
 local killTick = Instance.new("Sound")
 killTick.Name = "KillConfirmTick"
 killTick.SoundId = "rbxasset://sounds/electronicpingshort.wav"
-killTick.Volume = 0.55
+killTick.Volume = 0.7
 killTick.Parent = SoundService
 
 local CombatFeel = {}
