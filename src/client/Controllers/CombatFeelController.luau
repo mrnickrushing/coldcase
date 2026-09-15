@@ -128,7 +128,7 @@ local ROLE_COLOUR = Theme.ROLE
 
 ---------------------------------------------------------------- death flash
 local function flashDeath()
-    CombatFeel.Kick(0.9, 0.45)
+    CombatFeel.Kick(0.6, 0.4)
     vignette.BackgroundTransparency = 0.35
     TweenService:Create(
         vignette,
@@ -150,7 +150,7 @@ plr.CharacterAdded:Connect(watchCharacter)
 
 ---------------------------------------------------------------- kill confirm
 local function confirmKill(victimRole: string?)
-    CombatFeel.Kick(0.35, 0.16)
+    CombatFeel.Kick(0.24, 0.15)
     killTick.TimePosition = 0
     killTick:Play()
     -- hitmarker pop
