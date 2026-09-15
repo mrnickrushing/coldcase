@@ -21,6 +21,21 @@ local DOOR_W, DOOR_H = 9, 10
 local RAIL_H = 3.6 -- waist high: blocks a stumble, not a jump
 local STAIR_W = CELL - 4
 local M = Enum.Material
+
+-- Real materials read far better than flat plastic. Pick a floor material from
+-- its colour: warm browns become wood planks, low-saturation greys become
+-- concrete, and light stone/tile keeps the style's (polished) material.
+local function floorMaterialFor(hex: string, fallback: Enum.Material): Enum.Material
+    local h, sat, v = Color3.fromHex(hex):ToHSV()
+    local deg = h * 360
+    if deg >= 18 and deg <= 46 and sat > 0.14 and v < 0.74 then
+        return M.WoodPlanks
+    end
+    if sat < 0.12 and v < 0.63 then
+        return M.Concrete
+    end
+    return fallback
+end
 local SIDES = { "N", "E", "S", "W" }
 
 -- Per map: shell and wall finishes, then a style per region kind. A style's
@@ -523,7 +538,7 @@ local function slabs(model: Model, plan, analysis, theme): BasePart?
                 r,
                 base - SLAB / 2,
                 Color3.fromHex(style.floor),
-                style.floorMaterial
+                floorMaterialFor(style.floor, style.floorMaterial)
             )
             first = first or p
         end
