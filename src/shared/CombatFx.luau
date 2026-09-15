@@ -93,4 +93,31 @@ function CombatFx.Pickup(position: Vector3)
     Debris:AddItem(pt, 0.6)
 end
 
+-- Becoming the hero: a rising cyan-and-gold flare when a player takes the
+-- dropped pistol. A public, loud moment already (gun_pickup), so a bright pop
+-- fits; brief and self-cleaning.
+function CombatFx.Hero(position: Vector3)
+    local pt = anchor(position + Vector3.new(0, 2, 0))
+    local e = Instance.new("ParticleEmitter")
+    e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    e.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(55, 188, 240)),
+        ColorSequenceKeypoint.new(0.6, Color3.fromRGB(255, 214, 92)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 214, 92)),
+    })
+    e.Transparency = NumberSequence.new(0.05, 1)
+    e.Size = NumberSequence.new(0.6, 0.05)
+    e.Lifetime = NumberRange.new(0.4, 0.8)
+    e.Speed = NumberRange.new(6, 11)
+    e.SpreadAngle = Vector2.new(60, 60)
+    e.Acceleration = Vector3.new(0, 6, 0)
+    e.Rate = 0
+    e.LightEmission = 0.6
+    e.LightInfluence = 0
+    e.Parent = pt
+    pt.Parent = Workspace
+    e:Emit(26)
+    Debris:AddItem(pt, 0.9)
+end
+
 return CombatFx

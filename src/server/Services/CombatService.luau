@@ -194,6 +194,7 @@ function CombatService:RequestPickup(plr: Player)
     end
     if RoleService:MakeHero(plr) then
         AudioService:Emit("gun_pickup", gun.Position)
+        CombatFx.Hero(char:GetPivot().Position)
         gun:Destroy()
         droppedGun = nil
     end
