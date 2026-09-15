@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
 local Shared = game.ReplicatedStorage.Shared
 local Config = require(Shared.Config)
 local FibreBands = require(Shared.FibreBands)
@@ -109,6 +110,53 @@ function EvidenceService:HadLineOfSight(victim: Player, killer: Player): boolean
 end
 
 ---------------------------------------------------------------- Bodies
+local TweenService = game:GetService("TweenService")
+
+-- A crime scene reads as one: a dark pool spreads under a fresh body. On the
+-- round folder so it stays at the death spot (a dragged body leaves its mark)
+-- and clears with the round. Scene-lit, no glow: like the impact spray it
+-- shows in daylight and stays dark during Lights Out, so it reveals nothing a
+-- blackout is meant to hide. Non-colliding and non-query, so it never blocks
+-- movement or the examine raycast.
+local function bloodPool(pos: Vector3, roundFolder: Instance, body: Instance)
+    -- Raycast to the floor, ignoring the body just laid down, every character,
+    -- and any other corpse, so the pool lands on the ground and never on a body.
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    local exclude: { Instance } = { body }
+    for _, plr in Players:GetPlayers() do
+        if plr.Character then
+            table.insert(exclude, plr.Character)
+        end
+    end
+    for _, corpse in CollectionService:GetTagged("Body") do
+        table.insert(exclude, corpse)
+    end
+    for _, botChar in CollectionService:GetTagged("BotCharacter") do
+        table.insert(exclude, botChar)
+    end
+    params.FilterDescendantsInstances = exclude
+    local hit = workspace:Raycast(pos + Vector3.new(0, 4, 0), Vector3.new(0, -16, 0), params)
+    local floorY = hit and hit.Position.Y or (pos.Y - 2.5)
+    local pool = Instance.new("Part")
+    pool.Name = "BloodPool"
+    pool.Shape = Enum.PartType.Cylinder
+    pool.Anchored = true
+    pool.CanCollide = false
+    pool.CanQuery = false
+    pool.CanTouch = false
+    pool.Material = Enum.Material.SmoothPlastic
+    pool.Color = Color3.fromRGB(78, 10, 10)
+    pool.Size = Vector3.new(0.1, 1.5, 1.5)
+    pool.CFrame = CFrame.new(pos.X, floorY + 0.06, pos.Z) * CFrame.Angles(0, 0, math.rad(90))
+    pool.Parent = roundFolder
+    TweenService:Create(
+        pool,
+        TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { Size = Vector3.new(0.1, 4.6, 4.6) }
+    ):Play()
+end
+
 function EvidenceService:DropBody(victim: Player, killer: Player)
     local char = victim.Character
     local roundFolder = workspace:FindFirstChild("Round")
@@ -123,6 +171,7 @@ function EvidenceService:DropBody(victim: Player, killer: Player)
     model:PivotTo(CFrame.new(pos - Vector3.new(0, 2.5, 0)))
     model:AddTag("Body")
     model.Parent = roundFolder
+    bloodPool(pos, roundFolder, model)
 
     -- Facts the client is NEVER told until it earns them
     bodies[model] = {
