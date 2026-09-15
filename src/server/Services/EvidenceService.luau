@@ -9,6 +9,7 @@ local EventService = require(script.Parent.EventService)
 local AudioService = require(script.Parent.AudioService)
 local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
+local Participant = require(script.Parent.Participant)
 
 local EvidenceService = {}
 local bodies = {} -- [Model] = clueData
@@ -167,6 +168,62 @@ local function bloodPool(pos: Vector3, roundFolder: Instance, body: Instance)
     disc(Color3.fromRGB(46, 4, 4), 0.08, 2.7)
 end
 
+-- A fallen player reads best as their own avatar. Clone the living character,
+-- strip anything that would move or label it - the Animate script, the
+-- Humanoid's name/health gui, any carried Tool - anchor every part so the pose
+-- freezes, and hand it back for DropBody to lay flat. Returns nil if the
+-- character has no root to pivot by, so the caller can fall back to the generic
+-- figure. NPCs never come here: their avatars are flat solid-colour dummies, so
+-- the built figure (a head, torso and limbs in real tones) reads better.
+local function buildAvatarCorpse(char: Model): Model?
+    if not char.PrimaryPart then
+        return nil
+    end
+    local wasArchivable = char.Archivable
+    char.Archivable = true
+    local clone = char:Clone()
+    char.Archivable = wasArchivable
+    if not clone or not clone.PrimaryPart then
+        if clone then
+            clone:Destroy()
+        end
+        return nil
+    end
+    for _, d in clone:GetDescendants() do
+        if d:IsA("BaseScript") or d:IsA("Tool") or d:IsA("ForceField") then
+            d:Destroy() -- the Animate loop, any behaviour, a carried weapon, a spawn shield
+        elseif d:IsA("BasePart") then
+            d.Anchored = true
+            d.CanCollide = false
+            d.CanQuery = false -- never block a shot, an examine ray or a sightline
+            d.Massless = true
+        end
+    end
+    local hum = clone:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+        hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+        pcall(function()
+            hum:ChangeState(Enum.HumanoidStateType.Physics)
+        end)
+        hum.PlatformStand = true
+    end
+    -- Bake the collapse into the parts: the root (the model's pivot) is left
+    -- upright and the rest pitch onto the floor around it. The generic figure is
+    -- authored the same way, so dropping and dragging - both of which set the
+    -- pivot to an upright frame - keep the body flat instead of standing it up.
+    local root = clone.PrimaryPart :: BasePart
+    local base = root.CFrame
+    local upright = CFrame.new(base.Position)
+    local lie = CFrame.Angles(-math.pi / 2, 0, 0)
+    for _, p in clone:GetDescendants() do
+        if p:IsA("BasePart") then
+            p.CFrame = if p == root then upright else upright * lie * base:ToObjectSpace(p.CFrame)
+        end
+    end
+    return clone
+end
+
 function EvidenceService:DropBody(victim: Player, killer: Player)
     local char = victim.Character
     local roundFolder = workspace:FindFirstChild("Round")
@@ -176,11 +233,30 @@ function EvidenceService:DropBody(victim: Player, killer: Player)
     local pos = char:GetPivot().Position
     local killerPos = killer.Character and killer.Character:GetPivot().Position or pos
 
-    local model = game.ServerStorage.BodyTemplate:Clone()
-    model.Name = victim.DisplayName -- a body on the floor is a person, not a template
-    model:PivotTo(CFrame.new(pos - Vector3.new(0, 2.5, 0)))
-    model:AddTag("Body")
-    model.Parent = roundFolder
+    -- A real player falls as their own avatar, laid flat at the death spot; an
+    -- NPC (or a clone that could not be made) falls back to the generic figure.
+    local model: any = if not Participant.IsBot(victim) then buildAvatarCorpse(char) else nil
+    if model then
+        model.Name = victim.DisplayName
+        model:AddTag("Body")
+        model.Parent = roundFolder
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = { char, model }
+        local hit = workspace:Raycast(pos + Vector3.new(0, 3, 0), Vector3.new(0, -20, 0), params)
+        local floorY = hit and hit.Position.Y or (pos.Y - 2.5)
+        -- The pivot is the upright root; rest the body's underside on the floor.
+        local cf, size = model:GetBoundingBox()
+        local gap = model:GetPivot().Position.Y - (cf.Position.Y - size.Y / 2)
+        local yaw = math.random() * math.pi * 2
+        model:PivotTo(CFrame.new(pos.X, floorY + gap, pos.Z) * CFrame.Angles(0, yaw, 0))
+    else
+        model = game.ServerStorage.BodyTemplate:Clone()
+        model.Name = victim.DisplayName -- a body on the floor is a person, not a template
+        model:PivotTo(CFrame.new(pos - Vector3.new(0, 2.5, 0)))
+        model:AddTag("Body")
+        model.Parent = roundFolder
+    end
     bloodPool(pos, roundFolder, model)
 
     -- Facts the client is NEVER told until it earns them

@@ -124,15 +124,15 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 60 ticked, 19 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 62 ticked, 17 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 1 | A solo session with NPCs can settle these. Several are already verified by reading the code but deliberately left unticked, because reading is not observing. |
+| Testable in Studio, not yet done | 0 | Empty now: the last one, line 113's lamp douse and furniture routing, was walked in a solo session. Several other lines are verified by reading the code but sit in the buckets below, because reading is not observing. |
 | Needs two or more real players | 8 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Empty, and it should stay empty. This Studio session runs as the game owner with VIP, RADIO and EMOTE BUNDLE all showing OWNED, so pass-gated paths are exercisable solo and nothing belongs here on purchase grounds alone. The lines that once sat here moved to the second-client bucket, where their real blocker is. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
-| Needs human eyes or ears | 6 | Whether the cues match the brief, whether a weapon sits right in the hand, whether the art reads. No probe settles taste. (The ghost hints were here while only a fresh account could test them; they left when the cloud-place datastore showed `hintsSeen` persisting - see the persistence note.) |
+| Needs human eyes or ears | 5 | Whether the cues match the brief and whether the art reads. No probe settles taste. (Whether a weapon sits right in the hand left this bucket once it was watched by eye - line 116.) (The ghost hints were here while only a fresh account could test them; they left when the cloud-place datastore showed `hintsSeen` persisting - see the persistence note.) |
 | Setup step, not a claim | 2 | `rokit install` and the API access toggle. `[ColdCase] server up` left this bucket by being observed: a Play restart clears the Output window, so the boot line sits at the top instead of scrolled past the console tool's truncation. |
 
 
