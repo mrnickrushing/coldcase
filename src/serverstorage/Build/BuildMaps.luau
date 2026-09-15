@@ -137,6 +137,7 @@ local THEMES = {
                 props = { "Barrel", "CrateStack", "FilingCabinet", "KitchenCounter", "Fridge" },
                 density = 0.4,
                 centre = "DiningTable",
+                chairs = true, -- a kitchen table reads bare without seats
             },
             study = {
                 wall = "5f83a0",
