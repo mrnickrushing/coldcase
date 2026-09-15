@@ -1235,14 +1235,14 @@ test("every Catalog item kind has an equip slot", function()
 end)
 
 ------------------------------------------------- prop mesh orientation
--- Nine prop meshes were authored with their front on +Z, opposite the -Z
+-- Ten prop meshes were authored with their front on +Z, opposite the -Z
 -- LookVector every placement site assumes (BuildLobby's `facing`, BuildMaps'
 -- lookAt(at, at - out)). Uncorrected, they show their backs to the room -
 -- bookshelves with shelves to the wall, couches facing the wall, a fridge
 -- with its door hidden. Each carries a 180-degree yaw in the manifest. The
 -- manifest's own comment says to regenerate it from Studio when a model is
 -- replaced, which would silently zero these; this pins them.
-test("inverted prop meshes keep their 180-degree yaw in the manifest", function()
+test("the ten inverted prop meshes keep their 180-degree yaw in the manifest", function()
     local src = fs.readFile("src/serverstorage/Build/AssetManifest.luau")
     local missing = {}
     for _, name in
@@ -1256,6 +1256,7 @@ test("inverted prop meshes keep their 180-degree yaw in the manifest", function(
             "CardCatalog",
             "Fridge",
             "Bed",
+            "Television",
         }
     do
         local i = src:find("        " .. name .. " = {", 1, true)

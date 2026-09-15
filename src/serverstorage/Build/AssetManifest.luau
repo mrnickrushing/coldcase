@@ -177,7 +177,7 @@ return {
                 texture = "rbxassetid://127703656257339",
                 size = { 5.141, 4.385, 1.92 },
                 offset = { 0, 0, 0 },
-                rot = { 0, 0, 0 },
+                rot = { 0, math.pi, 0 }, -- screen was on +Z (back to the room); yaw so it sits on the LookVector
             },
         },
         VendingMachine = {
