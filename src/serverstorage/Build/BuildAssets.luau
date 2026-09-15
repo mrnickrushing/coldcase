@@ -83,6 +83,34 @@ local function runAll(jobs: { () -> () })
     done:Destroy()
 end
 
+-- The Television mesh is a flat-screen; on its own it sits on the floor. Give it
+-- a wooden console to stand on, then recentre the model's pivot to the combined
+-- bounding box so every placement (lobby and maps) still rests it on the floor.
+local function standForTV(m: Model)
+    local tv = m:FindFirstChildWhichIsA("BasePart")
+    if not tv then
+        return
+    end
+    local sz = tv.Size
+    local standH = 3.4
+    local cx, cz = tv.Position.X, tv.Position.Z
+    tv.Position = Vector3.new(cx, standH + sz.Y / 2, cz)
+    local stand = Instance.new("Part")
+    stand.Name = "TVStand"
+    stand.Anchored = true
+    stand.Size = Vector3.new(sz.X + 0.9, standH, math.max(sz.Z + 1.2, 2.6))
+    stand.Position = Vector3.new(cx, standH / 2, cz)
+    stand.Color = Color3.fromHex("5a3f2a")
+    stand.Material = Enum.Material.Wood
+    stand.CanCollide = true
+    stand.CanQuery = true
+    stand.CanTouch = false
+    stand.TopSurface = Enum.SurfaceType.Smooth
+    stand.BottomSurface = Enum.SurfaceType.Smooth
+    stand.Parent = m
+    m.WorldPivot = CFrame.new(cx, (standH + sz.Y) / 2, cz)
+end
+
 return function()
     local jobs = {}
     local ready: { { folder: Folder, parent: Instance } } = {}
@@ -125,7 +153,11 @@ return function()
     if props then
         for name, parts in Manifest.props do
             table.insert(jobs, function()
-                model(name, parts, true).Parent = props
+                local m = model(name, parts, true)
+                if name == "Television" then
+                    standForTV(m)
+                end
+                m.Parent = props
             end)
         end
     end
