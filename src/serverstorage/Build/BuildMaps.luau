@@ -186,7 +186,7 @@ local THEMES = {
         wall = "9fb3bd",
         wallMaterial = M.SmoothPlastic,
         shell = "5f8fa8",
-        shellMaterial = M.SmoothPlastic,
+        shellMaterial = M.Metal,
         roof = "3f5f70",
         roofMaterial = M.Metal,
         trim = "e8f0f4",
@@ -274,7 +274,7 @@ local THEMES = {
         wall = "e0d8c0",
         wallMaterial = M.SmoothPlastic,
         shell = "cfc7b4",
-        shellMaterial = M.SmoothPlastic,
+        shellMaterial = M.Concrete,
         roof = "6a6f74",
         roofMaterial = M.Concrete,
         trim = "f4f0e4",
@@ -987,7 +987,7 @@ local function staircase(model: Model, plan, theme, s)
                 else Vector3.new(STAIR_W, height, depth),
             CFrame.new(at),
             wood,
-            theme.stairMaterial
+            floorMaterialFor(theme.stair, theme.stairMaterial)
         )
     end
 
