@@ -215,7 +215,12 @@ local function buildAvatarCorpse(char: Model): Model?
     local root = clone.PrimaryPart :: BasePart
     local base = root.CFrame
     local upright = CFrame.new(base.Position)
-    local lie = CFrame.Angles(-math.pi / 2, 0, 0)
+    -- Face-down, but nudged off dead-flat by a small random roll and pitch so no
+    -- two bodies land as the same stiff plank; the floor rest below lifts the
+    -- lowest point onto the ground whatever the tilt.
+    local roll = (math.random() - 0.5) * math.rad(22)
+    local pitchJitter = (math.random() - 0.5) * math.rad(14)
+    local lie = CFrame.Angles(-math.pi / 2 + pitchJitter, 0, roll)
     for _, p in clone:GetDescendants() do
         if p:IsA("BasePart") then
             p.CFrame = if p == root then upright else upright * lie * base:ToObjectSpace(p.CFrame)
