@@ -14,26 +14,36 @@ local LAMP = Color3.fromHex("ffe3b0")
 -- { template, x, z, facing } relative to the floor centre; the front of the
 -- prop looks along `facing`
 local PROPS = {
-    { "Bookshelf", -36, -57, Vector3.zAxis },
-    { "Bookshelf", 36, -57, Vector3.zAxis },
-    { "GrandfatherClock", -18, -58.5, Vector3.zAxis },
-    { "FilingCabinet", 57.5, -30, -Vector3.xAxis },
-    { "FilingCabinet", 57.5, -26.5, -Vector3.xAxis },
-    { "Armchair", -56, 30, Vector3.xAxis },
-    { "Armchair", -56, 38, Vector3.xAxis },
+    -- -Z wall: library and game-room wall. Spaced by real footprints so nothing
+    -- clips (the clock and television once sat 2 studs apart and overlapped).
+    { "Bookshelf", -46, -57.5, Vector3.zAxis },
+    { "GrandfatherClock", -36, -58.5, Vector3.zAxis },
+    { "Television", -22, -57.5, Vector3.zAxis },
+    { "VendingMachine", 14, -57.5, Vector3.zAxis },
+    { "Arcade", 24, -57.5, Vector3.zAxis },
+    { "Bookshelf", 40, -57.5, Vector3.zAxis },
+    -- Media corner: the red couch sits out in the room facing the television,
+    -- instead of alone against a blank wall.
+    { "SofaRed", -22, -40, -Vector3.zAxis },
+    -- +Z fireplace lounge: the sofa faces the room with the fire as its
+    -- backdrop, and an armchair at each end is turned in toward the group -
+    -- a conversation set on the rug, not furniture pushed to the walls.
     { "Fireplace", 0, 58, -Vector3.zAxis },
     { "Sofa", 0, 44, -Vector3.zAxis },
+    { "Armchair", -11, 40, Vector3.new(0.878, 0, -0.479) },
+    { "Armchair", 11, 40, Vector3.new(-0.878, 0, -0.479) },
+    -- +X study corner
+    { "FilingCabinet", 57.5, -30, -Vector3.xAxis },
+    { "FilingCabinet", 57.5, -26.5, -Vector3.xAxis },
     { "WritingDesk", 46, 18, -Vector3.xAxis },
     { "Globe", 50, 32, -Vector3.xAxis },
-    { "SofaRed", -30, 44, -Vector3.zAxis },
+    { "Bookshelf", 57.5, -50, -Vector3.xAxis },
+    -- -X wall
+    { "CrateStack", -57.5, 0, -Vector3.xAxis },
+    -- corner plants
     { "Plant", -52, -52, Vector3.xAxis },
     { "Plant", 52, -52, -Vector3.xAxis },
     { "Plant", -52, 52, Vector3.xAxis },
-    { "VendingMachine", 20, -57.5, Vector3.zAxis },
-    { "Arcade", 30, -57.5, Vector3.zAxis },
-    { "Television", -20, -57.5, Vector3.zAxis },
-    { "CrateStack", -57.5, 0, -Vector3.xAxis },
-    { "Bookshelf", 57.5, -50, -Vector3.xAxis },
 }
 
 local function block(

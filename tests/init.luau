@@ -1234,6 +1234,46 @@ test("every Catalog item kind has an equip slot", function()
     )
 end)
 
+------------------------------------------------- prop mesh orientation
+-- Nine prop meshes were authored with their front on +Z, opposite the -Z
+-- LookVector every placement site assumes (BuildLobby's `facing`, BuildMaps'
+-- lookAt(at, at - out)). Uncorrected, they show their backs to the room -
+-- bookshelves with shelves to the wall, couches facing the wall, a fridge
+-- with its door hidden. Each carries a 180-degree yaw in the manifest. The
+-- manifest's own comment says to regenerate it from Studio when a model is
+-- replaced, which would silently zero these; this pins them.
+test("inverted prop meshes keep their 180-degree yaw in the manifest", function()
+    local src = fs.readFile("src/serverstorage/Build/AssetManifest.luau")
+    local missing = {}
+    for _, name in
+        {
+            "Sofa",
+            "SofaRed",
+            "Bookshelf",
+            "VendingMachine",
+            "Arcade",
+            "FilingCabinet",
+            "CardCatalog",
+            "Fridge",
+            "Bed",
+        }
+    do
+        local i = src:find("        " .. name .. " = {", 1, true)
+        assert(i, name .. " is no longer in the manifest")
+        -- the first rot line after this prop's header must be the yaw
+        local j = src:find("rot = {", i, true)
+        local line = j and src:sub(j, j + 40) or ""
+        if not line:find("rot = { 0, math.pi, 0 }", 1, true) then
+            table.insert(missing, name)
+        end
+    end
+    assert(
+        #missing == 0,
+        "props that lost their front-correcting yaw (would face the wall again): "
+            .. table.concat(missing, ", ")
+    )
+end)
+
 ------------------------------------------------- rarity odds and integrity
 -- Roblox requires accurate published odds on paid random items, and
 -- RarityTable's own comment says so. The Locker's pull weights must sum to

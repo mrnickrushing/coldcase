@@ -123,7 +123,7 @@ return {
                 texture = "rbxassetid://97724069988079",
                 size = { 4.152, 5.75, 3.6 },
                 offset = { 0, 0, 0 },
-                rot = { 0, 0, 0 },
+                rot = { 0, math.pi, 0 }, -- mesh front was on +Z; yaw so the front sits on the LookVector
             },
         },
         Bed = {
@@ -132,7 +132,7 @@ return {
                 texture = "rbxassetid://72987987399468",
                 size = { 4.354, 3.64, 6.761 },
                 offset = { 0, 0, 0 },
-                rot = { 0, 0, 0 },
+                rot = { 0, math.pi, 0 }, -- headboard was on the LookVector; yaw so it goes to the wall when placed against one
             },
         },
         Fridge = {
@@ -141,7 +141,7 @@ return {
                 texture = "rbxassetid://111237659133998",
                 size = { 3.784, 6.023, 3.64 },
                 offset = { 0, 0, 0 },
-                rot = { 0, 0, 0 },
+                rot = { 0, math.pi, 0 }, -- mesh front was on +Z; yaw so the front sits on the LookVector
             },
         },
         KitchenCounter = {
@@ -168,7 +168,7 @@ return {
                 texture = "rbxassetid://133152419617955",
                 size = { 7.315, 3.75, 3.606 },
                 offset = { 0, 0, 0 },
-                rot = { 0, 0, 0 },
+                rot = { 0, math.pi, 0 }, -- mesh front was on +Z (same as Sofa); yaw so the front sits on the LookVector
             },
         },
         Television = {
@@ -186,7 +186,7 @@ return {
                 texture = "rbxassetid://117083845430330",
                 size = { 3.286, 6.527, 2.86 },
                 offset = { 0, 0, 0 },
-                rot = { 0, 0, 0 },
+                rot = { 0, math.pi, 0 }, -- mesh front was on +Z; yaw so the front sits on the LookVector
             },
         },
         Anchor = {
@@ -231,7 +231,7 @@ return {
                 texture = "rbxassetid://115252584072521",
                 size = { 5.82, 8.569, 2.5 },
                 offset = { 0, 0, 0 },
-                rot = { 0, 0, 0 },
+                rot = { 0, math.pi, 0 }, -- mesh front was on +Z; yaw so the front sits on the LookVector
             },
         },
         CardCatalog = {
@@ -240,7 +240,7 @@ return {
                 texture = "rbxassetid://99073321844485",
                 size = { 3.523, 6, 2.053 },
                 offset = { 0, 0, 0 },
-                rot = { 0, 0, 0 },
+                rot = { 0, math.pi, 0 }, -- mesh front was on +Z; yaw so the front sits on the LookVector
             },
         },
         CrateStack = {
@@ -276,7 +276,7 @@ return {
                 texture = "rbxassetid://139187268912317",
                 size = { 2.6, 4.188, 2.711 },
                 offset = { 0, 0, 0 },
-                rot = { 0, 0, 0 },
+                rot = { 0, math.pi, 0 }, -- mesh front was on +Z; yaw so the front sits on the LookVector
             },
         },
         Fireplace = {
@@ -339,7 +339,7 @@ return {
                 texture = "rbxassetid://104031401316478",
                 size = { 9.159, 3.771, 4.375 },
                 offset = { 0, 0, 0 },
-                rot = { 0, 0, 0 },
+                rot = { 0, math.pi, 0 }, -- mesh front was on +Z; yaw so the front sits on the LookVector like every other prop
             },
         },
         WritingDesk = {
