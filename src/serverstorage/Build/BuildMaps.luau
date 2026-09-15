@@ -1455,14 +1455,18 @@ local function build(mapName: string, plan, theme): Model
     for i, c in points.coins do
         reserved[MapPlan.Key(c.f, c.x, c.z)] = true
         local x, y, z = MapPlan.Position(plan, c.f, c.x, c.z)
+        -- A real coin, not a flat marker: a thin gold disc stood on edge, its
+        -- round faces pointing along X so it shows a face then its edge as the
+        -- client spins it. Still Neon so it stays findable across a dark room.
         local p = part(
             ("Coin_%02d"):format(i),
             model,
-            Vector3.new(2, 2, 0.4),
-            CFrame.new(x, y + 3, z),
+            Vector3.new(0.4, 2.2, 2.2),
+            CFrame.new(x, y + 2.7, z),
             Color3.fromHex("f2a63b"),
             M.Neon
         )
+        p.Shape = Enum.PartType.Cylinder
         p.CanCollide = false
         p.CanQuery = false
         p:SetAttribute("NodeId", i)
