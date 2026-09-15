@@ -138,23 +138,33 @@ local function bloodPool(pos: Vector3, roundFolder: Instance, body: Instance)
     params.FilterDescendantsInstances = exclude
     local hit = workspace:Raycast(pos + Vector3.new(0, 4, 0), Vector3.new(0, -16, 0), params)
     local floorY = hit and hit.Position.Y or (pos.Y - 2.5)
-    local pool = Instance.new("Part")
-    pool.Name = "BloodPool"
-    pool.Shape = Enum.PartType.Cylinder
-    pool.Anchored = true
-    pool.CanCollide = false
-    pool.CanQuery = false
-    pool.CanTouch = false
-    pool.Material = Enum.Material.SmoothPlastic
-    pool.Color = Color3.fromRGB(78, 10, 10)
-    pool.Size = Vector3.new(0.1, 1.5, 1.5)
-    pool.CFrame = CFrame.new(pos.X, floorY + 0.06, pos.Z) * CFrame.Angles(0, 0, math.rad(90))
-    pool.Parent = roundFolder
-    TweenService:Create(
-        pool,
-        TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        { Size = Vector3.new(0.1, 4.6, 4.6) }
-    ):Play()
+
+    -- A spreading disc with a darker core reads as a pool with depth rather than
+    -- a flat decal. Both are scene-lit and never glow, so like the impact spray
+    -- they show in daylight and stay dark in Lights Out, and both are
+    -- non-colliding and non-query so they block neither movement nor the examine
+    -- ray. The core rides just above the spread so it always wins the z-fight.
+    local function disc(colour: Color3, lift: number, grown: number)
+        local d = Instance.new("Part")
+        d.Name = "BloodPool"
+        d.Shape = Enum.PartType.Cylinder
+        d.Anchored = true
+        d.CanCollide = false
+        d.CanQuery = false
+        d.CanTouch = false
+        d.Material = Enum.Material.SmoothPlastic
+        d.Color = colour
+        d.Size = Vector3.new(0.1, 1.5 * (grown / 4.6), 1.5 * (grown / 4.6))
+        d.CFrame = CFrame.new(pos.X, floorY + lift, pos.Z) * CFrame.Angles(0, 0, math.rad(90))
+        d.Parent = roundFolder
+        TweenService:Create(
+            d,
+            TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Size = Vector3.new(0.1, grown, grown) }
+        ):Play()
+    end
+    disc(Color3.fromRGB(78, 10, 10), 0.06, 4.6)
+    disc(Color3.fromRGB(46, 4, 4), 0.08, 2.7)
 end
 
 function EvidenceService:DropBody(victim: Player, killer: Player)
