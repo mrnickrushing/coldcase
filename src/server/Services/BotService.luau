@@ -245,11 +245,16 @@ local wardrobeReady = false
 
 local function lookFor(index: number, shirt: Shirt): Look
     local rng = Random.new(index * 7919)
+    -- Neighbouring seeds open with correlated draws (seven of twelve came
+    -- out bald from a one-in-six roll); a few discarded draws spread them
+    for _ = 1, 8 do
+        rng:NextNumber()
+    end
     return {
         shirt = shirt,
         pants = PANTS[rng:NextInteger(1, #PANTS)],
-        -- One in six goes without hair
-        hair = if rng:NextInteger(1, 6) == 1 then nil else HAIR[rng:NextInteger(1, #HAIR)],
+        -- Every sixth name goes without hair
+        hair = if index % 6 == 0 then nil else HAIR[rng:NextInteger(1, #HAIR)],
         face = FACES[rng:NextInteger(1, #FACES)],
         skin = Color3.fromHex(SKIN[rng:NextInteger(1, #SKIN)]),
         scale = {
@@ -296,7 +301,8 @@ end
 -- Builds one dressed body from the catalogue. Nil when the assets will not
 -- load, and the caller falls back to the plain rig in flat colours.
 local function dress(look: Look): Model?
-    for attempt = 1, 2 do
+    local bald: Model? = nil
+    for attempt = 1, 4 do
         local ok, model = pcall(
             Players.CreateHumanoidModelFromDescription,
             Players,
@@ -305,15 +311,30 @@ local function dress(look: Look): Model?
         )
         if ok and model then
             stripClientScripts(model)
-            return model
+            -- Accessories load separately and are silently dropped when a
+            -- busy server start cannot fetch them in time, so a look that
+            -- asked for hair and got none is tried again
+            if not look.hair or model:FindFirstChildOfClass("Accessory") then
+                if bald then
+                    bald:Destroy()
+                end
+                return model
+            end
+            if bald then
+                bald:Destroy()
+            end
+            bald = model
+            warn(("[ColdCase] NPC hair did not load, attempt %d"):format(attempt))
+        else
+            warn(("[ColdCase] NPC outfit, attempt %d: %s"):format(attempt, tostring(model)))
         end
-        warn(("[ColdCase] NPC outfit, attempt %d: %s"):format(attempt, tostring(model)))
         task.wait(attempt)
     end
-    return nil
+    return bald
 end
 
 local function buildWardrobe()
+    task.wait(1.5) -- let the server's own asset loads settle first
     local deck = shirtDeck()
     for i, name in NAMES do
         local shirt = deck[((i - 1) % #deck) + 1]
