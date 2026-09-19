@@ -46,6 +46,12 @@ local roleCard = gui.RoleCard
 local banner = gui.EventBanner
 local evidence = gui.Evidence
 local action = gui.Action
+-- On touch the bottom-right corner belongs to the jump button and the action
+-- buttons round it, so the weapon/prompt panel sits at the bottom centre
+if game:GetService("UserInputService").TouchEnabled then
+    action.AnchorPoint = Vector2.new(0.5, 1)
+    action.Position = UDim2.new(0.5, 0, 1, -16)
+end
 
 -- A brief colour-coded pulse when an event fires, on its own full-screen
 -- layer so it covers the top inset too. Fades fast; it dramatises the onset

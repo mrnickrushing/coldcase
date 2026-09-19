@@ -610,8 +610,10 @@ local function floorDetail(model: Model, plan, analysis, theme)
                 local shade = Color3.fromHex(style.floor)
                 local h, s, v = shade:ToHSV()
                 local cx, _, cz = MapPlan.Position(plan, f, x, z)
-                -- A seam on the cell's own edges, drawn just proud of the floor
-                for _, seam in { { CELL, 0.6, 0, CELL / 2 }, { 0.6, CELL, CELL / 2, 0 } } do
+                -- A seam on the cell's own edges, drawn just proud of the floor.
+                -- The cross seam stops short of the corners, where it would lie
+                -- on the neighbouring cell's seam and flicker.
+                for _, seam in { { CELL, 0.6, 0, CELL / 2 }, { 0.6, CELL - 1.2, CELL / 2, 0 } } do
                     deco(
                         "FloorSeam",
                         model,
@@ -691,8 +693,9 @@ local function solidWall(
     )
     if theme.trim then
         local wood = Color3.fromHex(theme.trim)
-        -- Thicker on the shell, so the trim stands proud of the wall lining
-        local band = t + (if lookName == "shell" and theme.liner then 1 else 0.4)
+        -- With a liner, every trim stands proud of the wall skin (0.3 deep); a
+        -- cornice flush with the skin face z-fights it and flickers.
+        local band = t + (if theme.liner then 1 else 0.4)
         deco(
             "Skirting",
             model,
@@ -790,11 +793,13 @@ local function doorway(model: Model, plan, theme, e)
         material
     )
     local wood = Color3.fromHex(theme.trim or theme.rail)
+    -- Proud of the wall skin, never flush with it
+    local frameBand = t + (if theme.liner then 1 else 0.5)
     for _, sign in { -1, 1 } do
         deco(
             "DoorFrame",
             model,
-            boxSize(along, 0.6, DOOR_H, t + 0.5),
+            boxSize(along, 0.6, DOOR_H, frameBand),
             CFrame.new(centre + along * (sign * (DOOR_W / 2 - 0.3)) + Vector3.new(0, DOOR_H / 2, 0)),
             wood,
             M.Wood
@@ -803,7 +808,7 @@ local function doorway(model: Model, plan, theme, e)
     deco(
         "DoorFrame",
         model,
-        boxSize(along, DOOR_W, 0.6, t + 0.5),
+        boxSize(along, DOOR_W, 0.6, frameBand),
         CFrame.new(centre + Vector3.new(0, DOOR_H - 0.3, 0)),
         wood,
         M.Wood
@@ -874,10 +879,14 @@ local function skins(model: Model, plan, analysis, theme)
         return
     end
     for _, e in analysis.edges do
-        if e.kind ~= "exterior" and e.kind ~= "wall" then
+        if e.kind ~= "exterior" and e.kind ~= "wall" and e.kind ~= "door" then
             continue
         end
         local centre, along, across = edgeFrame(plan, e)
+        -- The wall this edge actually got: an interior edge beside an outdoor
+        -- region is built shell-thick, and a skin sized for a thin wall would
+        -- sit inside it with its face flush to the wall's, flickering.
+        local thickness = finish(theme, look(plan, e))
         for _, side in { { ch = e.a, face = -1 }, { ch = e.b, face = 1 } } do
             local region = plan.regions[side.ch]
             if not MapPlan.IsWalkable(side.ch) or (region and region.outdoor) then
@@ -885,18 +894,45 @@ local function skins(model: Model, plan, analysis, theme)
             end
             local style = theme.styles[region.style]
             local colour = Color3.fromHex((style and style.wall) or theme.wall)
-            local thickness = if e.kind == "exterior" then SHELL else WALL
-            local at = centre
-                + across * side.face * (thickness / 2 + 0.15)
-                + Vector3.new(0, (H - SLAB) / 2, 0)
-            deco(
-                "WallSkin",
-                model,
-                boxSize(along, CELL, H - SLAB, 0.3),
-                CFrame.new(at),
-                colour,
-                (style and style.wallMaterial) or theme.wallMaterial
-            )
+            local material = (style and style.wallMaterial) or theme.wallMaterial
+            local offset = across * side.face * (thickness / 2 + 0.15)
+            if e.kind == "door" then
+                -- Skin the jambs and the panel over the door too, so a room's
+                -- colour runs unbroken past its doorways
+                local from, to = DOOR_W / 2, CELL / 2
+                for _, sign in { -1, 1 } do
+                    deco(
+                        "WallSkin",
+                        model,
+                        boxSize(along, to - from, H - SLAB, 0.3),
+                        CFrame.new(
+                            centre
+                                + offset
+                                + along * (sign * (from + to) / 2)
+                                + Vector3.new(0, (H - SLAB) / 2, 0)
+                        ),
+                        colour,
+                        material
+                    )
+                end
+                deco(
+                    "WallSkin",
+                    model,
+                    boxSize(along, DOOR_W, H - SLAB - DOOR_H, 0.3),
+                    CFrame.new(centre + offset + Vector3.new(0, (DOOR_H + H - SLAB) / 2, 0)),
+                    colour,
+                    material
+                )
+            else
+                deco(
+                    "WallSkin",
+                    model,
+                    boxSize(along, CELL, H - SLAB, 0.3),
+                    CFrame.new(centre + offset + Vector3.new(0, (H - SLAB) / 2, 0)),
+                    colour,
+                    material
+                )
+            end
         end
     end
 end

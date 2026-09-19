@@ -792,17 +792,22 @@ test("the dock is sized to clear the leftmost touch button", function()
     local input = fs.readFile("src/client/Controllers/InputController.luau")
     local social = fs.readFile("src/client/Controllers/SocialController.luau")
 
-    local insets = {}
-    for n in input:gmatch("UDim2%.new%(1, %-(%d+), 1, %-%d+%)") do
-        table.insert(insets, tonumber(n))
-    end
-    assert(#insets > 0, "found no action button positions in InputController")
-    table.sort(insets)
-    local leftmost = insets[#insets] -- the biggest inset reaches furthest left
-
-    local budget = tonumber(social:match("local maxWidth = width %- (%d+)"))
-    assert(budget, "SocialController no longer budgets the dock against a button inset")
-    eq(budget, leftmost, "dock width budget vs the leftmost button's inset")
+    -- The buttons are laid out round the live jump button, so no inset is a
+    -- literal any more: both sides share one named reach instead.
+    assert(
+        input:find("reach <= Theme.TOUCH_REACH", 1, true),
+        "InputController no longer keeps its buttons inside Theme.TOUCH_REACH"
+    )
+    assert(
+        social:match("local maxWidth = width %- Theme%.TOUCH_REACH"),
+        "SocialController no longer budgets the dock against Theme.TOUCH_REACH"
+    )
+    local theme = fs.readFile("src/shared/Theme.luau")
+    local reach = tonumber(theme:match("Theme%.TOUCH_REACH = (%d+)"))
+    assert(
+        reach and reach >= 200,
+        "TOUCH_REACH missing or too small for three buttons round a jump button"
+    )
 end)
 
 ---------------------------------------------------------------- round loop

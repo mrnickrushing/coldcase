@@ -199,12 +199,12 @@ local function render()
     local narrow = width < Theme.NARROW_WIDTH
     -- Bottom edge sits 8px above the evidence log, which collapses when narrow
     dock.Position = UDim2.new(0, 16, 1, narrow and -120 or -174)
-    -- The touch action buttons are anchored to the right edge, and the
-    -- leftmost of them (DRAG) starts 250px in. On a short landscape screen the
-    -- dock's right edge reached underneath it - at 568x320 it covered a 38x4px
-    -- corner of DRAG - so the dock never grows past the gap that leaves.
-    -- 250 is DRAG's inset, 16 the dock's own left margin, 8 a gap.
-    local maxWidth = width - 250 - 16 - 8
+    -- The touch action buttons sit round the jump button at the right edge and
+    -- reach at most Theme.TOUCH_REACH in. On a short landscape screen the
+    -- dock's right edge once reached underneath them - at 568x320 it covered a
+    -- 38x4px corner of DRAG - so the dock never grows past the gap that leaves.
+    -- 16 is the dock's own left margin, 8 a gap.
+    local maxWidth = width - Theme.TOUCH_REACH - 16 - 8
     dock.Size =
         UDim2.new(0, math.clamp(maxWidth, 200, narrow and 240 or 340), 0, Theme.TAP_MIN * 2 + 8)
 end
