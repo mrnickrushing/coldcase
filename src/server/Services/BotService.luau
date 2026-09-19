@@ -6,6 +6,7 @@
 -- and grace period applies to them too.
 local PathfindingService = game:GetService("PathfindingService")
 local Players = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
 local Config = require(game.ReplicatedStorage.Shared.Config)
 local MapPlan = require(game.ReplicatedStorage.Shared.MapPlan)
 local FibreBands = require(game.ReplicatedStorage.Shared.FibreBands)
@@ -35,22 +36,61 @@ local NAMES = {
     "Cyril",
     "Edith",
 }
--- Shirts span the fibre bands, so the fibre clue still narrows an NPC down
+-- Every NPC is dressed from free Roblox-made catalogue assets, so they load
+-- in any experience without ownership: a classic shirt and pants, a hair
+-- accessory, a face, and a body of its own proportions. `colour` is the
+-- shirt's real torso tone, measured from its template, and the torso part
+-- is painted it under the texture so the fibre clue (which reads torso
+-- colour) still tells the truth about what the killer wore.
 local SHIRTS = {
-    "6b3a2e",
-    "2f4858",
-    "5b5f3a",
-    "7a2e3a",
-    "3a3f58",
-    "8a6a3a",
-    "2e5a4a",
-    "4a4a4a",
-    "6a4a7a",
-    "a0522d",
-    "1f3b2c",
-    "c8b89a",
+    { id = 382537702, colour = "10c2a8" }, -- Teal Shirt
+    { id = 382538059, colour = "3a5c42" }, -- Green Jersey
+    { id = 607785314, colour = "1e1e1e" }, -- ROBLOX Jacket
+    { id = 144076436, colour = "5e7c86" }, -- Grey Striped Shirt with Denim Jacket
+    { id = 4047884046, colour = "486064" }, -- Guitar Tee with Black Jacket
+    { id = 4047886060, colour = "29d6b9" }, -- Purple and Teal Top
+    { id = 3670737444, colour = "111111" }, -- Roblox Shirt - Simple Pattern
+    { id = 398635081, colour = "34506f" }, -- Blue Plaid Shirt
+    { id = 398633584, colour = "a0a6ad" }, -- Denim Jacket with White Hoodie
+    { id = 144076358, colour = "2a3a5a" }, -- Blue and Black Motorcycle Shirt
+}
+local PANTS = {
+    382537569, -- Black Jeans
+    398633812, -- Black Jeans with White Shoes
+    144076760, -- Dark Green Jeans
+    382538503, -- Black Jeans with Sneakers
+    398634487, -- Beautiful You Jeans
+    398635338, -- Ripped Skater Pants
+    382537806, -- Jean Shorts
+    382537950, -- Jean Shorts with White Shoes
+}
+local HAIR = {
+    62234425, -- Brown Hair
+    376526888, -- Straight Blonde Hair
+    376548738, -- Brown Charmer Hair
+    376524487, -- Blonde Spiked Hair
+    7193454569, -- Braided Hair - Black
+    9244150641, -- Braided Hair - Cool Brown
+    2956239660, -- Belle Of Belfast Long Red Hair
+    63690008, -- Pal Hair
+    451221329, -- True Blue Hair
+    9244148336, -- Braided Hair - Blonde
+    7193455510, -- Braided Hair - Red
+}
+local FACES = {
+    7074764, -- Chill
+    7075469, -- :-/
+    8560971, -- Stare
+    10907549, -- Finn McCool
+    15637848, -- -_-
+    20418658, -- Err...
+    28999228, -- Joyous Surprise
+    7074864, -- Winky
+    15432080, -- :3
+    21635565, -- Heeeeeey...
 }
 local SKIN = { "f1c27d", "e0ac69", "c68642", "8d5524", "ffdbac", "a67c52" }
+-- Body colours for the undressed fallback rig, when no catalogue asset loads
 local TROUSERS = { "2b2b2b", "3d3a35", "1f2a38", "4a3b2c" }
 -- Roblox's default R15 animations, which any experience may play
 local ANIMATIONS = { walk = "rbxassetid://913402848", idle = "rbxassetid://507766666" }
@@ -77,32 +117,33 @@ local function between(bounds: { number }): number
     return bounds[1] + math.random() * (bounds[2] - bounds[1])
 end
 
-local function pick(list: { string }): string
-    return list[math.random(#list)]
+local function pick<T>(list: { T }): number
+    return math.random(#list)
 end
 
 -- The fibre clue names the colour band of the killer's shirt, so a round where
 -- three NPCs wear the same band narrows almost nothing. Shirts are dealt one
 -- band at a time, and never handed out twice.
-local function shirtDeck(): { string }
-    local byBand: { [string]: { string } } = {}
+type Shirt = { id: number, colour: string }
+local function shirtDeck(): { Shirt }
+    local byBand: { [string]: { Shirt } } = {}
     local order = {}
-    for _, hex in Shuffle.Shuffled(SHIRTS) do
-        local band = FibreBands.Describe(Color3.fromHex(hex):ToHSV())
+    for _, shirt in Shuffle.Shuffled(SHIRTS) do
+        local band = FibreBands.Describe(Color3.fromHex(shirt.colour):ToHSV())
         if not byBand[band] then
             byBand[band] = {}
             table.insert(order, band)
         end
-        table.insert(byBand[band], hex)
+        table.insert(byBand[band], shirt)
     end
     local deck = {}
     local more = true
     while more do
         more = false
         for _, band in order do
-            local hex = table.remove(byBand[band])
-            if hex then
-                table.insert(deck, hex)
+            local shirt = table.remove(byBand[band])
+            if shirt then
+                table.insert(deck, shirt)
                 more = more or #byBand[band] > 0
             end
         end
@@ -178,18 +219,136 @@ local function rig(): Model?
     return template
 end
 
--- Bootstrap warms the rig on server start, so the first round never waits on it
-function BotService:Prepare()
-    task.spawn(rig)
+---------------------------------------------------------------- Looks
+-- Each named NPC has one look, built once on server start and cloned every
+-- round, so Nell is always the same red-haired woman in the green jersey.
+-- Shirts are dealt across the names from the band deck, so whichever six
+-- turn up, their fibre bands are as spread as the wardrobe allows.
+type Look = {
+    shirt: Shirt,
+    pants: number,
+    hair: number?,
+    face: number,
+    skin: Color3,
+    scale: {
+        height: number,
+        width: number,
+        depth: number,
+        head: number,
+        body: number,
+        prop: number,
+    },
+}
+local looks: { [string]: Look } = {}
+local dressed: { [string]: Model } = {}
+local wardrobeReady = false
+
+local function lookFor(index: number, shirt: Shirt): Look
+    local rng = Random.new(index * 7919)
+    return {
+        shirt = shirt,
+        pants = PANTS[rng:NextInteger(1, #PANTS)],
+        -- One in six goes without hair
+        hair = if rng:NextInteger(1, 6) == 1 then nil else HAIR[rng:NextInteger(1, #HAIR)],
+        face = FACES[rng:NextInteger(1, #FACES)],
+        skin = Color3.fromHex(SKIN[rng:NextInteger(1, #SKIN)]),
+        scale = {
+            height = rng:NextNumber(0.93, 1.06),
+            width = rng:NextNumber(0.9, 1.08),
+            depth = rng:NextNumber(0.95, 1.05),
+            head = rng:NextNumber(0.96, 1.04),
+            body = rng:NextNumber(0, 0.35),
+            prop = rng:NextNumber(0, 0.6),
+        },
+    }
 end
 
-local function colour(char: Model, shirt: Color3, skin: Color3, legs: Color3)
+local function describe(look: Look): HumanoidDescription
+    local d = Instance.new("HumanoidDescription")
+    d.Shirt = look.shirt.id
+    d.Pants = look.pants
+    d.Face = look.face
+    d.HairAccessory = if look.hair then tostring(look.hair) else ""
+    local skin = look.skin
+    d.HeadColor = skin
+    d.LeftArmColor = skin
+    d.RightArmColor = skin
+    d.LeftLegColor = skin
+    d.RightLegColor = skin
+    d.TorsoColor = Color3.fromHex(look.shirt.colour)
+    d.HeightScale = look.scale.height
+    d.WidthScale = look.scale.width
+    d.DepthScale = look.scale.depth
+    d.HeadScale = look.scale.head
+    d.BodyTypeScale = look.scale.body
+    d.ProportionScale = look.scale.prop
+    return d
+end
+
+local function stripClientScripts(model: Model)
+    for _, d in model:GetDescendants() do
+        if d:IsA("LuaSourceContainer") then
+            d:Destroy() -- the Animate LocalScript; the server animates NPCs instead
+        end
+    end
+end
+
+-- Builds one dressed body from the catalogue. Nil when the assets will not
+-- load, and the caller falls back to the plain rig in flat colours.
+local function dress(look: Look): Model?
+    for attempt = 1, 2 do
+        local ok, model = pcall(
+            Players.CreateHumanoidModelFromDescription,
+            Players,
+            describe(look),
+            Enum.HumanoidRigType.R15
+        )
+        if ok and model then
+            stripClientScripts(model)
+            return model
+        end
+        warn(("[ColdCase] NPC outfit, attempt %d: %s"):format(attempt, tostring(model)))
+        task.wait(attempt)
+    end
+    return nil
+end
+
+local function buildWardrobe()
+    local deck = shirtDeck()
+    for i, name in NAMES do
+        local shirt = deck[((i - 1) % #deck) + 1]
+        looks[name] = lookFor(i, shirt)
+    end
+    local store = Instance.new("Folder")
+    store.Name = "NPCLooks"
+    store.Parent = ServerStorage
+    for _, name in NAMES do
+        local model = dress(looks[name])
+        if model then
+            model.Name = name
+            model.Parent = store
+            dressed[name] = model
+        end
+    end
+    wardrobeReady = true
+end
+
+-- Bootstrap warms the rig and the wardrobe on server start, so the first
+-- round never waits on them
+function BotService:Prepare()
+    task.spawn(rig)
+    task.spawn(buildWardrobe)
+end
+
+-- Paints the parts directly as well as BodyColors, so a corpse clone and the
+-- fibre clue (which reads the torso part) see the same tones.
+local function colour(char: Model, torso: Color3, skin: Color3, arms: Color3, legs: Color3)
     local body = char:FindFirstChildOfClass("BodyColors")
     if body then
         body.HeadColor3 = skin
-        body.TorsoColor3 = shirt
-        body.LeftArmColor3 = shirt
-        body.RightArmColor3 = shirt
+        body.TorsoColor3 = torso
+        body.LeftArmColor3 = arms
+        body.RightArmColor3 = arms
         body.LeftLegColor3 = legs
         body.RightLegColor3 = legs
     end
@@ -198,12 +357,10 @@ local function colour(char: Model, shirt: Color3, skin: Color3, legs: Color3)
             local name = part.Name
             if name == "Head" then
                 part.Color = skin
-            elseif
-                string.find(name, "Torso")
-                or string.find(name, "Arm")
-                or string.find(name, "Hand")
-            then
-                part.Color = shirt
+            elseif string.find(name, "Torso") then
+                part.Color = torso
+            elseif string.find(name, "Arm") or string.find(name, "Hand") then
+                part.Color = arms
             elseif string.find(name, "Leg") or string.find(name, "Foot") then
                 part.Color = legs
             end
@@ -278,22 +435,40 @@ function BotService:Spawn(count: number): { any }
         warn("[ColdCase] no NPC rig could be built")
         return made
     end
+    -- The wardrobe is still dressing on a server that starts a round at once
+    local deadline = os.clock() + 6
+    while not wardrobeReady and os.clock() < deadline do
+        task.wait(0.25)
+    end
 
     for i = 1, count do
-        local char = template:Clone()
+        local given = names[i]
+        local look = given and looks[given]
+        local outfit = given and dressed[given]
+        local char: Model
+        if look and outfit then
+            char = outfit:Clone()
+            colour(char, Color3.fromHex(look.shirt.colour), look.skin, look.skin, look.skin)
+        else
+            char = template:Clone()
+            local shirt = shirts[i] or SHIRTS[pick(SHIRTS)]
+            local shirtColour = Color3.fromHex(shirt.colour)
+            colour(
+                char,
+                shirtColour,
+                Color3.fromHex(SKIN[pick(SKIN)]),
+                shirtColour,
+                Color3.fromHex(TROUSERS[pick(TROUSERS)])
+            )
+        end
         local hum = char:FindFirstChildOfClass("Humanoid")
         if not hum then
+            char:Destroy()
             continue
         end
-        colour(
-            char,
-            Color3.fromHex(shirts[i] or pick(SHIRTS)),
-            Color3.fromHex(pick(SKIN)),
-            Color3.fromHex(pick(TROUSERS))
-        )
 
         -- "(NPC)" cannot appear in a Roblox username, so names never collide
-        local name = (names[i] or ("Guest" .. i)) .. " (NPC)"
+        local name = (given or ("Guest" .. i)) .. " (NPC)"
         char.Name = name
         hum.DisplayName = name
         hum.Health = hum.MaxHealth

@@ -44,6 +44,10 @@ Theme.CLUE = {
 }
 
 Theme.TAP_MIN = 44 -- px, every touch target
+-- How far in from the right edge the leftmost touch action button may reach.
+-- InputController keeps its buttons inside it; SocialController budgets the
+-- dock against it, so the two never overlap on a short screen.
+Theme.TOUCH_REACH = 250
 Theme.NARROW_WIDTH = 500 -- px, Evidence collapses to two lines below this
 
 return Theme

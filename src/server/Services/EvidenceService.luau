@@ -9,7 +9,6 @@ local EventService = require(script.Parent.EventService)
 local AudioService = require(script.Parent.AudioService)
 local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
-local Participant = require(script.Parent.Participant)
 
 local EvidenceService = {}
 local bodies = {} -- [Model] = clueData
@@ -243,9 +242,10 @@ function EvidenceService:DropBody(victim: Player, killer: Player)
     local pos = char:GetPivot().Position
     local killerPos = killer.Character and killer.Character:GetPivot().Position or pos
 
-    -- A real player falls as their own avatar, laid flat at the death spot; an
-    -- NPC (or a clone that could not be made) falls back to the generic figure.
-    local model: any = if not Participant.IsBot(victim) then buildAvatarCorpse(char) else nil
+    -- Anyone falls as their own avatar, laid flat at the death spot: a player's,
+    -- or a dressed NPC's. A clone that could not be made falls back to the
+    -- generic figure.
+    local model: any = buildAvatarCorpse(char)
     if model then
         model.Name = victim.DisplayName
         model:AddTag("Body")

@@ -185,10 +185,167 @@ local function dragStop()
     Remotes.RequestDrag:FireServer(nil, true)
 end
 
+---------------------------------------------------------------- Touch buttons
+-- On-screen buttons are our own, not ContextActionService's. Its buttons take
+-- fixed pixel offsets inside Roblox's touch frame, and on a large tablet the
+-- jump button is bigger and sits further in, so fixed offsets land on top of
+-- it. These are laid out from the real jump button's screen rectangle, in an
+-- arc to its left, and laid out again whenever it or the viewport moves.
+local touchGui: ScreenGui? = nil
+local touchButtons: { [string]: TextButton } = {}
+local touchOrder: { string } = {}
+local heldInputs: { [InputObject]: () -> () } = {}
+local watchedJump: GuiObject? = nil
+
+local function isPress(input: InputObject): boolean
+    return input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseButton1
+end
+
+local function touchRoot(): ScreenGui
+    if touchGui then
+        return touchGui
+    end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "ColdCaseTouch"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true -- so absolute screen coordinates map straight onto it
+    gui.DisplayOrder = 5
+    gui.Parent = plr:WaitForChild("PlayerGui")
+    touchGui = gui
+    return gui
+end
+
+local function jumpButton(): GuiObject?
+    local pg = plr:FindFirstChild("PlayerGui")
+    local touch = pg and pg:FindFirstChild("TouchGui")
+    local frame = touch and touch:FindFirstChild("TouchControlFrame")
+    local jump = frame and frame:FindFirstChild("JumpButton")
+    return if jump and jump:IsA("GuiObject") then jump else nil
+end
+
+local layoutTouch -- defined below; the jump-button watcher calls it
+
+local function watchJump(jump: GuiObject)
+    if watchedJump == jump then
+        return
+    end
+    watchedJump = jump
+    jump:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+        layoutTouch()
+    end)
+    jump:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        layoutTouch()
+    end)
+end
+
+layoutTouch = function()
+    local n = #touchOrder
+    if n == 0 then
+        return
+    end
+    local cam = workspace.CurrentCamera
+    local vp = if cam then cam.ViewportSize else Vector2.new(1280, 720)
+    local jump = jumpButton()
+    local centre: Vector2, jumpSize: number
+    if jump and jump.AbsoluteSize.X > 0 then
+        watchJump(jump)
+        centre = jump.AbsolutePosition + jump.AbsoluteSize / 2
+        jumpSize = jump.AbsoluteSize.X
+    else
+        -- Roblox's own sizes: 120px on a large screen, 70px on a phone
+        jumpSize = if math.min(vp.X, vp.Y) > 600 then 120 else 70
+        centre = Vector2.new(vp.X - 20 - jumpSize / 2, vp.Y - 20 - jumpSize / 2)
+    end
+    local gap = 12
+    -- From due left of the jump button round to straight above it
+    local step = if n > 1 then math.min(math.rad(50), math.rad(90) / (n - 1)) else 0
+    local size = math.clamp(math.floor(jumpSize * 0.62), Theme.TAP_MIN, 80)
+    local radius = 0
+    while true do
+        radius = jumpSize / 2 + size / 2 + gap
+        if n > 1 then
+            -- Never so tight that neighbours on the arc touch
+            radius = math.max(radius, (size + gap) / (2 * math.sin(step / 2)))
+        end
+        -- The leftmost button stays inside the reach the social dock budgets for
+        local reach = vp.X - (centre.X - radius - size / 2)
+        if reach <= Theme.TOUCH_REACH or size <= Theme.TAP_MIN then
+            break
+        end
+        size -= 2
+    end
+    for i, name in touchOrder do
+        local button = touchButtons[name]
+        if button then
+            local angle = math.pi - (i - 1) * step
+            local at = centre + Vector2.new(math.cos(angle), -math.sin(angle)) * radius
+            button.Size = UDim2.fromOffset(size, size)
+            button.Position = UDim2.fromOffset(math.round(at.X), math.round(at.Y))
+            button.TextSize = math.floor(size * 0.22)
+        end
+    end
+end
+
+local function touchButton(name: string, title: string, onBegin, onEnd): TextButton
+    local b = Instance.new("TextButton")
+    b.Name = name
+    b.Text = title
+    b.FontFace = Theme.DISPLAY
+    b.TextColor3 = Theme.INK
+    b.BackgroundColor3 = Theme.GROUND
+    b.BackgroundTransparency = 0.25
+    b.AutoButtonColor = false
+    b.AnchorPoint = Vector2.new(0.5, 0.5)
+    b.BorderSizePixel = 0
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0.5, 0)
+    corner.Parent = b
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Theme.INK
+    stroke.Transparency = 0.55
+    stroke.Thickness = 2
+    stroke.Parent = b
+    b.InputBegan:Connect(function(input)
+        if not isPress(input) then
+            return
+        end
+        b.BackgroundTransparency = 0.05
+        if onEnd then
+            heldInputs[input] = function()
+                b.BackgroundTransparency = 0.25
+                onEnd()
+            end
+        else
+            task.delay(0.12, function()
+                b.BackgroundTransparency = 0.25
+            end)
+        end
+        onBegin()
+    end)
+    return b
+end
+
+-- A held button (DRAG) releases wherever the finger lifts, on the button or off it
+UserInputService.InputEnded:Connect(function(input)
+    local release = heldInputs[input]
+    if release then
+        heldInputs[input] = nil
+        release()
+    end
+end)
+
+local function setTouchTitle(name: string, title: string)
+    local button = touchButtons[name]
+    if button then
+        button.Text = title
+    end
+end
+
 ---------------------------------------------------------------- Bindings
 -- Keyboard and gamepad always; on-screen buttons only for the actions the
 -- current role can take, sized to the 44px tap minimum.
-local function bind(name: string, onBegin, onEnd, title: string, position: UDim2, ...: Enum.KeyCode)
+local function bind(name: string, onBegin, onEnd, title: string, ...: Enum.KeyCode)
     ContextActionService:BindAction(name, function(_, inputState)
         if inputState == Enum.UserInputState.Begin then
             onBegin()
@@ -199,13 +356,12 @@ local function bind(name: string, onBegin, onEnd, title: string, position: UDim2
             onEnd()
         end
         return Enum.ContextActionResult.Sink
-    end, true, ...)
-    ContextActionService:SetTitle(name, title)
-    ContextActionService:SetPosition(name, position)
-    local button = ContextActionService:GetButton(name)
-    if button then
-        local size = math.max(Theme.TAP_MIN, 64)
-        button.Size = UDim2.fromOffset(size, size)
+    end, false, ...)
+    if UserInputService.TouchEnabled then
+        local button = touchButton(name, title, onBegin, onEnd)
+        button.Parent = touchRoot()
+        touchButtons[name] = button
+        table.insert(touchOrder, name)
     end
 end
 
@@ -216,52 +372,41 @@ local function refreshBindings()
     for _, name in ACTIONS do
         ContextActionService:UnbindAction(name)
     end
+    for _, button in touchButtons do
+        button:Destroy()
+    end
+    touchButtons, touchOrder = {}, {}
+    for input, release in heldInputs do
+        heldInputs[input] = nil
+        release()
+    end
     if not role then
         return
     end
-    bind(
-        "CC_Interact",
-        interact,
-        nil,
-        "USE",
-        UDim2.new(1, -170, 1, -190),
-        Enum.KeyCode.E,
-        Enum.KeyCode.ButtonX
-    )
-    bind(
-        "CC_Drag",
-        dragStart,
-        dragStop,
-        "DRAG",
-        UDim2.new(1, -250, 1, -120),
-        Enum.KeyCode.F,
-        Enum.KeyCode.ButtonB
-    )
+    bind("CC_Interact", interact, nil, "USE", Enum.KeyCode.E, Enum.KeyCode.ButtonX)
+    bind("CC_Drag", dragStart, dragStop, "DRAG", Enum.KeyCode.F, Enum.KeyCode.ButtonB)
     if role == "sheriff" or role == "hero" then
-        bind("CC_Fire", fire, nil, "FIRE", UDim2.new(1, -95, 1, -250), Enum.KeyCode.ButtonR2)
+        bind("CC_Fire", fire, nil, "FIRE", Enum.KeyCode.ButtonR2)
     elseif role == "murderer" then
-        bind(
-            "CC_Throw",
-            throw,
-            nil,
-            "THROW",
-            UDim2.new(1, -95, 1, -250),
-            Enum.KeyCode.Q,
-            Enum.KeyCode.ButtonY
-        )
+        bind("CC_Throw", throw, nil, "THROW", Enum.KeyCode.Q, Enum.KeyCode.ButtonY)
     elseif role == "medic" then
-        bind(
-            "CC_Revive",
-            revive,
-            nil,
-            "REVIVE",
-            UDim2.new(1, -95, 1, -250),
-            Enum.KeyCode.R,
-            Enum.KeyCode.ButtonY
-        )
+        bind("CC_Revive", revive, nil, "REVIVE", Enum.KeyCode.R, Enum.KeyCode.ButtonY)
     end
+    layoutTouch()
 end
 ClientState.On("role", refreshBindings)
+
+local camera = workspace.CurrentCamera
+if camera then
+    camera:GetPropertyChangedSignal("ViewportSize"):Connect(layoutTouch)
+end
+-- Roblox builds its touch frame after the character spawns, so lay out again
+-- once the jump button exists
+plr:WaitForChild("PlayerGui").DescendantAdded:Connect(function(d)
+    if d.Name == "JumpButton" then
+        task.defer(layoutTouch)
+    end
+end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -340,7 +485,7 @@ task.spawn(function()
         end
         if role and title ~= shownTitle then
             shownTitle = title
-            ContextActionService:SetTitle("CC_Interact", title)
+            setTouchTitle("CC_Interact", title)
         end
     end
 end)
