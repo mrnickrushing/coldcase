@@ -21,7 +21,7 @@ local TEMPLATE = {
     streak = 0,
     onboarding = { freeCrate = false, rankGift = false },
     hintsSeen = {}, -- { move = true, examine = true, coins = true }
-    settings = { waitForPlayers = false }, -- lobby: wait for real players instead of NPCs
+    settings = { waitForPlayers = false }, -- no longer read: the lobby choice is per visit now
 }
 
 local Store = ProfileStore.New("PlayerData_v1", TEMPLATE)
@@ -77,7 +77,11 @@ function DataService:Load(plr: Player)
     }
     profiles[plr] = profile
     plr:SetAttribute("Rank", data.rank) -- public: shown in the lobby list
-    plr:SetAttribute("WaitForPlayers", data.settings.waitForPlayers) -- public: RoundService and the lobby read it
+    -- Every visit starts on PLAY NOW: a round fills with NPCs and starts by
+    -- itself. WAIT FOR PLAYERS is chosen in the lobby for this visit only -
+    -- saved to the profile, one tap by a child left the game never starting
+    -- for them again. Public: RoundService and the lobby read it.
+    plr:SetAttribute("WaitForPlayers", false)
 
     local reward = self:ApplyLoginStreak(data)
     if reward > 0 then
@@ -112,14 +116,12 @@ function DataService:GetSession(plr: Player): Session?
     return sessions[plr]
 end
 
--- The lobby choice: wait for a round of real players, or play now with NPCs
+-- The lobby choice: wait for a round of real players, or play now with NPCs.
+-- Held on the player for this visit; see Load for why it is not saved.
 function DataService:SetWaitForPlayers(plr: Player, on: boolean)
-    local data = self:Get(plr)
-    if not data then
-        return
+    if self:Get(plr) then
+        plr:SetAttribute("WaitForPlayers", on)
     end
-    data.settings.waitForPlayers = on
-    plr:SetAttribute("WaitForPlayers", on)
 end
 
 function DataService:SetScreen(plr: Player, screen: string)
