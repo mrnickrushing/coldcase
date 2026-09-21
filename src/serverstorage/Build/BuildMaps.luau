@@ -1543,8 +1543,15 @@ end
 return function(opts: { force: boolean? }?)
     local force = opts and opts.force
 
+    -- A Maps folder saved into the place file is generated code that has
+    -- stopped tracking its generator. Reused blindly, every later change in
+    -- this file is ignored in silence and the maps keep the shape they had
+    -- when they were baked - a geometry fix can be written, reviewed, merged
+    -- and published without ever reaching the game. So a baked folder is kept
+    -- only while it still belongs to the running place; republish and it is
+    -- rebuilt. A folder built at run time never outlives its server.
     local folder = ServerStorage:FindFirstChild("Maps")
-    if folder and not force then
+    if folder and not force and folder:GetAttribute("PlaceVersion") == game.PlaceVersion then
         return folder
     end
     if folder then
@@ -1614,6 +1621,7 @@ return function(opts: { force: boolean? }?)
         body.Parent = ServerStorage
     end
 
+    folder:SetAttribute("PlaceVersion", game.PlaceVersion)
     folder.Parent = ServerStorage
     return folder
 end

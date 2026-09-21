@@ -414,6 +414,15 @@ return function(parent: Instance?)
             b.Visible = false
             stroke(b, Color3.fromHex("2b323c"))
         end
+
+        -- Which build is actually running. A place has to be republished
+        -- before a merged fix reaches anyone, and from a phone there is no
+        -- way to tell whether that happened - a fix looks identical to a fix
+        -- that never shipped. PlaceVersion is the number Roblox steps on
+        -- every publish, so this line settles it without a rejoin.
+        local build = text("Build", root, "", 10, Theme.DIM, Theme.MONO)
+        build.TextXAlignment = Enum.TextXAlignment.Right
+        build.Position = UDim2.new(0, 0, 0, 600)
         out.lobby = g
     end
 
