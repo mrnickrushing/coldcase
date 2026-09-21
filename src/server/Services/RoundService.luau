@@ -112,9 +112,9 @@ function RoundService:GetState(): string
     return state
 end
 
--- Who would play if the countdown ended now. Everyone who has not pressed
--- WAIT plays, including those who have not chosen at all; only a pressed
--- PLAY NOW can start the countdown (Lobby.Plan has the reasoning).
+-- Who would play if the countdown ended now: those who pressed PLAY NOW,
+-- and only them. Everyone else waits in the lobby for real players
+-- (Lobby.Plan has the reasoning).
 --
 -- Counted by loaded profile, not by character. A player who resets has no
 -- Character for a moment, and counting them out for that moment idled the
@@ -123,26 +123,17 @@ end
 -- no character once the round loads is dropped there, by the `present`
 -- filter in Advance.
 local function lobbyPlan(): (Lobby.Plan, { Player }, { Player })
-    local humans = {}
+    local humans, playing = {}, {}
     for _, plr in Players:GetPlayers() do
         if DataService:Get(plr) then
             table.insert(humans, plr)
-        end
-    end
-    local playing, ready, waiting = {}, 0, 0
-    for _, plr in humans do
-        local wait = plr:GetAttribute("WaitForPlayers")
-        if wait == true then
-            waiting += 1
-        else
-            table.insert(playing, plr)
-            if wait == false then
-                ready += 1
+            if plr:GetAttribute("WaitForPlayers") == false then
+                table.insert(playing, plr)
             end
         end
     end
     local plan =
-        Lobby.Plan(#humans, ready, waiting, minPlayers(), Config.BOT_FILL_TO, Config.BOTS_ENABLED)
+        Lobby.Plan(#humans, #playing, minPlayers(), Config.BOT_FILL_TO, Config.BOTS_ENABLED)
     return plan, humans, playing
 end
 

@@ -46,7 +46,7 @@ and orb pets.
 | To… | Do this |
 | --- | --- |
 | Save data between sessions | Game Settings → Security → *Enable Studio Access to API Services*. Without it ProfileStore uses its mock store and nothing persists. |
-| Test solo | Press Play: NPCs fill the round to 6 while fewer than 4 people are in (`Config.BOTS_ENABLED`). Each player picks PLAY NOW · NPCS or WAIT FOR PLAYERS in the lobby (for that visit; a fresh join is undecided and no countdown runs until someone presses PLAY NOW, decided by `Shared/Lobby`); waiters sit out NPC rounds, the undecided play along. `MinPlayers = 1` on `ServerStorage` still lowers the minimum in Studio. |
+| Test solo | Press Play: NPCs fill the round to 6 while fewer than 4 people are in (`Config.BOTS_ENABLED`). Every join starts on WAIT FOR PLAYERS, so nobody is swept into a round before their group is in; each player presses PLAY NOW · NPCS when ready (for that visit; decided by `Shared/Lobby`), the countdown runs once someone has, and only those who pressed are in the round. `MinPlayers = 1` on `ServerStorage` still lowers the minimum in Studio. |
 | Preview a live-ops day | Set a number attribute `LiveOpsDay` on `ServerStorage`, e.g. `28` to open trading or `14` for Season One (Studio only). |
 | Run a full round | Test → Clients and Servers → 4 players. |
 | Get the intended lighting | Set `Lighting.Technology` to *Future* in the Properties panel. Scripts cannot set it. |
@@ -138,7 +138,7 @@ docs/                        store page and store art, assets, analytics, live-o
 reads.
 
 ```
-INTERMISSION           lobby menus: map vote, crate, collection, trading; idles until someone presses PLAY NOW, then a 15s countdown and NPCs fill the round
+INTERMISSION           lobby menus: map vote, crate, collection, trading; everyone waits until they press PLAY NOW, then a 15s countdown and NPCs fill the round around those who did
 LOADING      (3s)      loading screen names the scene; voted map clones as this begins; spawn with separation
 REVEAL       (4s)      roles sent one player at a time, movement locked
 ACTIVE      (110–150s) one map event at 45%, snitch reveal and Last Call at 30s left

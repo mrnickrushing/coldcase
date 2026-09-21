@@ -165,41 +165,33 @@ end)
 
 ---------------------------------------------------------------- Lobby
 test("enough real players start a full round with no NPCs", function()
-    local plan = Lobby.Plan(4, 0, 0, 4, 6, true)
+    local plan = Lobby.Plan(4, 0, 4, 6, true)
     eq(plan.start, true, "start")
     eq(plan.full, true, "full")
     eq(plan.npcs, 0, "npcs")
 end)
 
-test("a solo player who plays now gets NPCs to fill the round", function()
-    local plan = Lobby.Plan(1, 1, 0, 4, 6, true)
+test("a solo player who presses play now gets NPCs to fill the round", function()
+    local plan = Lobby.Plan(1, 1, 4, 6, true)
     eq(plan.start, true, "start")
     eq(plan.full, false, "full")
     eq(plan.npcs, 5, "npcs")
 end)
 
-test("a solo player who chose to wait keeps waiting", function()
-    eq(Lobby.Plan(1, 0, 1, 4, 6, true).start, false)
+test("nobody has pressed play now: everyone waits, no countdown", function()
+    eq(Lobby.Plan(1, 0, 4, 6, true).start, false)
+    eq(Lobby.Plan(3, 0, 4, 6, true).start, false)
 end)
 
-test("nobody has chosen yet: no countdown, no round", function()
-    eq(Lobby.Plan(3, 0, 0, 4, 6, true).start, false)
-end)
-
-test("players who have not chosen play in a round someone else asked for", function()
-    local plan = Lobby.Plan(3, 1, 0, 4, 6, true)
+test("only those who pressed play now are in the round; NPCs fill the rest", function()
+    local plan = Lobby.Plan(3, 1, 4, 6, true)
     eq(plan.start, true, "start")
-    eq(plan.npcs, 3, "npcs fill around all three")
-end)
-
-test("only WAIT sits a round out; NPCs fill its seat", function()
-    local plan = Lobby.Plan(3, 1, 2, 4, 6, true)
-    eq(plan.start, true, "start")
-    eq(plan.npcs, 5, "npcs")
+    eq(plan.npcs, 5, "npcs around the one who pressed")
+    eq(Lobby.Plan(3, 3, 4, 6, true).npcs, 3, "npcs around all three once they all press")
 end)
 
 test("with NPCs disabled a quiet server waits", function()
-    eq(Lobby.Plan(2, 2, 0, 4, 6, false).start, false)
+    eq(Lobby.Plan(2, 2, 4, 6, false).start, false)
 end)
 
 ---------------------------------------------------------------- MapPlan
