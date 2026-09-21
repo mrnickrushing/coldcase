@@ -12,6 +12,7 @@ workflow — no manual Studio setup is needed.)
 
 ## Solo with NPCs — press Play, no attributes
 
+- [ ] A fresh join shows the opening screen (case file, name, bar) until the HUD is up, then the lobby with "CHOOSE HOW TO PLAY" and no countdown; pressing PLAY NOW · NPCS starts a 15s countdown
 - [x] Lobby countdown reads "STARTS IN Ns · 5 NPCS JOIN" and the round starts with five NPCs
 - [x] WAIT FOR PLAYERS highlights, the countdown switches to "WAITING FOR PLAYERS · 1/4", no round starts, and the choice is still set after a rejoin
 - [x] PLAY NOW · NPCS switches back and the next intermission starts an NPC round
@@ -124,11 +125,11 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 62 ticked, 17 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 62 ticked, 18 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
-| Testable in Studio, not yet done | 0 | Empty now: the last one, line 113's lamp douse and furniture routing, was walked in a solo session. Several other lines are verified by reading the code but sit in the buckets below, because reading is not observing. |
+| Testable in Studio, not yet done | 1 | The new join flow (the line above the NPC countdown): the opening screen, then a lobby reading CHOOSE HOW TO PLAY with no countdown until PLAY NOW · NPCS is pressed. Everything that sat here before was walked in a solo session. Several other lines are verified by reading the code but sit in the buckets below, because reading is not observing. |
 | Needs two or more real players | 8 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Empty, and it should stay empty. This Studio session runs as the game owner with VIP, RADIO and EMOTE BUNDLE all showing OWNED, so pass-gated paths are exercisable solo and nothing belongs here on purchase grounds alone. The lines that once sat here moved to the second-client bucket, where their real blocker is. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |

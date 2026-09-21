@@ -77,11 +77,12 @@ function DataService:Load(plr: Player)
     }
     profiles[plr] = profile
     plr:SetAttribute("Rank", data.rank) -- public: shown in the lobby list
-    -- Every visit starts on PLAY NOW: a round fills with NPCs and starts by
-    -- itself. WAIT FOR PLAYERS is chosen in the lobby for this visit only -
-    -- saved to the profile, one tap by a child left the game never starting
-    -- for them again. Public: RoundService and the lobby read it.
-    plr:SetAttribute("WaitForPlayers", false)
+    -- Every visit starts undecided: no attribute until they press PLAY NOW
+    -- (false) or WAIT FOR PLAYERS (true) in the lobby, and the countdown does
+    -- not run on their account until they have. The choice is held for this
+    -- visit only - saved to the profile, one tap by a child left the game
+    -- never starting for them again. Public: RoundService and the lobby read it.
+    plr:SetAttribute("WaitForPlayers", nil)
 
     local reward = self:ApplyLoginStreak(data)
     if reward > 0 then

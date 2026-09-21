@@ -120,8 +120,10 @@ local function renderPlayers()
         row.LayoutOrder = i
         local rank = other:GetAttribute("Rank") or 1
         row.PlayerName.Text = other == plr and (other.DisplayName .. " (you)") or other.DisplayName
-        row.Rank.Text = if other:GetAttribute("WaitForPlayers") == true
+        local wait = other:GetAttribute("WaitForPlayers")
+        row.Rank.Text = if wait == true
             then ("RANK %d · WAITING"):format(rank)
+            elseif wait == nil then ("RANK %d · CHOOSING"):format(rank)
             else ("RANK %d · %s"):format(rank, string.upper(Progression.TitleFor(rank)))
         row.Trade.Visible = other ~= plr
         -- PolicyService: paid item trading is not allowed in some regions
@@ -238,12 +240,14 @@ for key, entry in STORE do
     end)
 end
 
--- Play now with NPCs, or wait for a round of real players. Saved to the profile.
-local waiting = plr:GetAttribute("WaitForPlayers") == true
+-- Play now with NPCs, or wait for a round of real players. Three states, held
+-- for this visit: true is WAIT, false is PLAY NOW, nil is not chosen yet. The
+-- countdown does not run on this player's account until they choose.
+local choice = plr:GetAttribute("WaitForPlayers")
 
 local function renderMode()
     local mode = lobby.Header.Mode
-    for _, entry in { { mode.PlayNow, not waiting }, { mode.Wait, waiting } } do
+    for _, entry in { { mode.PlayNow, choice == false }, { mode.Wait, choice == true } } do
         local b, on = entry[1], entry[2]
         b.BackgroundColor3 = if on then Theme.AMBER else RAISED
         b.TextColor3 = if on then Theme.GROUND else Theme.SOFT
@@ -252,10 +256,10 @@ local function renderMode()
 end
 
 local function choose(wait: boolean)
-    if wait == waiting then
+    if wait == choice then
         return
     end
-    waiting = wait
+    choice = wait
     renderMode()
     Remotes.RequestLobbyMode:FireServer(if wait then "wait" else "play")
 end
@@ -266,7 +270,7 @@ lobby.Header.Mode.Wait.Activated:Connect(function()
     choose(true)
 end)
 plr:GetAttributeChangedSignal("WaitForPlayers"):Connect(function()
-    waiting = plr:GetAttribute("WaitForPlayers") == true
+    choice = plr:GetAttribute("WaitForPlayers")
     renderMode()
 end)
 renderMode()
@@ -283,25 +287,39 @@ RunService.Heartbeat:Connect(function(dt)
         math.ceil((ReplicatedStorage:GetAttribute("RoundEnds") or 0) - workspace:GetServerTimeNow())
     )
     local everyone = Players:GetPlayers()
-    local ready = 0
+    local ready, waiting = 0, 0
     for _, other in everyone do
-        local waits = if other == plr then waiting else other:GetAttribute("WaitForPlayers") == true
-        if not waits then
+        local wait = if other == plr then choice else other:GetAttribute("WaitForPlayers")
+        if wait == true then
+            waiting += 1
+        elseif wait == false then
             ready += 1
         end
     end
-    -- Mirrors RoundService, which decides with the same Lobby.Plan
-    local plan =
-        Lobby.Plan(#everyone, ready, Config.MIN_PLAYERS, Config.BOT_FILL_TO, Config.BOTS_ENABLED)
+    -- Mirrors RoundService, which decides with the same Lobby.Plan. RoundEnds
+    -- is 0 while the lobby idles with no countdown.
+    local plan = Lobby.Plan(
+        #everyone,
+        ready,
+        waiting,
+        Config.MIN_PLAYERS,
+        Config.BOT_FILL_TO,
+        Config.BOTS_ENABLED
+    )
+    local armed = (ReplicatedStorage:GetAttribute("RoundEnds") or 0) > 0
     local label
     if ClientState.GetRoundState() ~= "INTERMISSION" then
         label = ("ROUND IN PROGRESS · %ds"):format(left)
+    elseif not armed then
+        label = if choice == true
+            then ("WAITING FOR PLAYERS · %d/%d"):format(#everyone, Config.MIN_PLAYERS)
+            else "CHOOSE HOW TO PLAY"
     elseif plan.full then
         label = ("STARTS IN %ds"):format(left)
-    elseif plan.start and not waiting then
-        label = ("STARTS IN %ds · %d NPCS JOIN"):format(left, plan.npcs)
+    elseif choice == true then
+        label = ("NEXT ROUND IN %ds · YOU ARE WAITING"):format(left)
     else
-        label = ("WAITING FOR PLAYERS · %d/%d"):format(#everyone, Config.MIN_PLAYERS)
+        label = ("STARTS IN %ds · %d NPCS JOIN"):format(left, plan.npcs)
     end
     lobby.Header.Countdown.Text = label
 end)
