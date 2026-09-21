@@ -225,8 +225,10 @@ for _, font in { DISPLAY, MONO } do
     table.insert(assets, sample)
 end
 if Shared then
-    local ok, cues = pcall(require, Shared:WaitForChild("SoundCues", PATIENCE))
-    if ok and type(cues) == "table" then
+    -- SoundCues returns { cues = ..., ROLE_PITCH = ... }; the cues are what to cache
+    local ok, module = pcall(require, Shared:WaitForChild("SoundCues", PATIENCE))
+    local cues = if ok and type(module) == "table" then (module :: any).cues else nil
+    if type(cues) == "table" then
         for _, cue in cues :: { [string]: any } do
             if type(cue) == "table" and type(cue.soundId) == "string" and cue.soundId ~= "" then
                 local sound = Instance.new("Sound")
