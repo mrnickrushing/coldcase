@@ -265,17 +265,25 @@ local function isOutdoor(plan: Plan, ch: string): boolean
     return region ~= nil and region.outdoor == true
 end
 
--- A ^ cell is part of whatever space it opens down into
-local function outdoorBelow(plan: Plan, f: number, x: number, z: number): boolean
+-- A ^ cell is part of whatever space it opens down into: the first cell under
+-- it that is not itself open. Nil if the hole falls through the bottom of the
+-- building or onto ground nobody stands on. BuildMaps paints the walls around
+-- a stairwell in the colours of the room it looks down into.
+function MapPlan.OpensInto(plan: Plan, f: number, x: number, z: number): string?
     local g = f - 1
     while g >= 1 do
         local ch = MapPlan.Cell(plan, g, x, z)
         if ch ~= "^" then
-            return MapPlan.IsWalkable(ch) and isOutdoor(plan, ch)
+            return if MapPlan.IsWalkable(ch) then ch else nil
         end
         g -= 1
     end
-    return false
+    return nil
+end
+
+local function outdoorBelow(plan: Plan, f: number, x: number, z: number): boolean
+    local ch = MapPlan.OpensInto(plan, f, x, z)
+    return ch ~= nil and isOutdoor(plan, ch)
 end
 
 -- What stands between two neighbouring cells on one floor

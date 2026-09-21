@@ -37,24 +37,42 @@ end
 -- One revive per round, 3s channel, only on a body nobody has examined yet.
 -- The channel breaks if the medic moves: standing still beside a body in a
 -- room with a murderer is the whole cost of the ability.
+--
+-- Every refusal below says why. They used to return in silence, so a medic
+-- pressing REVIVE on an NPC's body, or on one someone had already examined,
+-- saw nothing happen at all and read the button as broken.
+local function deny(plr: Player, reason: string)
+    Remotes.Notify:FireClient(plr, reason)
+end
+
 function AbilityService:RequestRevive(plr: Player, model: Instance)
-    if RoleService:Get(plr) ~= "medic" or reviveUsed[plr] or channeling[plr] then
+    -- Role and liveness are not explained: only a live medic's client ever
+    -- sends this, so anything else is a forged call and is told nothing.
+    if RoleService:Get(plr) ~= "medic" or channeling[plr] or not round:IsAlive(plr) then
         return
     end
-    if not round:IsAlive(plr) then
-        return
+    if reviveUsed[plr] then
+        return deny(plr, "You have already used your revive this round.")
     end
     local body = EvidenceService:GetBody(model)
-    if not body or body.examined or body.draggedBy then
+    if not body then
         return
+    end
+    if body.examined then
+        return deny(plr, "That body has already been examined. It is too late for them.")
+    end
+    if body.draggedBy then
+        return deny(plr, "Someone is moving that body.")
     end
     local victim = body.victimPlayer
     if
-        not (victim and victim.Parent == Players and round:IsParticipant(victim))
-        or Participant.IsBot(victim) -- an NPC has no player to bring back
-        or not near(plr, model)
+        Participant.IsBot(victim) -- an NPC has no player to bring back
+        or not (victim and victim.Parent == Players and round:IsParticipant(victim))
     then
-        return
+        return deny(plr, "There is nobody to bring back.")
+    end
+    if not near(plr, model) then
+        return deny(plr, "Stand closer to the body.")
     end
 
     channeling[plr] = true
@@ -102,8 +120,14 @@ function AbilityService:StartDrag(plr: Player, model: Instance)
         return
     end
     local body = EvidenceService:GetBody(model)
-    if not body or body.draggedBy or not near(plr, model) then
+    if not body then
         return
+    end
+    if body.draggedBy then
+        return deny(plr, "Someone else has hold of that body.")
+    end
+    if not near(plr, model) then
+        return deny(plr, "Stand closer to the body.")
     end
 
     pendingDrag[plr] = model

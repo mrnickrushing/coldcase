@@ -10,6 +10,7 @@ local Remotes = game.ReplicatedStorage.Remotes
 local RoleService = {}
 local roles = {} -- [Player] = "murderer" | "sheriff" | "innocent" | "hero" | ...
 local sinceMurderer = {} -- [Player] = rounds since they last held the knife
+local PISTOL_ROLES: { [string]: boolean } = Config.PISTOL_ROLES :: any
 
 -- Weighted draw so nobody gets the knife twice in three rounds while a
 -- friend goes ten without it.
@@ -144,8 +145,14 @@ function RoleService:Get(plr: Player): string?
     return roles[plr]
 end
 
+-- Taking the fallen sheriff's pistol. Every unarmed civilian role can, not
+-- innocents alone (Config.PISTOL_ROLES): a medic or snitch who cannot pick up
+-- the gun in front of them reads as a broken game. Whoever takes it becomes
+-- the hero, so a medic trades the rest of their kit for the revolver -
+-- CombatService tells them so.
 function RoleService:MakeHero(plr: Player): boolean
-    if roles[plr] ~= "innocent" then
+    local role = roles[plr]
+    if not (role and PISTOL_ROLES[role]) then
         return false
     end
     roles[plr] = "hero"

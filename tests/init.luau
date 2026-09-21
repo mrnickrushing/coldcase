@@ -245,6 +245,31 @@ for name, plan in MapPlan.MAPS do
         end
     end)
 
+    -- Every wall face a player can see from inside has a room whose colour
+    -- BuildMaps can line it with. A face onto a ^ cell takes the colour of the
+    -- room the hole opens down into; if that came back nil, the map would show
+    -- the bare exterior shell indoors - raw brick across a stairwell, starting
+    -- at the storey line, which reads as a floor that has dropped away.
+    test(name .. " no wall shows its bare shell indoors", function()
+        local analysis = MapPlan.Analyse(plan)
+        for _, edge in analysis.edges do
+            if edge.kind ~= "wall" and edge.kind ~= "exterior" and edge.kind ~= "door" then
+                continue
+            end
+            local ax, az, bx, bz = MapPlan.EdgeCells(edge)
+            for _, side in { { ch = edge.a, x = ax, z = az }, { ch = edge.b, x = bx, z = bz } } do
+                if side.ch ~= "^" then
+                    continue
+                end
+                local below = MapPlan.OpensInto(plan, edge.floor, side.x, side.z)
+                assert(
+                    below ~= nil and plan.regions[below] ~= nil,
+                    ("floor %d cell %d,%d opens onto nothing"):format(edge.floor, side.x, side.z)
+                )
+            end
+        end
+    end)
+
     test(name .. " spawns and coins reach every floor", function()
         local analysis = MapPlan.Analyse(plan)
         local points = MapPlan.Points(plan, analysis)
