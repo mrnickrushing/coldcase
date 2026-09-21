@@ -130,16 +130,22 @@ local function interact()
             return
         end
     end
+    -- The pistol is offered before the body, because a fallen sheriff leaves
+    -- both in the same spot and EXAMINE_RANGE (14) reaches further than
+    -- GUN_PICKUP_RANGE (10): anyone close enough to take the gun is also close
+    -- enough to examine the body, so the body won every press and the gun
+    -- could not be picked up at all. Taking it destroys it, so the press after
+    -- examines as usual.
+    if canTakePistol(role) and nearestTagged("DroppedPistol", pos, Config.GUN_PICKUP_RANGE) then
+        if cooled("pickup", 0.5) then
+            Remotes.RequestPickup:FireServer()
+        end
+        return
+    end
     local body = nearestTagged("Body", pos, Config.EXAMINE_RANGE)
     if body then
         if cooled("examine", Config.EXAMINE_TIME) then
             Remotes.RequestExamine:FireServer(body)
-        end
-        return
-    end
-    if canTakePistol(role) and nearestTagged("DroppedPistol", pos, Config.GUN_PICKUP_RANGE) then
-        if cooled("pickup", 0.5) then
-            Remotes.RequestPickup:FireServer()
         end
     end
 end
@@ -488,16 +494,22 @@ task.spawn(function()
                 and nearestTagged("Revivable", pos, Config.EXAMINE_RANGE) ~= nil
             local pistol = canTakePistol(role)
                 and nearestTagged("DroppedPistol", pos, Config.GUN_PICKUP_RANGE) ~= nil
+            -- Same order as interact(): the pistol first, since it and the
+            -- body it fell beside are both within reach at once. A medic keeps
+            -- the revive hint either way - REVIVE is its own button.
             if role == "murderer" and nearestTarget(pos) then
                 text, title = use .. " · stab", "STAB"
+            elseif pistol and revivable then
+                text = ("%s · revive   %s · take pistol"):format(touch and "REVIVE" or "R", use)
+                title = "TAKE"
+            elseif pistol then
+                text, title = use .. " · take pistol", "TAKE"
             elseif revivable then
                 text = ("%s · revive   %s · examine"):format(touch and "REVIVE" or "R", use)
                 title = "EXAMINE"
             elseif body then
                 text = ("%s · examine   %s · drag"):format(use, touch and "DRAG" or "F")
                 title = "EXAMINE"
-            elseif pistol then
-                text, title = use .. " · take pistol", "TAKE"
             elseif role == "sheriff" or role == "hero" then
                 text = (touch and "FIRE" or "Click") .. " · shoot"
             elseif role == "murderer" then
