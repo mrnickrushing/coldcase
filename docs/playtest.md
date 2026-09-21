@@ -12,6 +12,7 @@ workflow — no manual Studio setup is needed.)
 
 ## Solo with NPCs — press Play, no attributes
 
+- [ ] A fresh join shows the opening screen (case file, name, bar) until the HUD is up, then the lobby with "CHOOSE HOW TO PLAY" and no countdown; pressing PLAY NOW · NPCS starts a 15s countdown
 - [x] Lobby countdown reads "STARTS IN Ns · 5 NPCS JOIN" and the round starts with five NPCs
 - [x] WAIT FOR PLAYERS highlights, the countdown switches to "WAITING FOR PLAYERS · 1/4", no round starts, and the choice is still set after a rejoin
 - [x] PLAY NOW · NPCS switches back and the next intermission starts an NPC round

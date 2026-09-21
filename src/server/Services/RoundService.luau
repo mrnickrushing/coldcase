@@ -23,7 +23,7 @@ local LightingMood = require(script.Parent.LightingMood)
 local Lobby = require(ReplicatedStorage.Shared.Lobby)
 
 local RoundService = {}
-local state, stateEnds = "INTERMISSION", 0
+local state, stateEnds = "INTERMISSION", math.huge -- no deadline until the lobby arms
 local participants: { Player } = {} -- Players and NPCs (see Participant)
 local pendingBots = 0
 local votes: { [Player]: string } = {}
@@ -49,6 +49,17 @@ local function setState(new: string, duration: number)
     ReplicatedStorage:SetAttribute("RoundState", new)
     for _, plr in Players:GetPlayers() do
         DataService:SetScreen(plr, (new == "ACTIVE" and not alive[plr]) and "SPECTATING" or new)
+    end
+end
+
+-- The lobby with no countdown: nobody has asked for a round yet. RoundEnds
+-- is 0, which the lobby reads as "choose how to play" rather than a timer.
+local function idleLobby()
+    state, stateEnds = "INTERMISSION", math.huge
+    ReplicatedStorage:SetAttribute("RoundEnds", 0)
+    ReplicatedStorage:SetAttribute("RoundState", "INTERMISSION")
+    for _, plr in Players:GetPlayers() do
+        DataService:SetScreen(plr, "INTERMISSION")
     end
 end
 
@@ -99,6 +110,52 @@ end
 
 function RoundService:GetState(): string
     return state
+end
+
+-- Who would play if the countdown ended now. Everyone who has not pressed
+-- WAIT plays, including those who have not chosen at all; only a pressed
+-- PLAY NOW can start the countdown (Lobby.Plan has the reasoning).
+local function lobbyPlan(self): (Lobby.Plan, { Player }, { Player })
+    local humans = self:GetEligible()
+    local playing, ready, waiting = {}, 0, 0
+    for _, plr in humans do
+        local wait = plr:GetAttribute("WaitForPlayers")
+        if wait == true then
+            waiting += 1
+        else
+            table.insert(playing, plr)
+            if wait == false then
+                ready += 1
+            end
+        end
+    end
+    local plan =
+        Lobby.Plan(#humans, ready, waiting, minPlayers(), Config.BOT_FILL_TO, Config.BOTS_ENABLED)
+    return plan, humans, playing
+end
+
+-- The countdown runs only while a round could start: someone has pressed
+-- PLAY NOW, or enough real players are in. Until then the lobby idles with
+-- no deadline, so a fresh join meets the choice before any timer. It starts
+-- the moment the plan allows and stops the moment it no longer does.
+local lobbyArmed = false
+function RoundService:ArmLobby()
+    local plan = lobbyPlan(self)
+    if plan.start and not lobbyArmed then
+        lobbyArmed = true
+        setState("INTERMISSION", Config.INTERMISSION)
+    elseif not plan.start and lobbyArmed then
+        lobbyArmed = false
+        idleLobby()
+    end
+end
+
+-- Back to the lobby between rounds: idle, then arm at once if the players
+-- who chose PLAY NOW are still here, so a chosen game keeps going by itself
+function RoundService:EnterLobby()
+    lobbyArmed = false
+    idleLobby()
+    self:ArmLobby()
 end
 
 function RoundService:TimeLeft(): number
@@ -369,7 +426,7 @@ local function recover(self, err: string)
     diedConnections = {}
     alive = {}
     pendingBots = 0
-    setState("INTERMISSION", Config.INTERMISSION)
+    self:EnterLobby()
 end
 
 function RoundService:Start()
@@ -391,6 +448,9 @@ end
 -- event, a snitch reveal or a sightline sample erroring would kill the loop
 -- just as dead as Advance would.
 function RoundService:Tick()
+    if state == "INTERMISSION" then
+        self:ArmLobby()
+    end
     if os.clock() < stateEnds then
         if state == "ACTIVE" then
             local left = stateEnds - os.clock()
@@ -420,23 +480,16 @@ end
 
 function RoundService:Advance()
     if state == "INTERMISSION" then
-        local humans = self:GetEligible()
-        local ready = {}
-        for _, plr in humans do
-            if plr:GetAttribute("WaitForPlayers") ~= true then
-                table.insert(ready, plr)
-            end
-        end
-        -- A quiet server fills the round with NPCs for whoever chose to play
-        -- now; players who chose to wait stay in the lobby for real players
-        local plan =
-            Lobby.Plan(#humans, #ready, minPlayers(), Config.BOT_FILL_TO, Config.BOTS_ENABLED)
+        -- A quiet server fills the round with NPCs around whoever is playing;
+        -- players who chose to wait stay in the lobby for real players
+        local plan, humans, playing = lobbyPlan(self)
         if not plan.start then
-            setState("INTERMISSION", Config.INTERMISSION)
+            self:EnterLobby() -- someone changed their mind at the last second
             return
         end
-        participants = if plan.full then humans else ready
+        participants = if plan.full then humans else playing
         pendingBots = plan.npcs
+        lobbyArmed = false
         -- Clone the map now, so the LOADING window covers its replication
         self:BuildVotedMap()
         setState("LOADING", Config.LOADING_TIME)
@@ -466,7 +519,7 @@ function RoundService:Advance()
                 built:Destroy()
             end
             Remotes.Notify:FireAllClients("The NPCs could not join. Trying again next round.")
-            setState("INTERMISSION", Config.INTERMISSION)
+            self:EnterLobby()
             return
         end
         if joined > 0 then
@@ -510,7 +563,7 @@ function RoundService:Advance()
         self:Resolve("innocents", "time")
     elseif state == "RESOLUTION" then
         self:ReturnToLobby()
-        setState("INTERMISSION", Config.INTERMISSION)
+        self:EnterLobby()
     end
 end
 
