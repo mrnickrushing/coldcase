@@ -1498,6 +1498,9 @@ test("a baked map folder cannot outlive the publish it was baked in", function()
     )
 end)
 
+---------------------------------------------------------------- Built maps
+require("./tests/BuiltMaps")(test)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")

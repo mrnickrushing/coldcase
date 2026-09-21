@@ -674,6 +674,17 @@ local function finish(theme, lookName: string): (number, Color3, Enum.Material)
     return WALL, Color3.fromHex(theme.wall), theme.wallMaterial
 end
 
+-- Where a wall stands, measured from its floor surface: from the middle of
+-- its own slab to the middle of the slab above, so both ends are buried.
+-- Built from the floor surface up to the storey line instead, a wall's top
+-- face lay in the very plane of the floor above, and wherever nothing stood
+-- on it upstairs the two z-fought - a flickering line of brick through the
+-- floor along every wall below, reading as a floor that had sunk. Ended at
+-- the slab's underside it would flicker with the ceiling the same way. Where
+-- there is no slab - a stairwell, a double-height hall - the storeys' walls
+-- meet edge to edge with no bare strip between.
+local WALL_BOTTOM, WALL_TOP = -SLAB / 2, H - SLAB / 2
+
 -- `grounded` is false for a stretch with no floor at its foot: the shell
 -- carrying on past a stairwell or a double-height room.
 local function solidWall(
@@ -689,8 +700,8 @@ local function solidWall(
     part(
         if lookName == "shell" then "Shell" else "Wall",
         model,
-        boxSize(along, length + t, H, t),
-        CFrame.new(mid + Vector3.new(0, H / 2, 0)),
+        boxSize(along, length + t, WALL_TOP - WALL_BOTTOM, t),
+        CFrame.new(mid + Vector3.new(0, (WALL_BOTTOM + WALL_TOP) / 2, 0)),
         colour,
         material
     )
@@ -787,8 +798,12 @@ local function doorway(model: Model, plan, theme, e)
         part(
             "Wall",
             model,
-            boxSize(along, to - from, H, t),
-            CFrame.new(centre + along * (sign * (from + to) / 2) + Vector3.new(0, H / 2, 0)),
+            boxSize(along, to - from, WALL_TOP - WALL_BOTTOM, t),
+            CFrame.new(
+                centre
+                    + along * (sign * (from + to) / 2)
+                    + Vector3.new(0, (WALL_BOTTOM + WALL_TOP) / 2, 0)
+            ),
             colour,
             material
         )
@@ -796,8 +811,8 @@ local function doorway(model: Model, plan, theme, e)
     part(
         "Lintel",
         model,
-        boxSize(along, DOOR_W, H - DOOR_H, t),
-        CFrame.new(centre + Vector3.new(0, (DOOR_H + H) / 2, 0)),
+        boxSize(along, DOOR_W, WALL_TOP - DOOR_H, t),
+        CFrame.new(centre + Vector3.new(0, (DOOR_H + WALL_TOP) / 2, 0)),
         colour,
         material
     )
@@ -892,6 +907,58 @@ local function skins(model: Model, plan, analysis, theme)
     if not theme.liner then
         return
     end
+    local function solid(edge): boolean
+        return edge ~= nil
+            and (edge.kind == "wall" or edge.kind == "exterior" or edge.kind == "door")
+    end
+    local function edgeAt(f: number, axis: string, line: number, index: number)
+        return analysis.byId[MapPlan.EdgeId(f, axis, line, index)]
+    end
+    -- How far past the cell corner this side's skin must run at one end of
+    -- the wall. Every wall is built half a thickness long at each end so two
+    -- meeting at a corner close it, and inside a room that overlap is buried
+    -- in the other wall. Where the wall turns away from this room instead -
+    -- the inside corner of an L-shaped corridor - or stops at a railing or
+    -- open floor, that stub stands out into the room with its bare brick
+    -- showing, so the skin runs on to wrap it.
+    local function extension(e, side, low: boolean): (number, boolean)
+        local ax, az, bx, bz = MapPlan.EdgeCells(e)
+        local cx, cz, ox, oz = ax, az, bx, bz
+        if side.face > 0 then
+            cx, cz, ox, oz = bx, bz, ax, az
+        end
+        local own, other, onward
+        if e.axis == "x" then
+            local vz = if low then e.index - 1 else e.index
+            own = edgeAt(e.floor, "z", vz, cx)
+            other = edgeAt(e.floor, "z", vz, ox)
+            onward = edgeAt(e.floor, "x", e.line, if low then e.index - 1 else e.index + 1)
+        else
+            local vx = if low then e.index - 1 else e.index
+            own = edgeAt(e.floor, "x", vx, cz)
+            other = edgeAt(e.floor, "x", vx, oz)
+            onward = edgeAt(e.floor, "z", e.line, if low then e.index - 1 else e.index + 1)
+        end
+        if solid(own) then
+            return 0, false
+        end
+        if solid(onward) then
+            -- The wall carries straight on. Where a shell gives way to a
+            -- thinner wall its stub reaches half a shell past the corner,
+            -- and its face lands exactly flush with the thin wall's skin,
+            -- flickering. The thicker skin runs on over the stub instead.
+            local t = finish(theme, look(plan, e))
+            local onwardT = finish(theme, look(plan, onward))
+            return if onwardT < t then t / 2 else 0, false
+        end
+        if solid(other) then
+            -- Reach the outer face of the skin on the wall the corner turns into
+            local t = finish(theme, look(plan, other))
+            return t / 2 + 0.45, false
+        end
+        local t = finish(theme, look(plan, e))
+        return t / 2, true
+    end
     for _, e in analysis.edges do
         if e.kind ~= "exterior" and e.kind ~= "wall" and e.kind ~= "door" then
             continue
@@ -906,6 +973,7 @@ local function skins(model: Model, plan, analysis, theme)
             { ch = e.a, face = -1, x = ax, z = az },
             { ch = e.b, face = 1, x = bx, z = bz },
         }
+        local capped = false
         for _, side in sides do
             -- A ^ cell is the head of the room below, so line the wall in that
             -- room's colour. Skipping it left the bare shell facing indoors:
@@ -923,43 +991,66 @@ local function skins(model: Model, plan, analysis, theme)
             local colour = Color3.fromHex((style and style.wall) or theme.wall)
             local material = (style and style.wallMaterial) or theme.wallMaterial
             local offset = across * side.face * (thickness / 2 + 0.15)
-            if e.kind == "door" then
-                -- Skin the jambs and the panel over the door too, so a room's
-                -- colour runs unbroken past its doorways
-                local from, to = DOOR_W / 2, CELL / 2
-                for _, sign in { -1, 1 } do
-                    deco(
-                        "WallSkin",
-                        model,
-                        boxSize(along, to - from, H - SLAB, 0.3),
-                        CFrame.new(
-                            centre
-                                + offset
-                                + along * (sign * (from + to) / 2)
-                                + Vector3.new(0, (H - SLAB) / 2, 0)
-                        ),
-                        colour,
-                        material
-                    )
-                end
+            -- The skin covers the wall's whole height, slab to slab. Its ends
+            -- are buried in the slabs where there are any, and where there
+            -- are none - a stairwell, a double-height hall - it meets the
+            -- skin of the storey above with no bare strip between.
+            local bottom, top = WALL_BOTTOM, WALL_TOP
+            local extLow, freeLow = extension(e, side, true)
+            local extHigh, freeHigh = extension(e, side, false)
+            local function panel(from: number, to: number)
                 deco(
                     "WallSkin",
                     model,
-                    boxSize(along, DOOR_W, H - SLAB - DOOR_H, 0.3),
-                    CFrame.new(centre + offset + Vector3.new(0, (DOOR_H + H - SLAB) / 2, 0)),
-                    colour,
-                    material
-                )
-            else
-                deco(
-                    "WallSkin",
-                    model,
-                    boxSize(along, CELL, H - SLAB, 0.3),
-                    CFrame.new(centre + offset + Vector3.new(0, (H - SLAB) / 2, 0)),
+                    boxSize(along, to - from, top - bottom, 0.3),
+                    CFrame.new(
+                        centre
+                            + offset
+                            + along * ((from + to) / 2)
+                            + Vector3.new(0, (bottom + top) / 2, 0)
+                    ),
                     colour,
                     material
                 )
             end
+            if e.kind == "door" then
+                -- Skin the jambs and the panel over the door too, so a room's
+                -- colour runs unbroken past its doorways
+                local from, to = DOOR_W / 2, CELL / 2
+                panel(-to - extLow, -from)
+                panel(from, to + extHigh)
+                deco(
+                    "WallSkin",
+                    model,
+                    boxSize(along, DOOR_W, top - DOOR_H, 0.3),
+                    CFrame.new(centre + offset + Vector3.new(0, (DOOR_H + top) / 2, 0)),
+                    colour,
+                    material
+                )
+            else
+                panel(-CELL / 2 - extLow, CELL / 2 + extHigh)
+            end
+            -- A wall that simply stops - at a railing, or beside open floor -
+            -- shows its end. Cap it in the first room's colour, wide enough
+            -- to close both side skins.
+            for _, at in { { sign = -1, free = freeLow }, { sign = 1, free = freeHigh } } do
+                if capped or not at.free then
+                    continue
+                end
+                deco(
+                    "WallSkin",
+                    model,
+                    boxSize(along, 0.3, top - bottom, thickness + 0.9),
+                    CFrame.new(
+                        centre
+                            + along * (at.sign * (CELL / 2 + thickness / 2 + 0.15))
+                            + Vector3.new(0, (bottom + top) / 2, 0)
+                    ),
+                    colour,
+                    material
+                )
+            end
+            capped = true
         end
     end
 end
