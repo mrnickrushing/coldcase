@@ -115,8 +115,20 @@ end
 -- Who would play if the countdown ended now. Everyone who has not pressed
 -- WAIT plays, including those who have not chosen at all; only a pressed
 -- PLAY NOW can start the countdown (Lobby.Plan has the reasoning).
-local function lobbyPlan(self): (Lobby.Plan, { Player }, { Player })
-    local humans = self:GetEligible()
+--
+-- Counted by loaded profile, not by character. A player who resets has no
+-- Character for a moment, and counting them out for that moment idled the
+-- lobby and restarted the whole countdown when they were back - in a full
+-- lobby, repeated resets kept a round from ever starting. Whoever still has
+-- no character once the round loads is dropped there, by the `present`
+-- filter in Advance.
+local function lobbyPlan(): (Lobby.Plan, { Player }, { Player })
+    local humans = {}
+    for _, plr in Players:GetPlayers() do
+        if DataService:Get(plr) then
+            table.insert(humans, plr)
+        end
+    end
     local playing, ready, waiting = {}, 0, 0
     for _, plr in humans do
         local wait = plr:GetAttribute("WaitForPlayers")
@@ -140,7 +152,7 @@ end
 -- the moment the plan allows and stops the moment it no longer does.
 local lobbyArmed = false
 function RoundService:ArmLobby()
-    local plan = lobbyPlan(self)
+    local plan = lobbyPlan()
     if plan.start and not lobbyArmed then
         lobbyArmed = true
         setState("INTERMISSION", Config.INTERMISSION)
@@ -185,16 +197,6 @@ end
 
 function RoundService:BotFromCharacter(model: Instance): any
     return BotService:FromCharacter(model)
-end
-
-function RoundService:GetEligible(): { Player }
-    local out = {}
-    for _, plr in Players:GetPlayers() do
-        if plr.Character and DataService:Get(plr) then
-            table.insert(out, plr)
-        end
-    end
-    return out
 end
 
 -- Returns whether the vote was accepted, so the caller can tell a real vote
@@ -482,7 +484,7 @@ function RoundService:Advance()
     if state == "INTERMISSION" then
         -- A quiet server fills the round with NPCs around whoever is playing;
         -- players who chose to wait stay in the lobby for real players
-        local plan, humans, playing = lobbyPlan(self)
+        local plan, humans, playing = lobbyPlan()
         if not plan.start then
             self:EnterLobby() -- someone changed their mind at the last second
             return
