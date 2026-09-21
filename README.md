@@ -77,7 +77,7 @@ A successful publish answers `{"versionNumber": N}`. Publishing from Studio (Alt
 | Stab / examine / take pistol | E | USE | everyone (server decides; the pistol goes to any unarmed civilian role) |
 | Throw knife | Q | THROW | murderer |
 | Shoot | Click | FIRE (aims at screen centre) | sheriff, hero |
-| Revive a body | R | REVIVE | medic (a person's body, once a round, before anyone examines it) |
+| Revive a body | R | REVIVE | medic (any body, player or NPC, once a round, before anyone examines it) |
 | Drag a body | hold F | hold DRAG | everyone |
 | Switch spectated player | ← / → | ‹ › | the dead |
 | Radio message / emote | dock above the evidence log | same | Radio / Emote pass owners |
