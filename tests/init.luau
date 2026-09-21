@@ -1472,6 +1472,32 @@ test("the lobby wait choice lasts a visit, not a profile", function()
     )
 end)
 
+------------------------------------------------------- generated maps
+-- ServerStorage.Maps is generated code. Saved into the place file and reused
+-- on sight, it stops tracking the generator that made it: a geometry fix can
+-- be written, reviewed, merged and published while the game keeps serving the
+-- shape the maps had when they were baked, and nothing anywhere looks wrong -
+-- the code is right, the tests pass, and the map is old. Reusing it only
+-- while it belongs to the running place is what keeps that from happening,
+-- and dropping the check back to "the folder exists" would read as a sensible
+-- saving.
+test("a baked map folder cannot outlive the publish it was baked in", function()
+    local src = fs.readFile("src/serverstorage/Build/BuildMaps.luau")
+    local entry = src:match("\nreturn function%(opts.*")
+    assert(entry, "could not find the BuildMaps entry point")
+
+    assert(
+        entry:find('GetAttribute("PlaceVersion")', 1, true),
+        "BuildMaps reuses a saved Maps folder without checking which publish it "
+            .. "belongs to, so a map change can never reach a place that has one"
+    )
+    assert(
+        entry:find('SetAttribute("PlaceVersion"', 1, true),
+        "BuildMaps no longer stamps the folder it builds, so the check above can "
+            .. "never match and the maps would be rebuilt on every server start"
+    )
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")

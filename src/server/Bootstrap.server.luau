@@ -179,4 +179,6 @@ end)
 
 require(Services.BotService):Prepare() -- builds the NPC rig before the first round
 RoundService:Start()
-print("[ColdCase] server up")
+-- The place version says which publish this server is running, so a fix that
+-- was merged but never published can be told apart from one that did not work.
+print(("[ColdCase] server up · place version %d"):format(game.PlaceVersion))

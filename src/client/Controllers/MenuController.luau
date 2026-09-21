@@ -273,6 +273,9 @@ plr:GetAttributeChangedSignal("WaitForPlayers"):Connect(function()
 end)
 renderMode()
 
+-- Stamped once: the place version cannot change under a running client.
+lobby.Build.Text = ("BUILD %d"):format(game.PlaceVersion)
+
 local countdownAccum = 0
 RunService.Heartbeat:Connect(function(dt)
     countdownAccum += dt
