@@ -43,6 +43,13 @@ return {
     GUN_COOLDOWN = 0.75,
     GUN_RANGE = 300,
     GUN_PICKUP_RANGE = 10,
+    -- Who may take a fallen sheriff's pistol and become the hero. Every
+    -- unarmed civilian role, not innocents alone: a medic or a snitch standing
+    -- over the gun could see it and not pick it up, which reads as the game
+    -- being broken. A murderer never takes it, and a sheriff or hero is armed
+    -- already. The client greys the prompt by this table and the server
+    -- re-checks it in RoleService:MakeHero.
+    PISTOL_ROLES = { innocent = true, medic = true, snitch = true },
     SHERIFF_MISFIRE_KILLS_SELF = true,
     WEAPON_DRAW_TIME = 1.2, -- weapons are carried hidden and drawn only while used
 

@@ -16,6 +16,7 @@ local plr = Players.LocalPlayer
 local InputController = {}
 local lastUse: { [string]: number } = {}
 local ability: { text: string, untilTime: number }? = nil
+local reviveSpent = false -- the medic gets one per round; the prompt stops offering it
 
 local function isTouch(): boolean
     return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
@@ -41,6 +42,15 @@ end
 
 local function inRound(): boolean
     return ClientState.GetRoundState() == "ACTIVE" and ClientState.role ~= nil
+end
+
+-- The unarmed civilian roles, the ones that may take a fallen sheriff's
+-- pistol. The server decides for real (RoleService:MakeHero); this only keeps
+-- the prompt honest. It used to read `role == "innocent"`, so a medic or a
+-- snitch standing on the gun got no prompt and USE did nothing at all.
+local PISTOL_ROLES: { [string]: boolean } = Config.PISTOL_ROLES :: any
+local function canTakePistol(role: string?): boolean
+    return role ~= nil and PISTOL_ROLES[role] == true
 end
 
 -- A Player, or an NPC's character model (the server resolves either)
@@ -120,16 +130,22 @@ local function interact()
             return
         end
     end
+    -- The pistol is offered before the body, because a fallen sheriff leaves
+    -- both in the same spot and EXAMINE_RANGE (14) reaches further than
+    -- GUN_PICKUP_RANGE (10): anyone close enough to take the gun is also close
+    -- enough to examine the body, so the body won every press and the gun
+    -- could not be picked up at all. Taking it destroys it, so the press after
+    -- examines as usual.
+    if canTakePistol(role) and nearestTagged("DroppedPistol", pos, Config.GUN_PICKUP_RANGE) then
+        if cooled("pickup", 0.5) then
+            Remotes.RequestPickup:FireServer()
+        end
+        return
+    end
     local body = nearestTagged("Body", pos, Config.EXAMINE_RANGE)
     if body then
         if cooled("examine", Config.EXAMINE_TIME) then
             Remotes.RequestExamine:FireServer(body)
-        end
-        return
-    end
-    if role == "innocent" and nearestTagged("DroppedPistol", pos, Config.GUN_PICKUP_RANGE) then
-        if cooled("pickup", 0.5) then
-            Remotes.RequestPickup:FireServer()
         end
     end
 end
@@ -164,8 +180,19 @@ local function revive()
     if ClientState.role ~= "medic" or not (pos and inRound()) then
         return
     end
-    local body = nearestTagged("Body", pos, Config.EXAMINE_RANGE)
-    if body and cooled("revive", 1) then
+    -- Only a body a revive could still land on carries Revivable: a person's,
+    -- not an NPC's, and not one somebody has already examined. Pressing REVIVE
+    -- over anything else now says why rather than doing nothing.
+    local body = nearestTagged("Revivable", pos, Config.EXAMINE_RANGE)
+    if reviveSpent or not body then
+        local text = if reviveSpent
+            then "Revive already used"
+            elseif nearestTagged("Body", pos, Config.EXAMINE_RANGE) then "Nothing to bring back"
+            else "No body within reach"
+        ability = { text = text, untilTime = os.clock() + 1.5 }
+        return
+    end
+    if cooled("revive", 1) then
         Remotes.RequestRevive:FireServer(body)
     end
 end
@@ -176,7 +203,11 @@ local function dragStart()
         return
     end
     local body = nearestTagged("Body", pos, Config.EXAMINE_RANGE)
-    if body and cooled("drag", 0.3) then
+    if not body then
+        ability = { text = "No body within reach", untilTime = os.clock() + 1.5 }
+        return
+    end
+    if cooled("drag", 0.3) then
         Remotes.RequestDrag:FireServer(body, false)
     end
 end
@@ -380,6 +411,7 @@ local function refreshBindings()
         heldInputs[input] = nil
         release()
     end
+    reviveSpent = false -- a fresh role is a fresh round
     if not role then
         return
     end
@@ -422,6 +454,7 @@ Remotes.AbilityState.OnClientEvent:Connect(function(kind: string, duration: numb
     elseif kind == "revive_failed" then
         ability = { text = "Revive broken — you moved", untilTime = now + 1.5 }
     elseif kind == "revive_done" then
+        reviveSpent = true
         ability = { text = "Revived", untilTime = now + 1.5 }
     elseif kind == "drag_start" then
         ability = { text = "Taking hold…", untilTime = now + duration }
@@ -456,18 +489,27 @@ task.spawn(function()
             local touch = isTouch()
             local use = touch and "USE" or "E"
             local body = nearestTagged("Body", pos, Config.EXAMINE_RANGE)
+            local revivable = role == "medic"
+                and not reviveSpent
+                and nearestTagged("Revivable", pos, Config.EXAMINE_RANGE) ~= nil
+            local pistol = canTakePistol(role)
+                and nearestTagged("DroppedPistol", pos, Config.GUN_PICKUP_RANGE) ~= nil
+            -- Same order as interact(): the pistol first, since it and the
+            -- body it fell beside are both within reach at once. A medic keeps
+            -- the revive hint either way - REVIVE is its own button.
             if role == "murderer" and nearestTarget(pos) then
                 text, title = use .. " · stab", "STAB"
-            elseif body and role == "medic" then
+            elseif pistol and revivable then
+                text = ("%s · revive   %s · take pistol"):format(touch and "REVIVE" or "R", use)
+                title = "TAKE"
+            elseif pistol then
+                text, title = use .. " · take pistol", "TAKE"
+            elseif revivable then
                 text = ("%s · revive   %s · examine"):format(touch and "REVIVE" or "R", use)
                 title = "EXAMINE"
             elseif body then
                 text = ("%s · examine   %s · drag"):format(use, touch and "DRAG" or "F")
                 title = "EXAMINE"
-            elseif
-                role == "innocent" and nearestTagged("DroppedPistol", pos, Config.GUN_PICKUP_RANGE)
-            then
-                text, title = use .. " · take pistol", "TAKE"
             elseif role == "sheriff" or role == "hero" then
                 text = (touch and "FIRE" or "Click") .. " · shoot"
             elseif role == "murderer" then

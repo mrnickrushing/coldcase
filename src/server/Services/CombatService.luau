@@ -232,11 +232,17 @@ function CombatService:RequestPickup(plr: Player)
     if (char:GetPivot().Position - gun.Position).Magnitude > reach then
         return
     end
+    -- Read before MakeHero, which overwrites it: a medic who takes the pistol
+    -- becomes the hero and gives up the revive, and nothing else would say so.
+    local was = RoleService:Get(plr)
     if RoleService:MakeHero(plr) then
         AudioService:Emit("gun_pickup", gun.Position)
         CombatFx.Hero(char:GetPivot().Position)
         gun:Destroy()
         droppedGun = nil
+        if was ~= "innocent" and not Participant.IsBot(plr) then
+            Remotes.Notify:FireClient(plr, "You took the pistol. You are the hero now.")
+        end
     end
 end
 

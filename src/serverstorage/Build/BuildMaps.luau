@@ -674,13 +674,16 @@ local function finish(theme, lookName: string): (number, Color3, Enum.Material)
     return WALL, Color3.fromHex(theme.wall), theme.wallMaterial
 end
 
+-- `grounded` is false for a stretch with no floor at its foot: the shell
+-- carrying on past a stairwell or a double-height room.
 local function solidWall(
     model: Model,
     theme,
     lookName: string,
     mid: Vector3,
     along: Vector3,
-    length: number
+    length: number,
+    grounded: boolean
 )
     local t, colour, material = finish(theme, lookName)
     part(
@@ -696,14 +699,20 @@ local function solidWall(
         -- With a liner, every trim stands proud of the wall skin (0.3 deep); a
         -- cornice flush with the skin face z-fights it and flickers.
         local band = t + (if theme.liner then 1 else 0.4)
-        deco(
-            "Skirting",
-            model,
-            boxSize(along, length, 1, band),
-            CFrame.new(mid + Vector3.new(0, 0.5, 0)),
-            wood,
-            M.Wood
-        )
+        -- A skirting and a dado rail are set by the height of a floor, so they
+        -- belong only on a stretch that has one. Carried on past a stairwell
+        -- they hung in mid-air along the storey line, reading as a floor that
+        -- had dropped away. A cornice belongs to the ceiling and always runs.
+        if grounded then
+            deco(
+                "Skirting",
+                model,
+                boxSize(along, length, 1, band),
+                CFrame.new(mid + Vector3.new(0, 0.5, 0)),
+                wood,
+                M.Wood
+            )
+        end
         deco(
             "Cornice",
             model,
@@ -712,7 +721,7 @@ local function solidWall(
             wood,
             M.Wood
         )
-        if theme.dado then
+        if theme.dado and grounded then
             deco(
                 "DadoRail",
                 model,
@@ -841,7 +850,7 @@ local function edges(model: Model, plan, analysis, theme)
         if run.look == "railing" then
             railing(model, theme, mid, along, length)
         else
-            solidWall(model, theme, run.look, mid, along, length)
+            solidWall(model, theme, run.look, mid, along, length, run.grounded)
         end
         run = nil
     end
@@ -853,9 +862,14 @@ local function edges(model: Model, plan, analysis, theme)
             flush()
         else
             local lookName = look(plan, e)
+            -- Nobody stands at the foot of a wall with a hole on both sides of
+            -- it: the shell carrying on past a stairwell. A run breaks where
+            -- that changes, so its trim is right along its whole length.
+            local grounded = MapPlan.IsWalkable(e.a) or MapPlan.IsWalkable(e.b)
             if
                 run
                 and run.look == lookName
+                and run.grounded == grounded
                 and run.edge.floor == e.floor
                 and run.edge.axis == e.axis
                 and run.edge.line == e.line
@@ -865,7 +879,7 @@ local function edges(model: Model, plan, analysis, theme)
                 run.last = e.index
             else
                 flush()
-                run = { edge = e, count = 1, last = e.index, look = lookName }
+                run = { edge = e, count = 1, last = e.index, look = lookName, grounded = grounded }
             end
         end
     end
@@ -887,9 +901,22 @@ local function skins(model: Model, plan, analysis, theme)
         -- region is built shell-thick, and a skin sized for a thin wall would
         -- sit inside it with its face flush to the wall's, flickering.
         local thickness = finish(theme, look(plan, e))
-        for _, side in { { ch = e.a, face = -1 }, { ch = e.b, face = 1 } } do
-            local region = plan.regions[side.ch]
-            if not MapPlan.IsWalkable(side.ch) or (region and region.outdoor) then
+        local ax, az, bx, bz = MapPlan.EdgeCells(e)
+        local sides = {
+            { ch = e.a, face = -1, x = ax, z = az },
+            { ch = e.b, face = 1, x = bx, z = bz },
+        }
+        for _, side in sides do
+            -- A ^ cell is the head of the room below, so line the wall in that
+            -- room's colour. Skipping it left the bare shell facing indoors:
+            -- across a stairwell you looked at raw exterior brick starting at
+            -- the storey line, which reads as a floor that has dropped away.
+            local below = if side.ch == "^"
+                then MapPlan.OpensInto(plan, e.floor, side.x, side.z)
+                else nil
+            local ch: string = below or side.ch
+            local region = plan.regions[ch]
+            if not region or region.outdoor then
                 continue
             end
             local style = theme.styles[region.style]
