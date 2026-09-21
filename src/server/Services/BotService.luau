@@ -891,17 +891,26 @@ local function think(bot)
     end
 end
 
--- One NPC's mind, from now until it dies or the round ends
+-- One NPC's mind, from now until it dies, the round ends, or a newer mind
+-- takes over. The brain table is the mind's token: `think` can be mid-yield
+-- (Path:ComputeAsync) when the NPC dies, and if a medic revives it before
+-- that yield returns, the old loop would find it alive again and run on
+-- beside the one Wake started. A replaced brain ends the old loop instead,
+-- and only a loop that still owns the brain stops the body on its way out.
 local function startThinking(bot)
-    bot.brain = {}
+    local mind = {}
+    bot.brain = mind
     task.spawn(function()
-        while round:GetState() == "ACTIVE" and round:IsAlive(bot) do
+        while bot.brain == mind and round:GetState() == "ACTIVE" and round:IsAlive(bot) do
             local ok, err = pcall(think, bot)
             if not ok then
                 warn("[ColdCase] NPC " .. bot.Name .. ": " .. tostring(err))
                 task.wait(1)
             end
             task.wait(0.25)
+        end
+        if bot.brain ~= mind then
+            return -- a newer mind has the body now
         end
         local hum = humanoidOf(bot)
         if hum and hum.Health > 0 then
