@@ -52,27 +52,32 @@ function AbilityService:RequestRevive(plr: Player, model: Instance)
         return
     end
     if reviveUsed[plr] then
-        return deny(plr, "You have already used your revive this round.")
+        deny(plr, "You have already used your revive this round.")
+        return
     end
     local body = EvidenceService:GetBody(model)
     if not body then
         return
     end
     if body.examined then
-        return deny(plr, "That body has already been examined. It is too late for them.")
+        deny(plr, "That body has already been examined. It is too late for them.")
+        return
     end
     if body.draggedBy then
-        return deny(plr, "Someone is moving that body.")
+        deny(plr, "Someone is moving that body.")
+        return
     end
     local victim = body.victimPlayer
     if
         Participant.IsBot(victim) -- an NPC has no player to bring back
         or not (victim and victim.Parent == Players and round:IsParticipant(victim))
     then
-        return deny(plr, "There is nobody to bring back.")
+        deny(plr, "There is nobody to bring back.")
+        return
     end
     if not near(plr, model) then
-        return deny(plr, "Stand closer to the body.")
+        deny(plr, "Stand closer to the body.")
+        return
     end
 
     channeling[plr] = true
@@ -124,10 +129,12 @@ function AbilityService:StartDrag(plr: Player, model: Instance)
         return
     end
     if body.draggedBy then
-        return deny(plr, "Someone else has hold of that body.")
+        deny(plr, "Someone else has hold of that body.")
+        return
     end
     if not near(plr, model) then
-        return deny(plr, "Stand closer to the body.")
+        deny(plr, "Stand closer to the body.")
+        return
     end
 
     pendingDrag[plr] = model
