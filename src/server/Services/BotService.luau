@@ -438,6 +438,70 @@ local function animate(hum: Humanoid)
     end)
 end
 
+-- What an NPC wears: the dressed outfit's tones when its wardrobe built, or
+-- the plain rig's random ones. Kept on the NPC so a revive brings the same
+-- person back, and the fibre clue keeps telling the truth about their shirt.
+type Wear = { given: string?, torso: Color3, skin: Color3, arms: Color3, legs: Color3 }
+
+local function wearFor(given: string?, index: number, shirts: { Shirt }): Wear
+    local look = given and looks[given]
+    if look and given and dressed[given] then
+        local torso = Color3.fromHex(look.shirt.colour)
+        return { given = given, torso = torso, skin = look.skin, arms = look.skin, legs = look.skin }
+    end
+    local shirt = shirts[index] or SHIRTS[pick(SHIRTS)]
+    local shirtColour = Color3.fromHex(shirt.colour)
+    return {
+        given = given,
+        torso = shirtColour,
+        skin = Color3.fromHex(SKIN[pick(SKIN)]),
+        arms = shirtColour,
+        legs = Color3.fromHex(TROUSERS[pick(TROUSERS)]),
+    }
+end
+
+-- A body in that wear: the dressed outfit if there is one, else the plain rig
+local function bodyFor(wear: Wear, template: Model): Model
+    local outfit = if wear.given then dressed[wear.given] else nil
+    local char = if outfit then outfit:Clone() else template:Clone()
+    colour(char, wear.torso, wear.skin, wear.arms, wear.legs)
+    return char
+end
+
+-- Makes a body this NPC's: its name and tag, server-owned physics, animation,
+-- and the tidy-up after it dies. Shared by Spawn and Respawn.
+local function inhabit(bot, char: Model, hum: Humanoid, pivot: CFrame)
+    local name = bot.Name
+    char.Name = name
+    hum.DisplayName = name
+    hum.Health = hum.MaxHealth
+    char:SetAttribute("BotName", name)
+    char:AddTag("BotCharacter")
+    char:PivotTo(pivot)
+    char.Parent = folder()
+    -- Server-owned physics: a nearby client can never fling or teleport an NPC
+    for _, part in char:GetDescendants() do
+        if part:IsA("BasePart") and part:CanSetNetworkOwnership() then
+            part:SetNetworkOwner(nil)
+        end
+    end
+    animate(hum)
+    bot.Character = char
+    byCharacter[char] = bot
+    hum.Died:Connect(function()
+        task.delay(4, function()
+            if char.Parent then
+                char:Destroy()
+            end
+            byCharacter[char] = nil
+            -- A revive may already have given them a new body; forget only this one
+            if bot.Character == char then
+                bot.Character = nil
+            end
+        end)
+    end)
+end
+
 function BotService:Spawn(count: number): { any }
     local made = {}
     if count <= 0 then
@@ -464,24 +528,8 @@ function BotService:Spawn(count: number): { any }
 
     for i = 1, count do
         local given = names[i]
-        local look = given and looks[given]
-        local outfit = given and dressed[given]
-        local char: Model
-        if look and outfit then
-            char = outfit:Clone()
-            colour(char, Color3.fromHex(look.shirt.colour), look.skin, look.skin, look.skin)
-        else
-            char = template:Clone()
-            local shirt = shirts[i] or SHIRTS[pick(SHIRTS)]
-            local shirtColour = Color3.fromHex(shirt.colour)
-            colour(
-                char,
-                shirtColour,
-                Color3.fromHex(SKIN[pick(SKIN)]),
-                shirtColour,
-                Color3.fromHex(TROUSERS[pick(TROUSERS)])
-            )
-        end
+        local wear = wearFor(given, i, shirts)
+        local char = bodyFor(wear, template)
         local hum = char:FindFirstChildOfClass("Humanoid")
         if not hum then
             char:Destroy()
@@ -490,43 +538,47 @@ function BotService:Spawn(count: number): { any }
 
         -- "(NPC)" cannot appear in a Roblox username, so names never collide
         local name = (given or ("Guest" .. i)) .. " (NPC)"
-        char.Name = name
-        hum.DisplayName = name
-        hum.Health = hum.MaxHealth
-        char:SetAttribute("BotName", name)
-        char:AddTag("BotCharacter")
-        char:PivotTo(CFrame.new(origin + Vector3.new((i - count / 2) * 4, 4, 8)))
-        char.Parent = folder()
-        -- Server-owned physics: a nearby client can never fling or teleport an NPC
-        for _, part in char:GetDescendants() do
-            if part:IsA("BasePart") and part:CanSetNetworkOwnership() then
-                part:SetNetworkOwner(nil)
-            end
-        end
-        animate(hum)
-
         local bot = setmetatable({
             IsBot = true,
             Name = name,
             DisplayName = name,
             UserId = -i,
-            Character = char,
+            Character = nil,
             Parent = Players, -- present, as far as round code is concerned
             attributes = { Rank = 1 },
             brain = {},
+            wear = wear,
         }, Bot)
-        byCharacter[char] = bot
+        inhabit(bot, char, hum, CFrame.new(origin + Vector3.new((i - count / 2) * 4, 4, 8)))
         table.insert(bots, bot)
         table.insert(made, bot)
-        hum.Died:Connect(function()
-            task.delay(4, function()
-                if char.Parent then
-                    char:Destroy()
-                end
-            end)
-        end)
     end
     return made
+end
+
+-- A medic brought an NPC back. The body it died in is a corpse now
+-- (EvidenceService cloned it at death), so it gets a fresh one in the same
+-- clothes at the spot the medic chose. RoundService:Revive then marks it
+-- alive and wakes it. False if no body could be built; the revive is not
+-- spent on that.
+function BotService:Respawn(bot, pivot: CFrame): boolean
+    local template = rig()
+    if not (bot and bot.IsBot and bot.wear and template) then
+        return false
+    end
+    local char = bodyFor(bot.wear, template)
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then
+        char:Destroy()
+        return false
+    end
+    local old = bot.Character
+    if old then
+        byCharacter[old] = nil
+        old:Destroy()
+    end
+    inhabit(bot, char, hum, pivot)
+    return true
 end
 
 function BotService:Clear()
@@ -839,26 +891,39 @@ local function think(bot)
     end
 end
 
+-- One NPC's mind, from now until it dies or the round ends
+local function startThinking(bot)
+    bot.brain = {}
+    task.spawn(function()
+        while round:GetState() == "ACTIVE" and round:IsAlive(bot) do
+            local ok, err = pcall(think, bot)
+            if not ok then
+                warn("[ColdCase] NPC " .. bot.Name .. ": " .. tostring(err))
+                task.wait(1)
+            end
+            task.wait(0.25)
+        end
+        local hum = humanoidOf(bot)
+        if hum and hum.Health > 0 then
+            stop(bot)
+        end
+    end)
+end
+
 function BotService:StartRound()
     collectPoints()
     plan = round and MapPlan.MAPS[round:MapName()] or nil
     planAnalysis = plan and MapPlan.Analyse(plan) or nil
     for _, bot in bots do
-        bot.brain = {}
-        task.spawn(function()
-            while round:GetState() == "ACTIVE" and round:IsAlive(bot) do
-                local ok, err = pcall(think, bot)
-                if not ok then
-                    warn("[ColdCase] NPC " .. bot.Name .. ": " .. tostring(err))
-                    task.wait(1)
-                end
-                task.wait(0.25)
-            end
-            local hum = humanoidOf(bot)
-            if hum and hum.Health > 0 then
-                stop(bot)
-            end
-        end)
+        startThinking(bot)
+    end
+end
+
+-- Back on its feet after a revive: RoundService calls this once the NPC is
+-- marked alive again, so the loop's first check passes
+function BotService:Wake(bot)
+    if bot and bot.IsBot and round:IsAlive(bot) then
+        startThinking(bot)
     end
 end
 

@@ -306,6 +306,29 @@ RunService.Heartbeat:Connect(function(dt)
     lobby.Header.Countdown.Text = label
 end)
 
+---------------------------------------------------------------- Loading
+-- The scene's name and a bar across the LOADING window, so the map swap reads
+-- as a beat of the game rather than a stall with a bare HUD
+local loading = guis.loading.Root
+
+local function renderLoadingName()
+    local mapName = ReplicatedStorage:GetAttribute("RoundMap")
+    loading.MapName.Text = if type(mapName) == "string"
+        then string.upper((mapName:gsub("(%l)(%u)", "%1 %2")))
+        else ""
+end
+ReplicatedStorage:GetAttributeChangedSignal("RoundMap"):Connect(renderLoadingName)
+renderLoadingName()
+
+RunService.Heartbeat:Connect(function()
+    if current ~= "loading" then
+        return
+    end
+    local left = (ReplicatedStorage:GetAttribute("RoundEnds") or 0) - workspace:GetServerTimeNow()
+    local done = math.clamp(1 - left / Config.LOADING_TIME, 0, 1)
+    loading.BarBg.Bar.Size = UDim2.fromScale(done, 1)
+end)
+
 ---------------------------------------------------------------- Results
 local BLURB = {
     killed = "The murderer is down. Everyone still standing walks out.",
@@ -893,7 +916,9 @@ local function onState()
         if current == nil or current == "results" then
             show("lobby")
         end
-    elseif st == "LOADING" or st == "REVEAL" then
+    elseif st == "LOADING" then
+        show("loading")
+    elseif st == "REVEAL" then
         show(nil)
     elseif st == "ACTIVE" then
         if ClientState.role then

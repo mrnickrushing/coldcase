@@ -182,6 +182,9 @@ function RoundService:BuildVotedMap()
 
     currentMapName = winningMap()
     mapIsIndoor = currentMapName ~= "RustedPier"
+    -- The loading screen names the scene; set before the state flips to
+    -- LOADING so no client shows the screen before it knows the name
+    ReplicatedStorage:SetAttribute("RoundMap", currentMapName)
     local template = ServerStorage.Maps:FindFirstChild(currentMapName)
     if template then
         template:Clone().Parent = folder
@@ -312,15 +315,12 @@ function RoundService:MarkDead(plr: Player, killer: Player?, method: string)
     self:CheckWinConditions(method)
 end
 
--- A medic brought them back. Their role is unchanged.
+-- A medic brought them back. Their role is unchanged. A person or an NPC:
+-- the caller has already given them a body (LoadCharacter, or
+-- BotService:Respawn), so this only marks them alive and, for an NPC, sets
+-- it thinking again.
 function RoundService:Revive(plr: Player): boolean
-    if
-        state ~= "ACTIVE"
-        or alive[plr]
-        or Participant.IsBot(plr)
-        or not self:IsParticipant(plr)
-        or not plr.Character
-    then
+    if state ~= "ACTIVE" or alive[plr] or not self:IsParticipant(plr) or not plr.Character then
         return false
     end
     alive[plr] = true
@@ -331,6 +331,9 @@ function RoundService:Revive(plr: Player): boolean
     SpectatorService:Exit(plr)
     SpectatorService:Broadcast(aliveNames())
     RoleService:Arm(plr) -- LoadCharacter took their weapon
+    if Participant.IsBot(plr) then
+        BotService:Wake(plr) -- its old mind stopped with its old body
+    end
     return true
 end
 

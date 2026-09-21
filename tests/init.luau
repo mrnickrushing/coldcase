@@ -1397,6 +1397,79 @@ test("the snitch reveal handles more than one murderer", function()
     )
 end)
 
+--------------------------------------------------------------- NPC revive
+-- Most bodies on the floor of a small server belong to an NPC, so a medic who
+-- can only revive a person has an ability that almost never fires. Reviving an
+-- NPC needs two things a person's revive does not: a new body, because an NPC
+-- has no character to reload, and a new mind, because the loop driving the old
+-- one ended the moment it died. Miss the second and the NPC gets up and stands
+-- there for the rest of the round - alive, counted, doing nothing - which
+-- reads as scenery rather than as a bug. These services need Roblox to load,
+-- so this guards the shape in source.
+test("reviving an NPC gives it a body and starts it thinking again", function()
+    local bots = fs.readFile("src/server/Services/BotService.luau")
+    local ability = fs.readFile("src/server/Services/AbilityService.luau")
+    local round = fs.readFile("src/server/Services/RoundService.luau")
+    local evidence = fs.readFile("src/server/Services/EvidenceService.luau")
+
+    for _, fn in { "Respawn", "Wake" } do
+        assert(
+            bots:find("function BotService:" .. fn, 1, true),
+            "BotService:" .. fn .. " is gone - an NPC cannot be brought back without it"
+        )
+    end
+
+    local request = ability:match("function AbilityService:RequestRevive%(.-\nend")
+    assert(request, "could not find AbilityService:RequestRevive")
+    assert(
+        request:find("BotService:Respawn", 1, true),
+        "RequestRevive no longer builds an NPC a body, so reviving one would bring "
+            .. "back a participant with no character at all"
+    )
+
+    local revive = round:match("function RoundService:Revive%(.-\nend")
+    assert(revive, "could not find RoundService:Revive")
+    assert(
+        revive:find("BotService:Wake", 1, true),
+        "RoundService:Revive no longer restarts a revived NPC's mind - it would "
+            .. "come back alive and stand still for the rest of the round"
+    )
+
+    -- and every body has to be a legal target for the button to aim at
+    local drop = evidence:match("function EvidenceService:DropBody%(.-\nend")
+    assert(drop, "could not find EvidenceService:DropBody")
+    assert(
+        drop:find('AddTag("Revivable")', 1, true),
+        "bodies no longer carry the Revivable tag, which is what the medic's button aims at"
+    )
+    assert(
+        not drop:find("IsBot", 1, true),
+        "DropBody tags NPC bodies differently again - the medic's button would skip "
+            .. "most of the bodies in an NPC-filled round"
+    )
+end)
+
+------------------------------------------------------------- lobby choice
+-- WAIT FOR PLAYERS was saved to the profile, so one tap by a child left every
+-- later visit waiting for a full lobby that a family server never reaches, and
+-- nothing on screen explained why no round ever started. It is a per-visit
+-- choice now: the profile field is no longer read, and Load starts everyone on
+-- PLAY NOW. Saving it again would look like a small tidy-up and would quietly
+-- bring back a game that never starts.
+test("the lobby wait choice lasts a visit, not a profile", function()
+    local src = fs.readFile("src/server/Services/DataService.luau")
+    local load = src:match("function DataService:Load%(.-\nend")
+    assert(load, "could not find DataService:Load")
+
+    local line = load:match('[^\n]*SetAttribute%("WaitForPlayers"[^\n]*')
+    assert(line, "Load no longer publishes WaitForPlayers, which the lobby and RoundService read")
+    assert(
+        not line:find("settings", 1, true),
+        "the lobby wait choice is restored from the profile again - one tap would "
+            .. "leave that account waiting for a full lobby on every later visit"
+    )
+end)
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
     error("tests failed")

@@ -9,7 +9,6 @@ local EventService = require(script.Parent.EventService)
 local AudioService = require(script.Parent.AudioService)
 local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
-local Participant = require(script.Parent.Participant)
 
 local EvidenceService = {}
 local bodies = {} -- [Model] = clueData
@@ -269,14 +268,12 @@ function EvidenceService:DropBody(victim: Player, killer: Player)
     end
     bloodPool(pos, roundFolder, model)
 
-    -- The medic's button needs to know which bodies it can work on, and the
-    -- client is never told who is an NPC. A body only carries this tag while a
-    -- revive could still land: an NPC has no player to bring back, and an
-    -- examined body is spent. Without it the REVIVE button lit up over every
-    -- corpse and did nothing on most of them.
-    if not Participant.IsBot(victim) then
-        model:AddTag("Revivable")
-    end
+    -- The medic's button needs to know which bodies it can work on. A body
+    -- carries this tag while a revive could still land - a person's or an
+    -- NPC's, since BotService can rebuild one - and loses it once examined,
+    -- because a read body is spent. Without it the REVIVE button lit up over
+    -- corpses it could do nothing about.
+    model:AddTag("Revivable")
 
     -- Facts the client is NEVER told until it earns them
     bodies[model] = {

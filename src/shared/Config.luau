@@ -2,7 +2,7 @@
 -- COLD CASE · every tuning number lives here
 return {
     -- Round
-    INTERMISSION = 20,
+    INTERMISSION = 15, -- the lobby: vote, then NPCs fill the round and it starts on its own
     LOADING_TIME = 3,
     REVEAL_TIME = 4,
     RESOLUTION_TIME = 6,
@@ -26,8 +26,8 @@ return {
     -- sheriff never once appeared. Matched to the second murderer so a full
     -- lobby scales both sides together instead of only the killers.
     SECOND_SHERIFF_AT = 12,
-    -- Needs two humans as well as this headcount: the medic cannot revive an
-    -- NPC, so in a solo round the role would sit dead (RoleService gates it).
+    -- A medic can revive a person or an NPC, so a solo round of NPCs still
+    -- deals the role at this headcount.
     MEDIC_AT = 6,
     SNITCH_AT = 6,
     SNITCH_REVEAL_AT = 30, -- seconds remaining

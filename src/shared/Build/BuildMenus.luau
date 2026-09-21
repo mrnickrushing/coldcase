@@ -7,6 +7,7 @@
   Every screen is a full-screen Backdrop plus a fixed-size Root with a UIScale
   named Scale, so the controller can shrink the layout to fit a phone.
     LobbyGui      map vote, player list with TRADE, rank bar, Locker, Robux store
+    LoadingGui    the scene's name and a bar across the LOADING window
     ResultsGui    reveal, roster, kill timeline, payout, near-miss
     CrateGui      Locker/Seasonal tabs, reel, published odds, direct-buy shelf
     InventoryGui  collection grid, equip, craft, effect re-roll
@@ -414,6 +415,39 @@ return function(parent: Instance?)
             stroke(b, Color3.fromHex("2b323c"))
         end
         out.lobby = g
+    end
+
+    ------------------------------------------------------------------ LOADING
+    -- Opaque, above the lobby: it hides the map swap, which floods
+    -- replication for the LOADING window. Everything sits on the centre line.
+    do
+        local g, root = screen(parent :: Instance, "LoadingGui", 6, 0)
+        local function centred(l: TextLabel, y: number, width: number, height: number)
+            l.AnchorPoint = Vector2.new(0.5, 0.5)
+            l.Position = UDim2.fromScale(0.5, y)
+            l.Size = UDim2.fromOffset(width, height)
+            l.TextXAlignment = Enum.TextXAlignment.Center
+        end
+        centred(text("Caption", root, "SETTING THE SCENE", 14, Theme.MUTED), 0.36, 600, 22)
+        local name = text("MapName", root, "", 64, Theme.INK, Theme.DISPLAY)
+        centred(name, 0.46, 900, 80)
+        centred(
+            text(
+                "Sub",
+                root,
+                "Everyone is being placed. You can move at the reveal.",
+                16,
+                Theme.SOFT
+            ),
+            0.56,
+            700,
+            24
+        )
+        local barBg = frame("BarBg", root, UDim2.fromOffset(520, 6), nil, SUNK)
+        barBg.AnchorPoint = Vector2.new(0.5, 0.5)
+        barBg.Position = UDim2.fromScale(0.5, 0.64)
+        frame("Bar", barBg, UDim2.fromScale(0, 1), nil, Theme.AMBER)
+        out.loading = g
     end
 
     ------------------------------------------------------------------ RESULTS

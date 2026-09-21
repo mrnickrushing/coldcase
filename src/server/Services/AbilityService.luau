@@ -9,6 +9,7 @@ local EvidenceService = require(script.Parent.EvidenceService)
 local EconomyService = require(script.Parent.EconomyService)
 local AudioService = require(script.Parent.AudioService)
 local Participant = require(script.Parent.Participant)
+local BotService = require(script.Parent.BotService)
 
 local AbilityService = {}
 local round: any = nil -- RoundService, handed over by BindRound
@@ -68,10 +69,7 @@ function AbilityService:RequestRevive(plr: Player, model: Instance)
         return
     end
     local victim = body.victimPlayer
-    if
-        Participant.IsBot(victim) -- an NPC has no player to bring back
-        or not (victim and victim.Parent == Players and round:IsParticipant(victim))
-    then
+    if not (victim and victim.Parent == Players and round:IsParticipant(victim)) then
         deny(plr, "There is nobody to bring back.")
         return
     end
@@ -102,18 +100,31 @@ function AbilityService:RequestRevive(plr: Player, model: Instance)
     end
     channeling[plr] = nil
 
+    -- They stand up where they fell. A person gets a fresh character; an NPC
+    -- gets a fresh body in the same clothes (the one it died in is the
+    -- corpse now). Either way the round then marks them alive.
+    local rise = CFrame.new((model :: Model):GetPivot().Position + Vector3.new(0, 3, 0))
+    if Participant.IsBot(victim) then
+        if not BotService:Respawn(victim, rise) then
+            Remotes.AbilityState:FireClient(plr, "revive_failed", 0)
+            deny(plr, "They could not be brought back. Your revive is not spent.")
+            return
+        end
+    else
+        victim:LoadCharacter()
+        local char = victim.Character
+        if char then
+            char:PivotTo(rise)
+        end
+    end
     -- Spent only on success, so a broken channel can be tried again
     reviveUsed[plr] = true
-    local spot = (model :: Model):GetPivot().Position
     EvidenceService:RemoveBody(model)
-    victim:LoadCharacter()
-    local char = victim.Character
-    if char then
-        char:PivotTo(CFrame.new(spot + Vector3.new(0, 3, 0)))
-    end
     round:Revive(victim)
     Remotes.AbilityState:FireClient(plr, "revive_done", 0)
-    Remotes.Notify:FireClient(victim, "You were revived.")
+    if not Participant.IsBot(victim) then
+        Remotes.Notify:FireClient(victim, "You were revived.")
+    end
     EconomyService:Grant(plr, Config.REVIVE_COINS, Config.REVIVE_XP, "revive")
 end
 
