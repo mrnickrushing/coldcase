@@ -165,6 +165,21 @@ local function cast(all: { Box }, px, py, pz, axis: string, sign: number, maxd: 
     return best, bestd
 end
 
+-- The first opaque box straight up from a point, and how far away it is
+local function castUp(all: { Box }, px, py, pz, maxd: number)
+    local best, bestd = nil, maxd
+    for _, b in all do
+        if b.hidden or px <= b.x0 or px >= b.x1 or pz <= b.z0 or pz >= b.z1 then
+            continue
+        end
+        local d = b.y0 - py
+        if d >= 0 and d < bestd then
+            best, bestd = b, d
+        end
+    end
+    return best, bestd
+end
+
 return function(test: (string, () -> ()) -> ())
     local folder = buildAll()
     for _, model in folder:GetChildren() do
@@ -270,6 +285,57 @@ return function(test: (string, () -> ()) -> ())
                 end
             end
         end)
+
+        -- A stairwell or a double-height hall is part of the room it opens
+        -- into, and that room looks up through it: without a ceiling panel
+        -- over the ^ cells it sees the raw underside of the slab or roof
+        -- above, a dark wood patch over every stair and a slate cave over
+        -- the Grand Hall. Only themed ceilings are checked; the Pier has none.
+        local ceilings = 0
+        for _, b in all do
+            if b.name == "Ceiling" then
+                ceilings += 1
+            end
+        end
+        if ceilings > 0 then
+            test(name .. " every indoor cell looks up at a ceiling", function()
+                for f = 1, floors do
+                    local base = (f - 1) * H
+                    for z = 1, gd do
+                        for x = 1, gw do
+                            local ch = MapPlan.Cell(plan, f, x, z)
+                            local space = if ch == "^" then MapPlan.OpensInto(plan, f, x, z) else ch
+                            if
+                                not space
+                                or not MapPlan.IsWalkable(space)
+                                or plan.regions[space].outdoor
+                            then
+                                continue
+                            end
+                            local cx = (lineAt(x - 1, gw) + lineAt(x, gw)) / 2
+                            local cz = (lineAt(z - 1, gd) + lineAt(z, gd)) / 2
+                            -- Off the centre, where a lamp cord hangs, and off
+                            -- the grid, so no ray grazes a panel's edge
+                            for _, off in { { -6, -6 }, { 6, -6 }, { -6, 6 }, { 6, 6 } } do
+                                local hit =
+                                    castUp(all, cx + off[1], base + H / 2, cz + off[2], H * floors)
+                                assert(
+                                    hit and hit.name == "Ceiling",
+                                    ("floor %d %s at %d,%d (%s) looks up at %s"):format(
+                                        f,
+                                        plan.regions[space].name,
+                                        x,
+                                        z,
+                                        ch,
+                                        hit and hit.name or "the sky"
+                                    )
+                                )
+                            end
+                        end
+                    end
+                end
+            end)
+        end
 
         test(name .. " no bare wall can be seen from any room", function()
             for f = 1, floors do
