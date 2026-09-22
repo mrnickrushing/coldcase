@@ -1498,6 +1498,28 @@ test("a baked map folder cannot outlive the publish it was baked in", function()
     )
 end)
 
+test("the lobby stands where the project puts it, clear of every map", function()
+    local serde = require("@lune/serde")
+    local project = serde.decode("json", fs.readFile("default.project.json"))
+    local floorPart = project.tree.Workspace.Lobby.LobbyFloor["$properties"]
+    eq(floorPart.Position[1], Lobby.FLOOR.x, "x")
+    eq(floorPart.Position[2], Lobby.FLOOR.y, "y")
+    eq(floorPart.Position[3], Lobby.FLOOR.z, "z")
+    local spawn = project.tree.Workspace.Lobby.LobbySpawn["$properties"]
+    eq(spawn.Position[3], Lobby.FLOOR.z, "spawn on the lobby floor")
+    -- Every map loads centred on the origin; the lobby floor's near edge has
+    -- to be past the deepest map's far edge with room for the shell
+    local half = floorPart.Size[3] / 2
+    for name, plan in MapPlan.MAPS do
+        local gw, gd = MapPlan.Size(plan)
+        local reach = math.max(gw, gd) * MapPlan.CELL / 2 + 4
+        assert(
+            math.abs(Lobby.FLOOR.z) - half > reach,
+            ("%s (reaches %d studs) would stand into the lobby"):format(name, reach)
+        )
+    end
+end)
+
 ---------------------------------------------------------------- Built maps
 require("./tests/BuiltMaps")(test)
 
