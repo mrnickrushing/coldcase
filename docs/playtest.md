@@ -9,6 +9,8 @@ workflow — no manual Studio setup is needed.)
 - [ ] Optional: Game Settings → Security → **Enable Studio Access to API Services** (without it data
       does not persist between sessions)
 - [x] Output shows `[ColdCase] server up`
+- Studio only: `ServerStorage` attributes `MinPlayers = 1` starts a round solo, and `ForceRole = "medic"`
+  (or any role name) hands the first person that role by swapping with whoever drew it
 
 ## Solo with NPCs — press Play, no attributes
 
