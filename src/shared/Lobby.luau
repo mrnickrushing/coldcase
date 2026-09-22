@@ -6,6 +6,15 @@
 -- Pure, so RoundService decides with it and the lobby countdown mirrors it.
 local Lobby = {}
 
+-- Where the lobby floor stands. The maps load at the origin, the largest of
+-- them 243 studs across, so the lobby lives far down -Z where no map can
+-- reach it. default.project.json places the part there; BuildLobby moves it
+-- back if a saved place has it anywhere else. One saved place had it dragged
+-- to the origin, and every round then loaded a mansion around the lobby: its
+-- brick walls stood through the cellar and its floor sat a stud above the
+-- cellar's, reading as brick half walls and a floor that had sunk.
+Lobby.FLOOR = { x = 0, y = -1, z = -900 }
+
 export type Plan = {
     start: boolean, -- a round starts when the countdown ends
     full: boolean, -- enough real players: everyone plays, nobody waits

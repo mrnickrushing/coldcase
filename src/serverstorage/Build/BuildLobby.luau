@@ -5,6 +5,7 @@
   The floor and spawn themselves come from default.project.json.
 ]]
 local ServerStorage = game:GetService("ServerStorage")
+local Lobby = require(game.ReplicatedStorage.Shared.Lobby)
 local Theme = require(game.ReplicatedStorage.Shared.Theme)
 
 local HEIGHT = 18
@@ -113,6 +114,19 @@ return function()
     local old = (lobby :: Instance):FindFirstChild("Dressing")
     if old then
         old:Destroy()
+    end
+    -- The lobby stands where Lobby.FLOOR says, whatever a saved place has.
+    -- Anywhere else and a round can load a map around it.
+    local home = Vector3.new(Lobby.FLOOR.x, Lobby.FLOOR.y, Lobby.FLOOR.z)
+    if (floor.Position - home).Magnitude > 0.5 then
+        warn(
+            ("[ColdCase] Lobby floor was at %s; moved to %s, clear of the maps"):format(
+                tostring(floor.Position),
+                tostring(home)
+            )
+        )
+        local model = lobby :: Model
+        model:PivotTo(model:GetPivot() + (home - floor.Position))
     end
     local dressing = Instance.new("Folder")
     dressing.Name = "Dressing"
