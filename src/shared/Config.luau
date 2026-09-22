@@ -7,9 +7,12 @@ return {
     REVEAL_TIME = 4,
     RESOLUTION_TIME = 6,
     KILLCAM_TIME = 2.5, -- of RESOLUTION_TIME, before the results screen
-    ROUND_LENGTH_SMALL = 110, -- fewer than 8 players; the buildings are big
-    ROUND_LENGTH = 120,
-    ROUND_LENGTH_LARGE = 150, -- 12+ players
+    -- Three to four minutes. At 110-150s a family round was over before anyone
+    -- had crossed the building twice, and a player killed early sat out longer
+    -- than they had played.
+    ROUND_LENGTH_SMALL = 180, -- fewer than 8 players; the buildings are big
+    ROUND_LENGTH = 200,
+    ROUND_LENGTH_LARGE = 240, -- 12+ players
     ROUND_SMALL_UNDER = 8, -- below this headcount a round uses the small length
     ROUND_LARGE_AT = 12, -- at or above it, the large one
     MIN_PLAYERS = 4,
@@ -161,8 +164,11 @@ return {
     BOTS_ENABLED = true,
     BOT_FILL_TO = 6, -- players who chose Play now + NPCs, while humans < MIN_PLAYERS
     BOT_ROUND_REWARD = 1, -- coins and XP scale in a round with NPCs (1 = full pay)
-    BOT_FIRST_HUNT = { 9, 16 }, -- seconds before an NPC murderer first strikes
-    BOT_HUNT_PAUSE = { 6, 11 }, -- seconds between an NPC murderer's kills
+    -- Paced to the longer round: at {9, 16} and {6, 11} an NPC murderer had
+    -- cleared most of a six-seat round inside 90 seconds, and a lone human
+    -- standing still to read a prompt was its first mark within 15.
+    BOT_FIRST_HUNT = { 20, 35 }, -- seconds before an NPC murderer first strikes
+    BOT_HUNT_PAUSE = { 14, 24 }, -- seconds between an NPC murderer's kills
     BOT_REACTION = { 0.9, 1.6 }, -- seconds before an NPC sheriff fires on a killer
     BOT_SIGHT = 70, -- studs an NPC can witness a kill from
     BOT_STROLL_SPEED = 11, -- NPCs walk; they only run to chase or flee

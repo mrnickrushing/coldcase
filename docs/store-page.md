@@ -36,8 +36,8 @@ Collect 24 knives, pistols, pets and effects. Trade with anyone. And when the li
 > Check before launch: trading unlocks on day 28 (see [live-ops](live-ops.md)), so "Trade with
 > anyone" is not true at launch.
 >
-> Two more to weigh, both softer than the copy makes them sound. Rounds are 110s, 120s or 150s by
-> headcount, not a flat two minutes — the line rounds, it does not lie. And "when the lights go out"
+> Two more to weigh, both softer than the copy makes them sound. Rounds are 180s, 200s or 240s by
+> headcount, not a flat three minutes — the line rounds, it does not lie. And "when the lights go out"
 > happens about half the time: one event fires per round at the 45% mark, and only Lights Out and
 > Power Surge darken anything (Lockdown and Fog Bank do not). Promising darkness every round sets up
 > a player to notice it missing.
