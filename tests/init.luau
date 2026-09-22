@@ -1501,12 +1501,20 @@ end)
 test("the lobby stands where the project puts it, clear of every map", function()
     local serde = require("@lune/serde")
     local project = serde.decode("json", fs.readFile("default.project.json"))
+    -- CFrame, not Position: Rojo 7.7 silently drops a Position property, so a
+    -- built place had the lobby at the origin and BuildLobby moved it on every
+    -- server start (found in the live round of 2026-09-22). Rojo takes the
+    -- CFrame as twelve numbers: the position, then the rotation matrix rows.
     local floorPart = project.tree.Workspace.Lobby.LobbyFloor["$properties"]
-    eq(floorPart.Position[1], Lobby.FLOOR.x, "x")
-    eq(floorPart.Position[2], Lobby.FLOOR.y, "y")
-    eq(floorPart.Position[3], Lobby.FLOOR.z, "z")
+    assert(floorPart.Position == nil, "LobbyFloor uses Position, which rojo build drops")
+    eq(#floorPart.CFrame, 12, "LobbyFloor CFrame is twelve numbers")
+    eq(floorPart.CFrame[1], Lobby.FLOOR.x, "x")
+    eq(floorPart.CFrame[2], Lobby.FLOOR.y, "y")
+    eq(floorPart.CFrame[3], Lobby.FLOOR.z, "z")
     local spawn = project.tree.Workspace.Lobby.LobbySpawn["$properties"]
-    eq(spawn.Position[3], Lobby.FLOOR.z, "spawn on the lobby floor")
+    assert(spawn.Position == nil, "LobbySpawn uses Position, which rojo build drops")
+    eq(#spawn.CFrame, 12, "LobbySpawn CFrame is twelve numbers")
+    eq(spawn.CFrame[3], Lobby.FLOOR.z, "spawn on the lobby floor")
     -- Every map loads centred on the origin; the lobby floor's near edge has
     -- to be past the deepest map's far edge with room for the shell
     local half = floorPart.Size[3] / 2
