@@ -1,4 +1,6 @@
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
 local Config = require(game.ReplicatedStorage.Shared.Config)
 local Shuffle = require(game.ReplicatedStorage.Shared.Shuffle)
 local DataService = require(script.Parent.DataService)
@@ -99,6 +101,25 @@ function RoleService:Assign(participants: { Player })
     end
     for _, plr in newcomers do
         roles[plr] = "innocent"
+    end
+
+    -- Studio only: set ServerStorage.ForceRole = "medic" to play a role on
+    -- demand. The first person swaps roles with whoever drew it, so the
+    -- round still has exactly the roles it would have had.
+    local force = RunService:IsStudio() and ServerStorage:GetAttribute("ForceRole")
+    if type(force) == "string" then
+        for _, plr in participants do
+            if not Participant.IsBot(plr) then
+                for other, role in roles do
+                    if role == force then
+                        roles[other] = roles[plr]
+                        break
+                    end
+                end
+                roles[plr] = force
+                break
+            end
+        end
     end
 
     for _, plr in participants do
