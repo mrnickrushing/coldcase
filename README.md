@@ -3,7 +3,7 @@
 > One of you has a knife. Nobody knows who.
 
 Cold Case is a round-based social deduction game for Roblox. 1–12 players — four humans start a round
-on their own, and below that NPCs fill the lobby to six — 110–150 second rounds,
+on their own, and below that NPCs fill the lobby to six — 180–240 second rounds,
 one murderer and one sheriff — two of each once a full twelve are in — and a room full of people who
 have no idea which is which. The twist:
 **bodies remember**. Every kill writes real evidence — the direction of the wound, a fibre from the
@@ -141,7 +141,7 @@ reads.
 INTERMISSION           lobby menus: map vote, crate, collection, trading; everyone waits until they press PLAY NOW, then a 15s countdown and NPCs fill the round around those who did
 LOADING      (3s)      loading screen names the scene; voted map clones as this begins; spawn with separation
 REVEAL       (4s)      roles sent one player at a time, movement locked
-ACTIVE      (110–150s) one map event at 45%, snitch reveal and Last Call at 30s left
+ACTIVE      (180–240s) one map event at 45%, snitch reveal and Last Call at 30s left
 RESOLUTION   (6s)      results screen: murderer, roster, kill timeline, payout
 ```
 

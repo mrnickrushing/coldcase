@@ -769,17 +769,17 @@ test("no headcount threshold is above the server cap", function()
     end
 end)
 
--- The playtest checklist promises an NPC murderer waits "at least 9s" before
+-- The playtest checklist promises an NPC murderer waits "at least 20s" before
 -- its first strike. That floor is BOT_FIRST_HUNT[1]. The checklist once read
 -- "12s" - the value of BOT_CHASE_GIVE_UP, an unrelated chase-timeout constant -
 -- so pin the two apart: the floor is the range's low end, and it is not the
 -- give-up timer. A behavioural round can only ever land above this floor
 -- (the wait is randomised and the bot must then reach someone), so the floor
 -- itself is the only part a test can hold still.
-test("an NPC murderer's first-strike floor is 9s, not the chase timeout", function()
+test("an NPC murderer's first-strike floor is 20s, not the chase timeout", function()
     local hunt = Config.BOT_FIRST_HUNT
     assert(type(hunt) == "table", "BOT_FIRST_HUNT must be a {min, max} range")
-    eq(hunt[1], 9, "BOT_FIRST_HUNT floor")
+    eq(hunt[1], 20, "BOT_FIRST_HUNT floor")
     assert(hunt[2] >= hunt[1], "BOT_FIRST_HUNT max is below its min")
     assert(
         Config.BOT_CHASE_GIVE_UP ~= hunt[1],
