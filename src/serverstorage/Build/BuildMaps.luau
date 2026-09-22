@@ -19,6 +19,7 @@ local SHELL = 2 -- exterior wall thickness
 local SLAB = 1
 local DOOR_W, DOOR_H = 9, 10
 local RAIL_H = 3.6 -- waist high: blocks a stumble, not a jump
+local RESERVED_CLEAR = 4.5 -- studs kept free round the centre of a spawn or coin cell (the pad is 8 wide)
 local STAIR_W = CELL - 4
 local M = Enum.Material
 
@@ -561,8 +562,16 @@ local function slabs(model: Model, plan, analysis, theme): BasePart?
         if theme.ceiling then
             for _, r in
                 rectangles(gw, gd, function(x, z)
+                    -- A stairwell or a double-height hall is still a room
+                    -- from below: without a panel over its ^ cells the room
+                    -- looks up at the raw underside of the slab or roof above
                     local ch = MapPlan.Cell(plan, f, x, z)
-                    if not MapPlan.IsWalkable(ch) or plan.regions[ch].outdoor then
+                    local space = if ch == "^" then MapPlan.OpensInto(plan, f, x, z) else ch
+                    if
+                        not space
+                        or not MapPlan.IsWalkable(space)
+                        or plan.regions[space].outdoor
+                    then
                         return nil
                     end
                     local covered = analysis.roof[MapPlan.Key(f, x, z)]
@@ -1450,6 +1459,15 @@ local function dressRooms(
                         then SHELL
                         elseif kind == "railing" then 0.6
                         else WALL
+                    -- A spawn pad or coin sits in the middle of a reserved
+                    -- cell; a deep piece (a bed, a crate stack) with its
+                    -- back to the wall would reach into it, so try another
+                    if
+                        reserved[MapPlan.Key(info.f, info.x, info.z)]
+                        and CELL / 2 - thickness / 2 - size.Z - 0.3 < RESERVED_CLEAR
+                    then
+                        continue
+                    end
                     local slack = math.max(0, CELL / 2 - size.X / 2 - 2)
                     local at = Vector3.new(cx, base + size.Y / 2, cz)
                         + out * (CELL / 2 - thickness / 2 - size.Z / 2 - 0.3)
@@ -1641,8 +1659,18 @@ return function(opts: { force: boolean? }?)
     -- and published without ever reaching the game. So a baked folder is kept
     -- only while it still belongs to the running place; republish and it is
     -- rebuilt. A folder built at run time never outlives its server.
+    -- An unpublished place (Studio, a local file, the test build) has place
+    -- version 0 forever, so a folder saved into it would match on every start
+    -- and never be rebuilt: the walkthrough of 2026-09-22 found a place file
+    -- carrying maps baked before the furniture existed, so no round ever had
+    -- any. Only a published server may keep a folder, and only its own.
     local folder = ServerStorage:FindFirstChild("Maps")
-    if folder and not force and folder:GetAttribute("PlaceVersion") == game.PlaceVersion then
+    if
+        folder
+        and not force
+        and game.PlaceVersion > 0
+        and folder:GetAttribute("PlaceVersion") == game.PlaceVersion
+    then
         return folder
     end
     if folder then
