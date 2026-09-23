@@ -28,7 +28,7 @@ workflow — no manual Studio setup is needed.)
 
 ## First playtest — Test → Clients and Servers, 4 players
 
-- [x] Map vote panel is open on arrival; votes update for everyone
+- [ ] Map vote panel is open on arrival; votes update for everyone
 - [x] A brand-new player gets a free Locker pull about five seconds after landing
 - [x] Intermission counts down; the round starts; everyone teleports to separated spawns
 - [x] Role card shows for 4s, movement locked during it
@@ -65,7 +65,7 @@ workflow — no manual Studio setup is needed.)
       spectating; a revive or the end of the round hands the camera back
 - [x] The murderer's knife and the sheriff's pistol stay hidden while walking about and appear in hand
       only on a stab, throw or shot
-- [x] With the Radio pass a message reaches everyone; the dead cannot send one mid-round
+- [ ] With the Radio pass a message reaches everyone; the dead cannot send one mid-round
 - [x] With the Emote pass the five emotes show over the player's head within 40 studs
 - [ ] REPORT on a lobby row asks to confirm; reporting the same player twice is refused
 
@@ -127,15 +127,16 @@ Every hour spent on art before the exploit sweep is an hour you will spend again
 
 ## What a Studio session can and cannot settle
 
-Counting ticks is misleading on its own, so here is the split. 63 ticked, 17 not, as of the automated passes.
+Counting ticks is misleading on its own, so here is the split. 66 ticked, 14 not, as of the automated passes.
 
 | Bucket | Count | Meaning |
 | --- | --- | --- |
 | Testable in Studio, not yet done | 1 | The new join flow (the line above the NPC countdown): the opening screen, then a lobby on WAIT FOR PLAYERS with no countdown until PLAY NOW · NPCS is pressed. Everything that sat here before was walked in a solo session. Several other lines are verified by reading the code but sit in the buckets below, because reading is not observing. |
-| Needs two or more real players | 7 | Trading, vote tallies across clients, the results roster, the radio line, the closed test. (The medic revive sat here while it needed a second person to bring back; it left once an NPC could be revived, and was then played solo - see the ForceRole note.) A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
+| Needs two or more real players | 6 | The waiting player, trading, vote tallies across clients, the radio line, reporting a lobby row, the closed test. (Vote and radio were each observed from the sending client on 2026-09-22 - the tally updated, the line came back through `RadioMessage`, and the dead could not send mid-round - but a second client drawing them is what the lines ask for, so they stay here.) (The medic revive sat here while it needed a second person to bring back; it left once an NPC could be revived, and was then played solo - see the ForceRole note.) A second client is the only way. Note the radio is one line with two halves, and both halves land in this bucket: "reaches everyone" obviously does, and so does "the dead cannot send one mid-round", because health is server-authoritative for a kill that counts, and a client writing Health = 0 respawns through watchDeath before the send can be judged. Three attempts at it from one client, all inconclusive. |
 | Needs a purchased pass | 0 | Empty, and it should stay empty. This Studio session runs as the game owner with VIP, RADIO and EMOTE BUNDLE all showing OWNED, so pass-gated paths are exercisable solo and nothing belongs here on purchase grounds alone. The lines that once sat here moved to the second-client bucket, where their real blocker is. |
 | Needs a phone | 2 | Which action buttons appear per role, and USE relabelling. The emulator is not the test the line asks for. |
-| Needs human eyes or ears | 5 | Whether the cues match the brief and whether the art reads. No probe settles taste. (Whether a weapon sits right in the hand left this bucket once it was watched by eye - line 116.) (The ghost hints were here while only a fresh account could test them; they left when the cloud-place datastore showed `hintsSeen` persisting - see the persistence note.) |
+| Needs a restricted-region account | 1 | The regional policy line: a VPN or an account in a restricted region, since attributes set by hand only change the UI. |
+| Needs human eyes or ears | 2 | Whether the cues match the brief and whether the store art reads. (The Effect and pet lines left this bucket on 2026-09-22: aura, shoulder follow, hide on death and the Nightwatch dim were all measured on the character.) No probe settles taste. (Whether a weapon sits right in the hand left this bucket once it was watched by eye - line 116.) (The ghost hints were here while only a fresh account could test them; they left when the cloud-place datastore showed `hintsSeen` persisting - see the persistence note.) |
 | Setup step, not a claim | 2 | `rokit install` and the API access toggle. `[ColdCase] server up` left this bucket by being observed: a Play restart clears the Output window, so the boot line sits at the top instead of scrolled past the console tool's truncation. |
 
 
