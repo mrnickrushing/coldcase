@@ -62,7 +62,24 @@ local THEMES = {
         stairMaterial = M.SmoothPlastic,
         lamp = "ffe0a8",
         windows = true,
-        paintings = true,
+        -- Framed oils in dark gilt: the family's collection
+        pictures = {
+            frame = "8a6a2e",
+            frameMaterial = M.Wood,
+            canvases = { "7a4a2e", "3e5a4a", "5a3a4a", "8a7a5a", "2e3e5a", "6a2e2e" },
+            width = 7,
+            height = 5.5,
+            chance = 0.3,
+        },
+        -- A dark wooden waste basket with a brass rim
+        bin = {
+            colour = "4a3a2c",
+            material = M.Wood,
+            rim = "b08a3a",
+            rimMaterial = M.Metal,
+            height = 3,
+            diameter = 2.2,
+        },
         styles = {
             hall = {
                 wall = "d8c9a8",
@@ -198,6 +215,25 @@ local THEMES = {
         stairMaterial = M.SmoothPlastic,
         lamp = "ffd27a",
         windows = true,
+        -- Pinned notices and tide tables in cheap dark frames
+        pictures = {
+            frame = "3a3f44",
+            frameMaterial = M.Metal,
+            canvases = { "e8e2cc", "d9cfb0", "c9b89a", "b7b3a8", "8c6b4a", "a9b7bd" },
+            width = 5,
+            height = 4,
+            chance = 0.4,
+        },
+        -- A galvanised bin with a lid
+        bin = {
+            colour = "7d8388",
+            material = M.Metal,
+            rim = "5a5f63",
+            rimMaterial = M.Metal,
+            lid = true,
+            height = 3.4,
+            diameter = 2.6,
+        },
         water = true,
         styles = {
             boardwalk = {
@@ -288,6 +324,24 @@ local THEMES = {
         stair = "d8d2c4",
         stairMaterial = M.SmoothPlastic,
         lamp = "ffeccf",
+        -- Framed maps and documents in plain dark wood
+        pictures = {
+            frame = "5a3f2a",
+            frameMaterial = M.Wood,
+            canvases = { "e9dfc4", "dccfae", "cbbf9e", "b9a57e", "d8d0bc", "a8977a" },
+            width = 6.5,
+            height = 5,
+            chance = 0.3,
+        },
+        -- A matte office bin
+        bin = {
+            colour = "3c4148",
+            material = M.SmoothPlastic,
+            rim = "6a7078",
+            rimMaterial = M.SmoothPlastic,
+            height = 3,
+            diameter = 2.2,
+        },
         windows = true,
         styles = {
             vault = {
@@ -1503,32 +1557,139 @@ local function dressRooms(
             end
         end
 
-        -- Framed paintings on the bare inside walls of rooms
-        if theme.paintings and not region.outdoor then
+        -- Pictures on the walls: interior walls, and exterior walls with no
+        -- window on them (windows hang on every other exterior edge, above
+        -- ground). Each sits on the room face of the wall skin, frame slab
+        -- behind and canvas proud of it, never over a doorway, never where
+        -- furniture stands against the wall.
+        local pics = theme.pictures
+        if pics and not region.outdoor then
             for _, side in SIDES do
-                if info.kinds[side] ~= "wall" or against[side] or rng:NextNumber() > 0.3 then
+                local kind = info.kinds[side]
+                if kind ~= "wall" and kind ~= "exterior" then
+                    continue
+                end
+                if against[side] or rng:NextNumber() > pics.chance then
+                    continue
+                end
+                local edge = analysis.byId[MapPlan.SideEdgeId(info.f, info.x, info.z, side)]
+                local windowed = kind == "exterior"
+                    and theme.windows
+                    and info.f > plan.underground
+                    and edge ~= nil
+                    and edge.index % 2 == 1
+                if windowed then
                     continue
                 end
                 local d = MapPlan.DIRS[side]
                 local out = Vector3.new(d[1], 0, d[2])
                 local along = Vector3.new(-d[2], 0, d[1])
-                local at = Vector3.new(cx, base + 7.5, cz) + out * (CELL / 2 - WALL / 2 - 0.2)
+                -- The wall this edge was actually built with (an interior
+                -- edge beside an outdoor region is shell-thick), and so
+                -- the skin's room face, measured from the cell centre
+                local t = if edge then finish(theme, look(plan, edge)) else WALL
+                local skinFace = CELL / 2 - t / 2 - 0.3
+                local frameDepth, canvasDepth = 0.35, 0.12
+                local frameAt = Vector3.new(cx, base + 7.5, cz)
+                    + out * (skinFace - frameDepth / 2 + 0.02)
                 deco(
                     "PaintingFrame",
                     model,
-                    boxSize(along, 7, 5.5, 0.3),
-                    CFrame.new(at),
-                    Color3.fromHex("8a6a2e"),
-                    M.Wood
+                    boxSize(along, pics.width, pics.height, frameDepth),
+                    CFrame.new(frameAt),
+                    Color3.fromHex(pics.frame),
+                    pics.frameMaterial or M.Wood
                 )
-                local canvas = { "7a4a2e", "3e5a4a", "5a3a4a", "8a7a5a", "2e3e5a", "6a2e2e" }
+                local canvasAt = Vector3.new(cx, base + 7.5, cz)
+                    + out * (skinFace - frameDepth + 0.02 - canvasDepth / 2)
                 deco(
                     "Painting",
                     model,
-                    boxSize(along, 6, 4.5, 0.12),
-                    CFrame.new(at - out * 0.2),
-                    Color3.fromHex(canvas[rng:NextInteger(1, #canvas)])
+                    boxSize(along, pics.width - 1, pics.height - 1, canvasDepth),
+                    CFrame.new(canvasAt),
+                    Color3.fromHex(pics.canvases[rng:NextInteger(1, #pics.canvases)])
                 )
+            end
+        end
+
+        -- A bin in an inside corner: two solid sides meeting, no furniture
+        -- against either, never a spawn or coin cell. It stands on the floor
+        -- and clear of both skins, and a corner is never a doorway.
+        -- Outdoors it stands where a railing corner would hold it, on the
+        -- decks and roofs that also take furniture against a rail.
+        local bin = theme.bin
+        if
+            bin
+            and (not region.outdoor or style.againstRail)
+            and not reserved[MapPlan.Key(info.f, info.x, info.z)]
+            and rng:NextNumber() < (if region.hall then 0.5 else 0.3)
+        then
+            local corners = { { "N", "E" }, { "E", "S" }, { "S", "W" }, { "W", "N" } }
+            local open = {}
+            for _, c in corners do
+                local k1, k2 = info.kinds[c[1]], info.kinds[c[2]]
+                local function solidSide(k)
+                    return k == "wall"
+                        or k == "exterior"
+                        or k == "door"
+                        or (region.outdoor and k == "railing")
+                end
+                if solidSide(k1) and solidSide(k2) and not against[c[1]] and not against[c[2]] then
+                    table.insert(open, c)
+                end
+            end
+            if #open > 0 then
+                local c = open[rng:NextInteger(1, #open)]
+                local r = bin.diameter / 2
+                local at = Vector3.new(cx, base + bin.height / 2, cz)
+                for _, side in c do
+                    local d = MapPlan.DIRS[side]
+                    local edge = analysis.byId[MapPlan.SideEdgeId(info.f, info.x, info.z, side)]
+                    local t = if info.kinds[side] == "railing"
+                        then 0.6
+                        elseif edge then finish(theme, look(plan, edge))
+                        else WALL
+                    local skinFace = CELL / 2 - t / 2 - 0.3
+                    at += Vector3.new(d[1], 0, d[2]) * (skinFace - r - 0.35)
+                end
+                local upright = CFrame.Angles(0, 0, math.rad(90))
+                local body = part(
+                    "Bin",
+                    model,
+                    Vector3.new(bin.height, bin.diameter, bin.diameter),
+                    CFrame.new(at) * upright,
+                    Color3.fromHex(bin.colour),
+                    bin.material
+                )
+                body.Shape = Enum.PartType.Cylinder
+                local rim = deco(
+                    "BinRim",
+                    model,
+                    Vector3.new(0.3, bin.diameter + 0.3, bin.diameter + 0.3),
+                    CFrame.new(at.X, base + bin.height - 0.15, at.Z) * upright,
+                    Color3.fromHex(bin.rim),
+                    bin.rimMaterial
+                )
+                rim.Shape = Enum.PartType.Cylinder
+                if bin.lid then
+                    local lid = deco(
+                        "BinLid",
+                        model,
+                        Vector3.new(0.25, bin.diameter + 0.2, bin.diameter + 0.2),
+                        CFrame.new(at.X, base + bin.height + 0.125, at.Z) * upright,
+                        Color3.fromHex(bin.rim),
+                        bin.rimMaterial
+                    )
+                    lid.Shape = Enum.PartType.Cylinder
+                    deco(
+                        "BinLid",
+                        model,
+                        Vector3.new(0.6, 0.4, 0.6),
+                        CFrame.new(at.X, base + bin.height + 0.45, at.Z),
+                        Color3.fromHex(bin.rim),
+                        bin.rimMaterial
+                    )
+                end
             end
         end
     end

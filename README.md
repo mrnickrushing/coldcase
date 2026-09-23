@@ -117,7 +117,7 @@ src/
                              RemoteGuard, LiveOpsClock, PlayerPolicy, SpectatorService,
                              SocialService, BotService, Participant
   serverstorage/Build/       → ServerStorage.Build
-    BuildMaps.luau           builds each MapPlan: floors, walls, doorways, stairs, lamps, furniture
+    BuildMaps.luau           builds each MapPlan: floors, walls, doorways, stairs, lamps, furniture, pictures, bins
     BuildLighting.luau       daylight, warm grade, bloom (no Atmosphere: vision uses fog)
     BuildLobby.luau          the lobby room: walls, lamps, case board, furniture
   client/                    → StarterPlayerScripts

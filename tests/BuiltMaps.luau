@@ -114,7 +114,16 @@ local function boxes(model): { Box }
         if not d:IsA("BasePart") then
             continue
         end
-        local p, s = d.CFrame.Position, d.Size
+        local p = d.CFrame.Position
+        -- World-axis extents: a bin body is a cylinder stood on end by a
+        -- quarter turn, so its height runs along the part's X axis
+        local cf, size = d.CFrame, d.Size
+        local r, uv, l = cf.RightVector, cf.UpVector, cf.LookVector
+        local s = roblox.Vector3.new(
+            math.abs(r.X) * size.X + math.abs(uv.X) * size.Y + math.abs(l.X) * size.Z,
+            math.abs(r.Y) * size.X + math.abs(uv.Y) * size.Y + math.abs(l.Y) * size.Z,
+            math.abs(r.Z) * size.X + math.abs(uv.Z) * size.Y + math.abs(l.Z) * size.Z
+        )
         table.insert(out, {
             name = d.Name,
             x0 = p.X - s.X / 2,
@@ -336,6 +345,136 @@ return function(test: (string, () -> ()) -> ())
                 end
             end)
         end
+
+        -- Decoration placed by rule: every bin stands on a floor slab inside a
+        -- room and touches no wall, step or door; every picture hangs on a wall
+        -- skin's room face, clear of windows, doorways and other pictures.
+        test(name .. " bins stand on the floor, in a room, clear of every wall", function()
+            local bins, solids, floors = {}, {}, {}
+            for _, b in all do
+                if b.name == "Bin" then
+                    table.insert(bins, b)
+                elseif b.name == "Floor" then
+                    table.insert(floors, b)
+                elseif
+                    b.name == "Wall"
+                    or b.name == "Shell"
+                    or b.name == "Step"
+                    or b.name == "Door"
+                    or b.name == "DoorFrame"
+                    or b.name == "Lintel"
+                    or b.name == "Railing"
+                    or b.name == "Banister"
+                    or b.name == "WallSkin"
+                then
+                    table.insert(solids, b)
+                end
+            end
+            assert(#bins > 0, "no bins were placed")
+            local function overlaps(a, b)
+                return a.x0 < b.x1
+                    and a.x1 > b.x0
+                    and a.y0 < b.y1
+                    and a.y1 > b.y0
+                    and a.z0 < b.z1
+                    and a.z1 > b.z0
+            end
+            for _, bin in bins do
+                local cx, cz = (bin.x0 + bin.x1) / 2, (bin.z0 + bin.z1) / 2
+                local onFloor = false
+                for _, f in floors do
+                    if
+                        cx > f.x0
+                        and cx < f.x1
+                        and cz > f.z0
+                        and cz < f.z1
+                        and math.abs(bin.y0 - f.y1) < 0.05
+                    then
+                        onFloor = true
+                    end
+                end
+                assert(
+                    onFloor,
+                    ("bin at %.0f,%.1f,%.0f does not stand on a floor"):format(cx, bin.y0, cz)
+                )
+                for _, s in solids do
+                    assert(
+                        not overlaps(bin, s),
+                        ("bin at %.0f,%.0f runs into a %s"):format(cx, cz, s.name)
+                    )
+                end
+                local x = math.floor(cx / CELL + gw / 2) + 1
+                local z = math.floor(cz / CELL + gd / 2) + 1
+                local f = math.floor(bin.y0 / H + 0.5) + 1
+                local ch = MapPlan.Cell(plan, f, x, z)
+                assert(MapPlan.IsWalkable(ch), ("bin at %.0f,%.0f is not in a room"):format(cx, cz))
+            end
+        end)
+
+        test(
+            name .. " pictures hang on a wall face, clear of windows, doors and each other",
+            function()
+                local frames, skins, blockers = {}, {}, {}
+                for _, b in all do
+                    if b.name == "PaintingFrame" then
+                        table.insert(frames, b)
+                    elseif b.name == "WallSkin" then
+                        table.insert(skins, b)
+                    elseif
+                        b.name == "Window"
+                        or b.name == "WindowFrame"
+                        or b.name == "DoorFrame"
+                        or b.name == "Lintel"
+                        or b.name == "Door"
+                        or b.name == "Lamp"
+                        or b.name == "LampShade"
+                    then
+                        table.insert(blockers, b)
+                    end
+                end
+                assert(#frames > 0, "no pictures were hung")
+                local function overlaps(a, b)
+                    return a.x0 < b.x1
+                        and a.x1 > b.x0
+                        and a.y0 < b.y1
+                        and a.y1 > b.y0
+                        and a.z0 < b.z1
+                        and a.z1 > b.z0
+                end
+                for i, fr in frames do
+                    local cx, cz = (fr.x0 + fr.x1) / 2, (fr.z0 + fr.z1) / 2
+                    -- Its back is on a skin: the frame and a skin overlap by a hair,
+                    -- never by more than the deliberate embed
+                    local seated = false
+                    for _, sk in skins do
+                        if overlaps(fr, sk) then
+                            local depth = math.min(
+                                math.min(fr.x1, sk.x1) - math.max(fr.x0, sk.x0),
+                                math.min(fr.z1, sk.z1) - math.max(fr.z0, sk.z0)
+                            )
+                            assert(
+                                depth < 0.05,
+                                ("picture at %.0f,%.0f is buried in a wall skin"):format(cx, cz)
+                            )
+                            seated = true
+                        end
+                    end
+                    assert(seated, ("picture at %.0f,%.0f hangs on nothing"):format(cx, cz))
+                    for _, b in blockers do
+                        assert(
+                            not overlaps(fr, b),
+                            ("picture at %.0f,%.0f covers a %s"):format(cx, cz, b.name)
+                        )
+                    end
+                    for j = i + 1, #frames do
+                        assert(
+                            not overlaps(fr, frames[j]),
+                            ("two pictures overlap at %.0f,%.0f"):format(cx, cz)
+                        )
+                    end
+                end
+            end
+        )
 
         test(name .. " no bare wall can be seen from any room", function()
             for f = 1, floors do
