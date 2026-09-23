@@ -80,6 +80,13 @@ local THEMES = {
             height = 3,
             diameter = 2.2,
         },
+        -- Runners down the corridors, mats inside the doors, curtains at the
+        -- windows, a stopped clock on the wall
+        runner = "a03838",
+        mat = "4a3a2c",
+        curtain = "6a2e2e",
+        clocks = { hall = true, kitchen = true, study = true, dining = true },
+        rugs = { bedroom = "6a5a8a", study = "3e5a4a" },
         styles = {
             hall = {
                 wall = "d8c9a8",
@@ -234,6 +241,10 @@ local THEMES = {
             height = 3.4,
             diameter = 2.6,
         },
+        runner = "6a7076",
+        mat = "3a3f44",
+        clocks = { warehouse = true, office = true, coldstore = true },
+        rugs = { office = "3f5a4a" },
         water = true,
         styles = {
             boardwalk = {
@@ -342,6 +353,18 @@ local THEMES = {
             height = 3,
             diameter = 2.2,
         },
+        runner = "7a5a3a",
+        mat = "555a60",
+        curtain = "3e5a4a",
+        clocks = {
+            hall = true,
+            corridor = true,
+            office = true,
+            lobby = true,
+            reading = true,
+            lab = true,
+        },
+        rugs = { office = "3f5a4a", maps = "7a5a3a", exhibits = "5a3a4a" },
         windows = true,
         styles = {
             vault = {
@@ -1435,7 +1458,13 @@ local function dressRooms(
                 }
                 table.insert(cells, info)
                 local style = theme.styles[plan.regions[ch].style]
-                if style and style.centre and not passage and not rail and not reserved[key] then
+                local wantsCentre = style
+                    and (
+                        style.centre
+                        or style.rug
+                        or (theme.rugs and theme.rugs[plan.regions[ch].style])
+                    )
+                if wantsCentre and not passage and not rail and not reserved[key] then
                     local group = f .. ch
                     local best = centreCell[group]
                     if not best or openSides > best.openSides then
@@ -1458,13 +1487,18 @@ local function dressRooms(
 
         local best = centreCell[info.f .. info.ch]
         local centrepiece = best and best.info == info and template(style.centre)
+        local roomRug = style.rug or (theme.rugs and theme.rugs[region.style])
+        if best and best.info == info and not centrepiece and roomRug then
+            -- A rug on its own in the middle of the room
+            rug(CFrame.new(cx, base, cz), roomRug)
+        end
         if centrepiece then
             local size = centrepiece:GetExtentsSize()
             local turn = CFrame.Angles(0, if rng:NextNumber() < 0.5 then 0 else math.pi / 2, 0)
             local cf = CFrame.new(cx, base + size.Y / 2, cz) * turn
             place(centrepiece, cf)
-            if style.rug then
-                rug(CFrame.new(cx, base, cz) * turn, style.rug)
+            if roomRug then
+                rug(CFrame.new(cx, base, cz) * turn, roomRug)
             end
             local chair = style.chairs and template("DiningChair")
             if chair then
@@ -1562,6 +1596,7 @@ local function dressRooms(
         -- ground). Each sits on the room face of the wall skin, frame slab
         -- behind and canvas proud of it, never over a doorway, never where
         -- furniture stands against the wall.
+        local pictured: { [string]: boolean } = {}
         local pics = theme.pictures
         if pics and not region.outdoor then
             for _, side in SIDES do
@@ -1609,6 +1644,163 @@ local function dressRooms(
                     CFrame.new(canvasAt),
                     Color3.fromHex(pics.canvases[rng:NextInteger(1, #pics.canvases)])
                 )
+                pictured[side] = true
+            end
+        end
+
+        -- A runner down a straight stretch of corridor: open at both ends,
+        -- walled at both sides, no rug or centrepiece here
+        if
+            theme.runner
+            and region.hall
+            and not region.outdoor
+            and not style.centre
+            and not roomRug
+        then
+            local k = info.kinds
+            local function solidSide(kk)
+                return kk == "wall" or kk == "exterior" or kk == "door"
+            end
+            local axis = if k.N == "none"
+                    and k.S == "none"
+                    and solidSide(k.E)
+                    and solidSide(k.W)
+                then Vector3.zAxis
+                elseif
+                    k.E == "none"
+                    and k.W == "none"
+                    and solidSide(k.N)
+                    and solidSide(k.S)
+                then Vector3.xAxis
+                else nil
+            if axis then
+                local colour = Color3.fromHex(theme.runner)
+                local h, sat, v = colour:ToHSV()
+                deco(
+                    "RunnerBorder",
+                    model,
+                    boxSize(axis, CELL, 0.1, 6.2),
+                    CFrame.new(cx, base + 0.05, cz),
+                    Color3.fromHSV(h, sat, v * 0.55),
+                    M.Fabric
+                )
+                deco(
+                    "Runner",
+                    model,
+                    boxSize(axis, CELL, 0.14, 5),
+                    CFrame.new(cx, base + 0.07, cz),
+                    colour,
+                    M.Fabric
+                )
+            end
+        end
+
+        -- Curtains either side of a window, hung from a rod above it, only
+        -- where nothing stands against that wall
+        if theme.curtain and not region.outdoor then
+            for _, side in SIDES do
+                if info.kinds[side] ~= "exterior" or against[side] then
+                    continue
+                end
+                local edge = analysis.byId[MapPlan.SideEdgeId(info.f, info.x, info.z, side)]
+                local windowed = theme.windows
+                    and info.f > plan.underground
+                    and edge ~= nil
+                    and edge.index % 2 == 1
+                if not windowed then
+                    continue
+                end
+                local d = MapPlan.DIRS[side]
+                local out = Vector3.new(d[1], 0, d[2])
+                local along = Vector3.new(-d[2], 0, d[1])
+                local t = finish(theme, look(plan, edge))
+                local skinFace = CELL / 2 - t / 2 - 0.3
+                local depth = 0.35
+                local colour = Color3.fromHex(theme.curtain)
+                -- From just above the dado rail to the rod above the window
+                for _, sign in { -1, 1 } do
+                    deco(
+                        "Curtain",
+                        model,
+                        boxSize(along, 1.4, 8.4, depth),
+                        CFrame.new(
+                            Vector3.new(cx, base + 4.6 + 4.2, cz)
+                                + out * (skinFace - depth / 2 + 0.02)
+                                + along * (sign * 5.3)
+                        ),
+                        colour,
+                        M.Fabric
+                    )
+                end
+                local rod = deco(
+                    "CurtainRod",
+                    model,
+                    -- A cylinder's length runs along its X axis; it is
+                    -- turned to lie along the wall below
+                    Vector3.new(12.4, 0.35, 0.35),
+                    CFrame.new(Vector3.new(cx, base + 13.1, cz) + out * (skinFace - 0.45)),
+                    Color3.fromHex("3a3532"),
+                    M.Metal
+                )
+                rod.Shape = Enum.PartType.Cylinder
+                if along.Z ~= 0 then
+                    rod.CFrame = rod.CFrame * CFrame.Angles(0, math.rad(90), 0)
+                end
+            end
+        end
+
+        -- A stopped clock high on one interior wall of a working room
+        if theme.clocks and theme.clocks[region.style] and not region.outdoor then
+            local wallSides = {}
+            for _, side in SIDES do
+                if info.kinds[side] == "wall" and not against[side] and not pictured[side] then
+                    table.insert(wallSides, side)
+                end
+            end
+            if #wallSides > 0 and rng:NextNumber() < 0.15 then
+                local side = wallSides[rng:NextInteger(1, #wallSides)]
+                local d = MapPlan.DIRS[side]
+                local out = Vector3.new(d[1], 0, d[2])
+                local along = Vector3.new(-d[2], 0, d[1])
+                local edge = analysis.byId[MapPlan.SideEdgeId(info.f, info.x, info.z, side)]
+                local t = if edge then finish(theme, look(plan, edge)) else WALL
+                local skinFace = CELL / 2 - t / 2 - 0.3
+                local centre = Vector3.new(cx, base + 10.5, cz)
+                local facing = CFrame.fromMatrix(Vector3.zero, out, Vector3.yAxis)
+                local rim = deco(
+                    "ClockRim",
+                    model,
+                    Vector3.new(0.25, 2.6, 2.6),
+                    CFrame.new(centre + out * (skinFace - 0.125 + 0.02)) * facing.Rotation,
+                    Color3.fromHex("2a2622"),
+                    M.Metal
+                )
+                rim.Shape = Enum.PartType.Cylinder
+                local face = deco(
+                    "ClockFace",
+                    model,
+                    Vector3.new(0.1, 2.2, 2.2),
+                    CFrame.new(centre + out * (skinFace - 0.25 - 0.05 + 0.02)) * facing.Rotation,
+                    Color3.fromHex("f2ede0"),
+                    M.SmoothPlastic
+                )
+                face.Shape = Enum.PartType.Cylinder
+                local handDepth = skinFace - 0.3 - 0.03 + 0.02
+                deco(
+                    "ClockHand",
+                    model,
+                    boxSize(along, 0.14, 0.95, 0.06),
+                    CFrame.new(centre + out * handDepth + Vector3.new(0, 0.42, 0)),
+                    Color3.fromHex("2a2622")
+                )
+                deco(
+                    "ClockHand",
+                    model,
+                    boxSize(along, 0.75, 0.14, 0.06),
+                    CFrame.new(centre + out * handDepth + along * 0.33),
+                    Color3.fromHex("2a2622")
+                )
+                pictured[side] = true
             end
         end
 
@@ -1695,6 +1887,40 @@ local function dressRooms(
     end
 end
 
+---------------------------------------------------------------- Doormats
+-- A mat just inside every doorway, on each indoor side of it
+local function doormats(model: Model, plan, analysis, theme)
+    if not theme.mat then
+        return
+    end
+    local colour = Color3.fromHex(theme.mat)
+    for _, e in analysis.edges do
+        if e.kind ~= "door" then
+            continue
+        end
+        local centre, along, across = edgeFrame(plan, e)
+        local t = finish(theme, look(plan, e))
+        for _, side in { { ch = e.a, face = -1 }, { ch = e.b, face = 1 } } do
+            local region = plan.regions[side.ch]
+            if not region or region.outdoor then
+                continue
+            end
+            deco(
+                "Doormat",
+                model,
+                boxSize(along, 5.5, 0.1, 3),
+                CFrame.new(
+                    centre
+                        + across * side.face * (t / 2 + 0.3 + 0.3 + 1.5)
+                        + Vector3.new(0, 0.05, 0)
+                ),
+                colour,
+                M.Fabric
+            )
+        end
+    end
+end
+
 ---------------------------------------------------------------- Waterfront
 -- Rusted Pier stands on pilings over open water
 local function waterfront(model: Model, plan)
@@ -1759,6 +1985,7 @@ local function build(mapName: string, plan, theme): Model
     floorDetail(model, plan, analysis, theme)
     skins(model, plan, analysis, theme)
     windows(model, plan, analysis, theme)
+    doormats(model, plan, analysis, theme)
     for _, s in analysis.stairs do
         staircase(model, plan, theme, s)
     end

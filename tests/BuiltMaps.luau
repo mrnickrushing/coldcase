@@ -476,6 +476,119 @@ return function(test: (string, () -> ()) -> ())
             end
         )
 
+        test(
+            name .. " runners, rugs and mats lie flat on the floor, clear of steps, walls and bins",
+            function()
+                local soft, hard, floors = {}, {}, {}
+                for _, b in all do
+                    if b.name == "Runner" or b.name == "Rug" or b.name == "Doormat" then
+                        table.insert(soft, b)
+                    elseif b.name == "Floor" then
+                        table.insert(floors, b)
+                    elseif
+                        b.name == "Wall"
+                        or b.name == "Shell"
+                        or b.name == "Step"
+                        or b.name == "Bin"
+                        or b.name == "Door"
+                    then
+                        table.insert(hard, b)
+                    end
+                end
+                local function overlaps(a, b)
+                    return a.x0 < b.x1
+                        and a.x1 > b.x0
+                        and a.y0 < b.y1
+                        and a.y1 > b.y0
+                        and a.z0 < b.z1
+                        and a.z1 > b.z0
+                end
+                local mats = 0
+                for _, r in soft do
+                    local cx, cz = (r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2
+                    if r.name == "Doormat" then
+                        mats += 1
+                    end
+                    local onFloor = false
+                    for _, f in floors do
+                        if
+                            cx > f.x0
+                            and cx < f.x1
+                            and cz > f.z0
+                            and cz < f.z1
+                            and math.abs(r.y0 - f.y1) < 0.05
+                        then
+                            onFloor = true
+                        end
+                    end
+                    assert(onFloor, ("%s at %.0f,%.0f is not on a floor"):format(r.name, cx, cz))
+                    for _, h in hard do
+                        assert(
+                            not overlaps(r, h),
+                            ("%s at %.0f,%.0f runs into a %s"):format(r.name, cx, cz, h.name)
+                        )
+                    end
+                end
+                assert(mats > 0, "no doormats were laid")
+            end
+        )
+
+        test(
+            name .. " curtains and clocks hang on a wall face, clear of windows, pictures and doors",
+            function()
+                local hung, skins, blockers = {}, {}, {}
+                for _, b in all do
+                    if b.name == "Curtain" or b.name == "ClockRim" then
+                        table.insert(hung, b)
+                    elseif b.name == "WallSkin" then
+                        table.insert(skins, b)
+                    elseif
+                        b.name == "Window"
+                        or b.name == "WindowFrame"
+                        or b.name == "PaintingFrame"
+                        or b.name == "DoorFrame"
+                        or b.name == "Lintel"
+                        or b.name == "Lamp"
+                        or b.name == "LampShade"
+                    then
+                        table.insert(blockers, b)
+                    end
+                end
+                local function overlaps(a, b)
+                    return a.x0 < b.x1
+                        and a.x1 > b.x0
+                        and a.y0 < b.y1
+                        and a.y1 > b.y0
+                        and a.z0 < b.z1
+                        and a.z1 > b.z0
+                end
+                for _, h in hung do
+                    local cx, cz = (h.x0 + h.x1) / 2, (h.z0 + h.z1) / 2
+                    local seated = false
+                    for _, sk in skins do
+                        if overlaps(h, sk) then
+                            local depth = math.min(
+                                math.min(h.x1, sk.x1) - math.max(h.x0, sk.x0),
+                                math.min(h.z1, sk.z1) - math.max(h.z0, sk.z0)
+                            )
+                            assert(
+                                depth < 0.05,
+                                ("%s at %.0f,%.0f is buried in a wall skin"):format(h.name, cx, cz)
+                            )
+                            seated = true
+                        end
+                    end
+                    assert(seated, ("%s at %.0f,%.0f hangs on nothing"):format(h.name, cx, cz))
+                    for _, b in blockers do
+                        assert(
+                            not overlaps(h, b),
+                            ("%s at %.0f,%.0f covers a %s"):format(h.name, cx, cz, b.name)
+                        )
+                    end
+                end
+            end
+        )
+
         test(name .. " no bare wall can be seen from any room", function()
             for f = 1, floors do
                 local base = (f - 1) * H
