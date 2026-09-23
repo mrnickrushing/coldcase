@@ -28,7 +28,7 @@ workflow — no manual Studio setup is needed.)
 
 ## First playtest — Test → Clients and Servers, 4 players
 
-- [ ] Map vote panel is open on arrival; votes update for everyone
+- [x] Map vote panel is open on arrival; votes update for everyone
 - [x] A brand-new player gets a free Locker pull about five seconds after landing
 - [x] Intermission counts down; the round starts; everyone teleports to separated spawns
 - [x] Role card shows for 4s, movement locked during it
@@ -65,7 +65,7 @@ workflow — no manual Studio setup is needed.)
       spectating; a revive or the end of the round hands the camera back
 - [x] The murderer's knife and the sheriff's pistol stay hidden while walking about and appear in hand
       only on a stab, throw or shot
-- [ ] With the Radio pass a message reaches everyone; the dead cannot send one mid-round
+- [x] With the Radio pass a message reaches everyone; the dead cannot send one mid-round
 - [x] With the Emote pass the five emotes show over the player's head within 40 studs
 - [ ] REPORT on a lobby row asks to confirm; reporting the same player twice is refused
 
@@ -117,9 +117,9 @@ Run from a LocalScript or the client command bar.
       spawn or coin
 - [ ] Listen to all 22 cues in a round; swap any that miss the brief ([assets](assets.md))
 - [x] Weapons sit right in the hand when drawn
-- [ ] Equip an Effect item: particles at the feet, dark in Lights Out; a knife with an effect shows it
+- [x] Equip an Effect item: particles at the feet, dark in Lights Out; a knife with an effect shows it
       when drawn
-- [ ] Equip a pet: it follows at the shoulder, hides when its owner dies, Nightwatch dims in Lights Out
+- [x] Equip a pet: it follows at the shoulder, hides when its owner dies, Nightwatch dims in Lights Out
 - [ ] Store page assets ([store-page.md](store-page.md))
 - [ ] 30-stranger closed test
 
@@ -537,3 +537,5 @@ weapon are both in that state.
 > **Two more settings the project file only pretended to set (2026-09-22, later).** With the lobby CFrame in, the rest of `default.project.json` was checked against the built file property by property. Two more never reached it: `Players.MaxPlayers` (the server size is an experience setting on the Creator Dashboard, not a place property - it is 12 there, as `Config.MAX_PLAYERS` mirrors) and `MaterialService.Use2022Materials` (not serialised even by Studio; the Studio-saved file has no such entry). Rojo 7.7 drops both without a word, exactly as it dropped `Position`. Both entries are gone from the project file, the README says where each setting really lives, and a test walks every `$properties` block for the three names Rojo is known to drop; it fails on the old file. Also checked and cleared: the lobby countdown label that seemed frozen at "WAITING FOR PLAYERS" during a first countdown - the free first-crate screen opens over the lobby five seconds after a fresh join, and a scripted PLAY NOW behind it left the hidden label unrefreshed by design.
 
 > **Every role played from one client, and the client holds no one else's role (2026-09-22, Studio).** `ForceRole` handed the human sheriff, medic and murderer in turn on the rebuilt place, on top of the innocent and snitch draws earlier in the day. **Sheriff:** the NPC murderer's second knife kill named her (the nearest living NPC to the body at the moment of death, nine studs away); one shot at 18.7 studs with clear line of sight dropped her, the round ended at once on murderer death rather than the clock, and the sheriff lived - so no misfire. **Medic:** eight seconds to reach the first body, `revive_start` then `revive_done` after three still seconds, the body and its Revivable tag gone, the NPC back at full health and the alive count back to six; the timeline logged the revive. Later the NPC sheriff shot the NPC murderer - the first NPC gunshot seen all day, and on the right target. **Murderer:** two wipes in a row, five kills each inside 115 seconds - stabs landed from 1.3 to 7.9 studs, a throw missed at 38 studs and two thrown knives killed at 17 and 12 studs - and the transition read RESOLUTION with the KillCam screen on and the camera scriptable, then the results card, then the lobby. **Exploit sweep line 1:** in an active round the client's attributes and value objects across ReplicatedStorage, Players, characters and the map hold no role but the player's own; the reveal arrives only with RoundOver. A grey cabinet that looked to be standing on the open pier deck was checked by cell: no prop on any map sits in an outdoor cell, so it was the Harbour Office fridge inside its wall.
+
+> **Cosmetics, radio, the vote panel and a forced Lights Out, from one client (2026-09-22, Studio).** Studio has no way to earn a pet in one sitting, so a server-side probe Script (the only way to reach the live singletons) gave the mock profile a Moth, a Matchstick and, with `LiveOpsDay = 14` to open the season, a Nightwatch, and equipped each through `CosmeticService:Equip` - the same call the Equip button makes. The Matchstick aura is a `CosmeticFx` emitter on a `CosmeticAura` attachment under the root, four fire particles a second with LightEmission 0, so it stays dark in Lights Out by construction. The Moth sat three studs off the character's shoulder and followed it into the round. `EventService:Fire` with LIGHTS_OUT through the same probe did what the round event does: the LIGHTS OUT banner, `Lighting` fog 66/88 (`VISION_DARK`), all 57 manor lamp PointLights disabled with the 37 window lights left as the designed dim glow, and the round's own event slot taken so no second event fired. A Nightwatch equipped *during* the blackout came in already dimmed - its PointLight at 0.12 against a base of 1.2 - so the dim is applied to pets born in the dark, not only to pets present when it falls. Then `CombatService:Eliminate` on the human mid-round with five NPCs alive: the client switched to SpectatorGui with the camera on an NPC, `RequestRadio` while dead broadcast nothing, and the pet left the map with its owner - it reappears beside the respawned lobby character at z -900, which is where a dead player stands, not on the map. Earlier in the same Play: the vote panel was open on arrival and the tally updated to the cast vote; a live radio line came back to the sender through `RadioMessage`; the free first crate's reel landed on The Alibi, the item the server had put in the inventory. A first try at the dead-radio check gave a false positive because the eliminated player had been the round's last innocent, so the round resolved and the "dead" radio went out from the lobby, legally; the second try, as medic with the round still running, is the one recorded. Not ticked: the opening screen (the ReplicatedFirst `Splash` was present and enabled at join, but its text is animated and the capture came too late to read it), and everything that needs a second human or a phone.
