@@ -32,8 +32,7 @@
     "Players": {
       "$properties": {
         "CharacterAutoLoads": true,
-        "RespawnTime": 3,
-        "MaxPlayers": 12
+        "RespawnTime": 3
       }
     },
     "Workspace": {
@@ -115,12 +114,6 @@
     "Lighting": {
       "$properties": {
         "Technology": "Future"
-      }
-    },
-    "MaterialService": {
-      "$className": "MaterialService",
-      "$properties": {
-        "Use2022Materials": false
       }
     }
   }

@@ -50,6 +50,7 @@ and orb pets.
 | Preview a live-ops day | Set a number attribute `LiveOpsDay` on `ServerStorage`, e.g. `28` to open trading or `14` for Season One (Studio only). |
 | Run a full round | Test → Clients and Servers → 4 players. |
 | Get the intended lighting | Set `Lighting.Technology` to *Future* in the Properties panel. Scripts cannot set it. |
+| Server size and materials | Not in the project file: Rojo silently drops `Players.MaxPlayers` and `MaterialService.Use2022Materials` (and any `Position`). Server size is 12 on the Creator Dashboard, mirrored by `Config.MAX_PLAYERS`; the material style is a Studio place setting. |
 | Sell Robux products | Put real ids in `src/shared/Products.luau`. An id of `0` is never shown or granted. |
 
 See [docs/playtest.md](docs/playtest.md) for the vertical-slice checklist and exploit sweep.

@@ -16,9 +16,10 @@ return {
     ROUND_SMALL_UNDER = 8, -- below this headcount a round uses the small length
     ROUND_LARGE_AT = 12, -- at or above it, the large one
     MIN_PLAYERS = 4,
-    -- The server cap, mirrored from Players.MaxPlayers (declared in
-    -- default.project.json so it lives in the repo rather than only in the
-    -- place settings). Every headcount threshold below is checked against it.
+    -- The server cap. It mirrors the place's server size, which is set on the
+    -- Creator Dashboard (it is not a place-file property: Rojo drops a
+    -- Players.MaxPlayers entry without a word). Every headcount threshold
+    -- below is checked against it.
     MAX_PLAYERS = 12,
     SPAWN_MIN_SEP = 60,
     WEAPON_GRACE = 4, -- no kills for the first 4 seconds
