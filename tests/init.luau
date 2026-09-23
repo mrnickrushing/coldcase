@@ -1498,6 +1498,33 @@ test("a baked map folder cannot outlive the publish it was baked in", function()
     )
 end)
 
+test("the project file asks Rojo only for properties a build keeps", function()
+    -- Rojo 7.7 drops these without a warning, so a build that names them
+    -- silently differs from what the file promises (found 2026-09-22: the
+    -- lobby at the origin, and two settings that were never applied)
+    local serde = require("@lune/serde")
+    local project = serde.decode("json", fs.readFile("default.project.json"))
+    local dropped = { Position = true, MaxPlayers = true, Use2022Materials = true }
+    local function walk(node, path)
+        if type(node) ~= "table" then
+            return
+        end
+        local props = node["$properties"]
+        if type(props) == "table" then
+            for key in props do
+                assert(not dropped[key], ("%s sets %s, which rojo build drops"):format(path, key))
+            end
+        end
+        for key, child in node do
+            if key ~= "$properties" then
+                walk(child, path .. "/" .. tostring(key))
+            end
+        end
+    end
+    walk(project.tree, "tree")
+    assert(project.tree.MaterialService == nil, "MaterialService has nothing a build can carry")
+end)
+
 test("the lobby stands where the project puts it, clear of every map", function()
     local serde = require("@lune/serde")
     local project = serde.decode("json", fs.readFile("default.project.json"))
