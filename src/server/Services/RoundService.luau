@@ -20,6 +20,7 @@ local SpectatorService = require(script.Parent.SpectatorService)
 local BotService = require(script.Parent.BotService)
 local Participant = require(script.Parent.Participant)
 local LightingMood = require(script.Parent.LightingMood)
+local SnitchService = require(script.Parent.SnitchService)
 local Lobby = require(ReplicatedStorage.Shared.Lobby)
 
 local RoundService = {}
@@ -454,6 +455,7 @@ function RoundService:Tick()
             if not snitchRevealed and left <= Config.SNITCH_REVEAL_AT then
                 snitchRevealed = true
                 RoleService:RevealSnitch()
+                SnitchService:OnReveal()
             end
             -- Last Call: coins double and the murderer is outlined for
             -- everyone. Forces an ending instead of a hide-out.
@@ -621,6 +623,7 @@ end
 function RoundService:ReturnToLobby()
     EvidenceService:Clear()
     RoleService:Clear()
+    SnitchService:Clear()
     LightingMood.Apply("Lobby")
     local round = workspace:FindFirstChild("Round")
     if round then
@@ -656,5 +659,6 @@ EvidenceService:BindRound(RoundService)
 CoinService:BindRound(RoundService)
 AbilityService:BindRound(RoundService)
 BotService:BindRound(RoundService)
+SnitchService:BindRound(RoundService)
 
 return RoundService

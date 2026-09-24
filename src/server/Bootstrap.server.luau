@@ -26,6 +26,7 @@ local ShopService = require(Services.ShopService)
 local LiveOpsClock = require(Services.LiveOpsClock)
 local SocialService = require(Services.SocialService)
 local SpectatorService = require(Services.SpectatorService)
+local SnitchService = require(Services.SnitchService)
 require(Services.PlayerPolicy) -- regional policy for paid random items and trading
 require(Services.MonetizationService) -- installs ProcessReceipt
 
@@ -175,6 +176,10 @@ RemoteGuard.Connect("RequestLobbyMode", function(plr, mode)
     if mode == "wait" or mode == "play" then
         DataService:SetWaitForPlayers(plr, mode == "wait")
     end
+end)
+
+RemoteGuard.Connect("RequestExpose", function(plr)
+    SnitchService:RequestExpose(plr)
 end)
 
 require(Services.BotService):Prepare() -- builds the NPC rig before the first round

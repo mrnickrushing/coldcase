@@ -35,6 +35,11 @@ return {
     MEDIC_AT = 6,
     SNITCH_AT = 6,
     SNITCH_REVEAL_AT = 30, -- seconds remaining
+    -- The snitch's deduction: examining bodies builds a suspect board, and once
+    -- they have read this many bodies (or the reveal fires) they may EXPOSE the
+    -- real killer to everyone. One use; naming does not end the round.
+    SNITCH_EXPOSE_CLUES = 3,
+    SNITCH_EXPOSE_HIGHLIGHT = 4, -- seconds the named killer glows red to all
     MURDERER_COOLOFF = 3, -- rounds of reduced odds after being murderer
 
     -- Combat
@@ -153,6 +158,7 @@ return {
         RequestDrag = 6,
         RequestSpectate = 4,
         RequestLobbyMode = 4,
+        RequestExpose = 2, -- one use a round; a low cap is only anti-spam
         HintSeen = 5,
     },
 

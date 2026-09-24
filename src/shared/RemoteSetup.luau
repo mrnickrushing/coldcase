@@ -26,6 +26,8 @@ local NAMES = {
     "RadioMessage",
     "EmotePlayed",
     "KillConfirm",
+    "Deduction", -- snitch-only: the suspect board and expose availability
+    "Expose", -- all clients: the killer has been named, highlight them
     -- client -> server (every one is rate-limited and re-validated)
     "RequestStab",
     "RequestThrow",
@@ -48,6 +50,7 @@ local NAMES = {
     "RequestReport",
     "RequestSpectate",
     "RequestLobbyMode",
+    "RequestExpose", -- snitch blows the whistle: name the killer to everyone
 }
 
 return function()
