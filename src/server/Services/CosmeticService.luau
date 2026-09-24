@@ -138,13 +138,30 @@ function CosmeticService:ApplyWorn(plr: Player)
 end
 
 -- The effect rolled onto the equipped knife, if any copy of it has one
+-- Top-tier knives carry a built-in blade effect so a Legendary or Godly always
+-- looks the part, even before the owner spends a re-roll. A re-rolled effect on
+-- the item still overrides it.
+local SIGNATURE_EFFECT: { [string]: string } = {
+    cinder = "ember",
+    coldsnap = "frost",
+    verdict = "gold",
+}
+local RARITY_EFFECT: { [string]: string } = {
+    Legendary = "gold",
+    Godly = "gold",
+}
 local function knifeEffect(data, id: string): string?
     for _, item in data.inventory do
         if item.id == id and item.effect and item.effect ~= "none" then
             return item.effect
         end
     end
-    return nil
+    local sig = SIGNATURE_EFFECT[id]
+    if sig then
+        return sig
+    end
+    local def = Catalog[id]
+    return def and RARITY_EFFECT[def.rarity] or nil
 end
 
 ---------------------------------------------------------------- Weapons
@@ -168,6 +185,15 @@ local function weaponsOf(plr: Player, slot: string?): { Tool }
     end
     return out
 end
+
+-- How strongly a drawn weapon glows by rarity: outline transparency, and a
+-- fill transparency (1 = no fill) that lets the top tiers shine.
+local GLOW: { [string]: { outline: number, fill: number } } = {
+    Uncommon = { outline = 0.5, fill = 1 },
+    Rare = { outline = 0.35, fill = 1 },
+    Legendary = { outline = 0.2, fill = 0.82 },
+    Godly = { outline = 0.08, fill = 0.7 },
+}
 
 local function blockout(slot: string, rarity: string?): Tool
     local tool = Instance.new("Tool")
@@ -204,14 +230,20 @@ function CosmeticService:GiveWeapon(plr: Player, slot: string)
         elseif generic and generic:IsA("Tool") then generic
         else nil
     local tool = if template then template:Clone() else blockout(slot, def and def.rarity)
-    if template == generic and def and def.rarity ~= "Common" then
-        -- One model for every item in the slot; the rarity shows as an outline
-        local outline = Instance.new("Highlight")
-        outline.FillTransparency = 1
-        outline.OutlineColor = ItemCard.RARITY_COLOUR[def.rarity] or Theme.MUTED
-        outline.OutlineTransparency = 0.35
-        outline.DepthMode = Enum.HighlightDepthMode.Occluded
-        outline.Parent = tool
+    -- A rarity glow so a drawn weapon reads as rare in the moment it appears:
+    -- a coloured outline for Uncommon and up, and a faint tinted fill that
+    -- makes a Legendary or Godly blade glow. Also stands in for the mesh when
+    -- one model serves the whole slot (a generic fallback or a blockout).
+    local glow = def and GLOW[def.rarity]
+    if glow then
+        local c = ItemCard.RARITY_COLOUR[def.rarity] or Theme.MUTED
+        local hl = Instance.new("Highlight")
+        hl.OutlineColor = c
+        hl.OutlineTransparency = glow.outline
+        hl.FillColor = c
+        hl.FillTransparency = glow.fill
+        hl.DepthMode = Enum.HighlightDepthMode.Occluded
+        hl.Parent = tool
     end
     tool.Name = def and def.name or id
     tool.RequiresHandle = true

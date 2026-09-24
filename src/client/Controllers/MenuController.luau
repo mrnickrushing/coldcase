@@ -819,6 +819,10 @@ local function renderInventory()
         card.LayoutOrder = i
         local colour = RARITY_COLOUR[def.rarity] or Theme.DIM
         card.Swatch.BackgroundColor3 = colour
+        -- Show the real weapon or pet; only an effect keeps the diamond swatch
+        if ItemCard.mount(card, e.id) then
+            card.Swatch.Visible = false
+        end
         card.ItemName.Text = def.name
         card.Rarity.Text = ("%s · %s"):format(
             def.starter and "STARTER" or string.upper(def.rarity),
