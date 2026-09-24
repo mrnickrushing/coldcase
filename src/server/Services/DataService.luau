@@ -19,7 +19,8 @@ local TEMPLATE = {
     stats = { rounds = 0, wins = 0, murdererWins = 0 },
     lastLogin = 0,
     streak = 0,
-    onboarding = { freeCrate = false, rankGift = false },
+    lastVipBonus = 0, -- day the VIP daily coin bonus was last handed out
+    onboarding = { freeCrate = false, rankGift = false, vipSkin = false },
     hintsSeen = {}, -- { move = true, examine = true, coins = true }
     settings = { waitForPlayers = false }, -- no longer read: the lobby choice is per visit now
 }
@@ -90,6 +91,14 @@ function DataService:Load(plr: Player)
         Remotes.Notify:FireClient(plr, ("Day %d streak · +%d coins"):format(data.streak, reward))
     end
 
+    -- VIP owners collect a flat coin bonus once a day, on top of the streak.
+    -- Read from the saved pass flag: a purchase this session grants it next login.
+    local vipBonus = self:ApplyVipBonus(data)
+    if vipBonus > 0 then
+        Analytics.CoinsEarned(plr, "vip_daily", vipBonus, data.coins, 0)
+        Remotes.Notify:FireClient(plr, ("VIP daily bonus · +%d coins"):format(vipBonus))
+    end
+
     self:PushToClient(plr)
     Analytics.Funnel(plr, Analytics.FUNNEL.JOINED)
     DataService.Loaded:Fire(plr)
@@ -106,6 +115,21 @@ function DataService:ApplyLoginStreak(data): number
     local reward = math.min(Config.STREAK_COINS_PER_DAY * data.streak, Config.STREAK_COINS_MAX)
     data.coins += reward
     return reward
+end
+
+-- A flat VIP coin bonus, once per calendar day. Tracked apart from the streak
+-- so a lapsed streak never costs a VIP their daily bonus, and vice versa.
+function DataService:ApplyVipBonus(data): number
+    if not (data.passes and data.passes.vip) then
+        return 0
+    end
+    local today = math.floor(os.time() / 86400)
+    if data.lastVipBonus == today then
+        return 0
+    end
+    data.lastVipBonus = today
+    data.coins += Config.VIP_DAILY_BONUS
+    return Config.VIP_DAILY_BONUS
 end
 
 function DataService:Get(plr: Player)

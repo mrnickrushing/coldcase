@@ -31,7 +31,7 @@ local lastCall = false
 local standardPool = {}
 local seasonPools = {}
 for id, item in Catalog do
-    if item.starter then
+    if item.starter or item.vip then
         continue
     end
     local pools = standardPool
@@ -94,8 +94,8 @@ end)
 -- while their season is open; a retired seasonal can never be minted again.
 function EconomyService:GiveItem(data, id: string)
     local item = Catalog[id]
-    if not item or item.starter then
-        return nil
+    if not item or item.starter or item.vip then
+        return nil -- vip items are minted only by MonetizationService, never rolled
     end
     if item.season then
         local day = LiveOpsClock.Day()

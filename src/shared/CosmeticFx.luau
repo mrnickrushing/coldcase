@@ -70,6 +70,18 @@ CosmeticFx.AURA = {
         speed = NumberRange.new(0, 0),
         transparency = 0.6,
     },
+    -- VIP exclusive: a steady rise of gold motes, denser than Bellwether so it
+    -- reads as regalia. LightEmission stays 0 like every aura (no Lights Out edge).
+    regalia = {
+        texture = SPARKLES,
+        colour = Color3.fromHex("f2c14e"),
+        rate = 7,
+        lifetime = NumberRange.new(1, 1.5),
+        size = 0.5,
+        speed = NumberRange.new(0.5, 1),
+        accel = Vector3.new(0, 1.6, 0),
+        spread = 180,
+    },
 } :: { [string]: Fx }
 
 CosmeticFx.KNIFE = {

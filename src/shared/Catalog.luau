@@ -36,6 +36,10 @@ return {
     coldsnap = { name = "Coldsnap", kind = "Knife", rarity = "Godly", value = 22000 },
     thealibi = { name = "The Alibi", kind = "Pistol", rarity = "Godly", value = 28000 },
 
+    -- VIP exclusive. `vip` items never drop from a crate or craft; the VIP pass
+    -- mints exactly one, once, when the pass is owned (see MonetizationService).
+    regalia = { name = "Regalia", kind = "Effect", rarity = "Legendary", value = 5000, vip = true },
+
     -- Season One · The Long Night. Values are placeholders until the
     -- market sets them; the handbook does not price seasonals.
     vigil = { name = "Vigil", kind = "Knife", rarity = "Rare", value = 1200, season = "S1" },
