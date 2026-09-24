@@ -317,6 +317,30 @@ test("catalogue item names are unique", function()
     end
 end)
 
+test("the VIP exclusive names a real, non-droppable catalogue item", function()
+    local skin = Catalog[Config.VIP_SKIN]
+    assert(skin, ("Config.VIP_SKIN %q is not in the catalogue"):format(tostring(Config.VIP_SKIN)))
+    assert(skin.vip == true, "the VIP skin must be flagged vip so it never drops")
+end)
+
+test("a vip item is never also a starter or a seasonal", function()
+    -- The pool builder and GiveItem skip starters, seasonals and vip items;
+    -- an item that were two of those at once would confuse which rule applies.
+    for id, def in pairs(Catalog) do
+        if def.vip then
+            assert(not def.starter, id .. " is both vip and starter")
+            assert(not def.season, id .. " is both vip and seasonal")
+        end
+    end
+end)
+
+test("the VIP daily bonus is a positive coin amount", function()
+    assert(
+        type(Config.VIP_DAILY_BONUS) == "number" and Config.VIP_DAILY_BONUS > 0,
+        "VIP_DAILY_BONUS must be a positive number"
+    )
+end)
+
 test("every sound cue has a group, a volume and an asset", function()
     local count = 0
     for id, cue in pairs(SoundCues.cues) do

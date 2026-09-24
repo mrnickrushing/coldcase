@@ -110,6 +110,8 @@ return {
     FRIEND_COIN_BONUS = 0.25, -- +25% when a friend is in the server
     STREAK_COINS_PER_DAY = 50,
     STREAK_COINS_MAX = 400,
+    VIP_DAILY_BONUS = 150, -- coins a VIP owner is handed once per day at login
+    VIP_SKIN = "regalia", -- the VIP-exclusive aura, minted once on ownership
 
     -- Progression
     XP_WIN = 120,
