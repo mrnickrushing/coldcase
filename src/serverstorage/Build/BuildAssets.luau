@@ -10,6 +10,7 @@ local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Manifest = require(script.Parent.AssetManifest)
+local Catalog = require(ReplicatedStorage.Shared.Catalog)
 
 local TIMEOUT = 30 -- seconds; a mesh that never loads falls back like a missing one
 
@@ -139,6 +140,10 @@ return function()
                 handle.CanQuery = false
                 handle.CanTouch = false
                 handle.Massless = true
+                -- A weapon reads as forged, not moulded: Metal gives the mesh
+                -- an environmental sheen under Future lighting instead of the
+                -- flat MeshPart default. The baked texture still carries colour.
+                handle.Material = Enum.Material.Metal
                 local tool = Instance.new("Tool")
                 tool.Name = id
                 tool.CanBeDropped = false
@@ -175,5 +180,57 @@ return function()
     -- Parented only once complete, so nothing reads a half-built folder
     for _, entry in ready do
         entry.folder.Parent = entry.parent
+    end
+
+    -- Visual-only preview models the client shows in the crate reel, the shop
+    -- shelf and the inventory, so a player sees the actual weapon they will
+    -- win, not a coloured diamond. A weapon Tool lives in server-only
+    -- ServerStorage.Cosmetics; its Handle mesh, cloned here into
+    -- ReplicatedStorage, is safe to replicate because it is scenery, not a
+    -- usable weapon. Pets already replicate as PetModels.
+    if not ReplicatedStorage:FindFirstChild("PreviewModels") then
+        local previews = Instance.new("Folder")
+        previews.Name = "PreviewModels"
+        local cosmeticsFolder = ServerStorage:FindFirstChild("Cosmetics")
+        local petModels = ReplicatedStorage:FindFirstChild("PetModels")
+        for id, def in Catalog do
+            if previews:FindFirstChild(id) then
+                continue
+            end
+            local source: Instance? = nil
+            if def.kind == "Knife" or def.kind == "Pistol" then
+                local slot = if def.kind == "Knife" then "knife" else "gun"
+                local tool = cosmetics
+                    and (cosmeticsFolder:FindFirstChild(id) or cosmeticsFolder:FindFirstChild(slot))
+                source = tool and tool:FindFirstChild("Handle")
+            elseif def.kind == "Pet" then
+                source = petModels and petModels:FindFirstChild(id)
+            end
+            if not source then
+                continue
+            end
+            local preview = Instance.new("Model")
+            preview.Name = id
+            local body = source:Clone()
+            if body:IsA("BasePart") then
+                body.Name = "Body"
+                body.Anchored = true
+                body.CanCollide = false
+                body.CanQuery = false
+                body.CanTouch = false
+                body.CFrame = CFrame.identity
+                body.Parent = preview
+                preview.PrimaryPart = body
+            else
+                body.Parent = preview
+                for _, d in body:GetDescendants() do
+                    if d:IsA("BasePart") then
+                        d.Anchored = true
+                    end
+                end
+            end
+            preview.Parent = previews
+        end
+        previews.Parent = ReplicatedStorage
     end
 end
