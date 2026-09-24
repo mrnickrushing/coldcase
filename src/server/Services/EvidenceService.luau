@@ -354,6 +354,14 @@ function EvidenceService:Examine(plr: Player, model: Instance)
     Remotes.Clue:FireClient(plr, clues)
 
     round.clueCounts[plr] = (round.clueCounts[plr] or 0) + 1
+    -- The snitch's board is fed the same clues, cross-referenced against the
+    -- living. Fibre always helps (it clears suspects); a witness gives a name.
+    if require(script.Parent.RoleService):Get(plr) == "snitch" then
+        require(script.Parent.SnitchService):AddClue(plr, {
+            fibre = data.fibre,
+            prefix = data.sawKiller and data.killer:sub(1, 2) or nil,
+        })
+    end
     require(script.Parent.EconomyService):Grant(plr, Config.EXAMINE_REWARD, 0, "examine")
     local profile = DataService:Get(plr)
     Analytics.EvidenceExamined(plr, #clues, age, profile and profile.rank or 0)

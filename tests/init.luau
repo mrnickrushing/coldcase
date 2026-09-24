@@ -341,6 +341,17 @@ test("the VIP daily bonus is a positive coin amount", function()
     )
 end)
 
+test("the snitch expose settings are sane", function()
+    assert(
+        type(Config.SNITCH_EXPOSE_CLUES) == "number" and Config.SNITCH_EXPOSE_CLUES >= 1,
+        "SNITCH_EXPOSE_CLUES must be at least 1 body"
+    )
+    assert(
+        type(Config.SNITCH_EXPOSE_HIGHLIGHT) == "number" and Config.SNITCH_EXPOSE_HIGHLIGHT > 0,
+        "SNITCH_EXPOSE_HIGHLIGHT must be a positive duration"
+    )
+end)
+
 test("every sound cue has a group, a volume and an asset", function()
     local count = 0
     for id, cue in pairs(SoundCues.cues) do
