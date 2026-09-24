@@ -215,6 +215,27 @@ function RoleService:GetPublicReveal(): { [string]: string }
     return out
 end
 
+-- Every participant this round (players and bots), for the snitch's board.
+function RoleService:Participants(): { any }
+    local out = {}
+    for p in roles do
+        table.insert(out, p)
+    end
+    return out
+end
+
+-- The real murderer participants. Server truth for the snitch's Expose, so a
+-- whistle-blow always names the actual killer, never a wrong guess.
+function RoleService:Murderers(): { any }
+    local out = {}
+    for p, role in roles do
+        if role == "murderer" then
+            table.insert(out, p)
+        end
+    end
+    return out
+end
+
 function RoleService:Clear()
     roles = {}
 end
