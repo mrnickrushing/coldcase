@@ -10,6 +10,7 @@ local Catalog = require("./src/shared/Catalog")
 local SoundCues = require("./src/shared/SoundCues")
 local Products = require("./src/shared/Products")
 local Config = require("./src/shared/Config")
+local Modes = require("./src/shared/Modes")
 local Shuffle = require("./src/shared/Shuffle")
 local fs = require("@lune/fs")
 
@@ -345,6 +346,23 @@ test("the VIP daily bonus is a positive coin amount", function()
     assert(
         type(Config.VIP_DAILY_BONUS) == "number" and Config.VIP_DAILY_BONUS > 0,
         "VIP_DAILY_BONUS must be a positive number"
+    )
+end)
+
+test("every mode in the rotation is defined, and Classic is the default", function()
+    assert(Modes.DEFS.classic, "no classic mode")
+    for _, id in Modes.ROTATION do
+        assert(Modes.DEFS[id], "rotation mode not defined: " .. tostring(id))
+    end
+    -- unknown ids fall back to classic
+    eq(Modes.Get("does-not-exist").name, Modes.DEFS.classic.name, "unknown mode fallback")
+    eq(Modes.Get(nil).name, Modes.DEFS.classic.name, "nil mode fallback")
+end)
+
+test("Config.MODE_ROTATE_EVERY is a positive whole number", function()
+    assert(
+        type(Config.MODE_ROTATE_EVERY) == "number" and Config.MODE_ROTATE_EVERY >= 1,
+        "MODE_ROTATE_EVERY must be >= 1"
     )
 end)
 

@@ -3,6 +3,7 @@ local CollectionService = game:GetService("CollectionService")
 local Shared = game.ReplicatedStorage.Shared
 local Config = require(Shared.Config)
 local FibreBands = require(Shared.FibreBands)
+local Modes = require(Shared.Modes)
 local Remotes = game.ReplicatedStorage.Remotes
 local Reach = require(script.Parent.Reach)
 local EventService = require(script.Parent.EventService)
@@ -333,7 +334,9 @@ function EvidenceService:Examine(plr: Player, model: Instance)
 
     -- Clues cannot be read in the dark. This is the murderer's window.
     local age = os.clock() - data.at
-    if EventService:IsDark() or age > Config.BODY_CLUE_WINDOW then
+    local window = Modes.Get(game.ReplicatedStorage:GetAttribute("Mode")).clueWindow
+        or Config.BODY_CLUE_WINDOW
+    if EventService:IsDark() or age > window then
         Remotes.Clue:FireClient(plr, { cold = true })
         return
     end

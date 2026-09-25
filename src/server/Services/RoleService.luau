@@ -1,8 +1,10 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(game.ReplicatedStorage.Shared.Config)
 local Shuffle = require(game.ReplicatedStorage.Shared.Shuffle)
+local Modes = require(game.ReplicatedStorage.Shared.Modes)
 local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
 local CosmeticService = require(script.Parent.CosmeticService)
@@ -84,7 +86,8 @@ function RoleService:Assign(participants: { Player })
     end
     -- A medic can bring back a person or an NPC (BotService rebuilds the
     -- body), so a round filled with NPCs is a full round for the medic too.
-    if count >= Config.MEDIC_AT and #pool > 2 then
+    local mode = Modes.Get(ReplicatedStorage:GetAttribute("Mode"))
+    if count >= Config.MEDIC_AT and #pool > 2 and not mode.noMedic then
         local medic = drawPreferHuman()
         if medic then
             roles[medic] = "medic"

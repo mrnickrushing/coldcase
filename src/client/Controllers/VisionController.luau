@@ -70,6 +70,10 @@ local function targetRadius(): number
         end
         return surgeTarget
     end
+    -- Hardcore keeps sight cut the whole round, with no event running.
+    if ReplicatedStorage:GetAttribute("Mode") == "hardcore" then
+        return Config.VISION_HARDCORE
+    end
     return Config.VISION_NORMAL
 end
 

@@ -604,3 +604,13 @@ weapon are both in that state.
 > - **Verified live:** 3 pedestals with 3 prompts; equipping and featuring Eclipse showed it hovering above pedestal 1 at y≈4, nameplate "NickRush · ECLIPSE", chroma animating, from a replicated Item attribute. No console errors. The actual E-hold claim needs a real player near the prompt (as with any ProximityPrompt), but the claim it performs (set three attributes -> client render) is verified.
 >
 > Cloud engine suite 6/6 (29 services load); Lune 107.
+
+## 2026-09-25 · Game modes framework + Hardcore
+
+> Modes framework: `Shared/Modes` defines each mode; RoundService picks one before roles are dealt and publishes it as the ReplicatedStorage "Mode" attribute (Classic by default, a special mode every `MODE_ROTATE_EVERY` rounds from `Modes.ROTATION`; `ServerStorage.ForceMode` forces one in Studio). Services branch on it. Mode is reset to classic and lighting relit at round end.
+>
+> **Hardcore** (first mode): the whole round runs dim (EventService:SetModeDark, Brightness 0.6, pre-dawn) with no random event, vision cut to `VISION_HARDCORE` (70) via the client reading the Mode attribute, the medic role not dealt (RoleService), and the body clue window shortened to 8s (EvidenceService). A Notify announces the mode at round start.
+>
+> **Verified live** (ForceMode=hardcore): a round came up mode="hardcore", role innocent, anyMedic=false, Lighting.Brightness=0.6, ClockTime=2; the screen showed the tight dark-fog vision. No console errors. Lune 109 (2 new mode tests); cloud engine suite 6/6.
+>
+> Next modes to add to the framework: Whodunnit (deduction + vote), Assassin (FFA), Infection (Outbreak).
