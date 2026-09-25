@@ -28,6 +28,7 @@ local NAMES = {
     "KillConfirm",
     "Deduction", -- snitch-only: the suspect board and expose availability
     "Expose", -- all clients: the killer has been named, highlight them
+    "Leaderboard", -- all clients: the top wins / killers / richest boards
     -- client -> server (every one is rate-limited and re-validated)
     "RequestStab",
     "RequestThrow",

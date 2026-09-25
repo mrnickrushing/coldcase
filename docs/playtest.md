@@ -567,3 +567,14 @@ weapon are both in that state.
 > - **Expose** (one use). Once the snitch has read `SNITCH_EXPOSE_CLUES` bodies (or the 30s reveal fires), an EXPOSE button unlocks. It names the server's **true** killer - never the snitch's guess - to everyone via the `Expose` broadcast: a "THE KILLER: X" banner and a 4s red `AlwaysOnTop` highlight on the killer for all clients. It does **not** end the round; the sheriff still has to stop them, and by then the murderer already knows the snitch. `RequestExpose` is rate-capped like every other client remote.
 >
 > **Verified live** (fresh build, `ServerStorage.ForceRole="snitch"` to draw the role on demand, cleared afterwards). Across two forced snitch rounds the board scored correctly every time: the real killer *Hugo (NPC)* came back **near-certain (bar 4)** at the top with **4 of 5** other suspects cleared by fibre. The client rendered the board (4 rows, panel enabled only while snitch + ACTIVE), and an Expose broadcast set the banner text to "THE KILLER: Hugo (NPC)" and applied the red AlwaysOnTop `ExposeGlow` to the named character. selene clean, 107/107 Lune tests (2 new config-contract tests).
+
+## 2026-09-25 · More like MM2: Ancient tier, Chroma, item values, leaderboards
+
+> Four additions to bring the collection/social layer closer to Murder Mystery 2.
+>
+> - **Ancient rarity** above Godly (`RarityTable`, ~0.2%). Common trimmed 56->55.8 so the disclosed Locker odds still sum to exactly 100. Its colour flows to every RARITY_COLOUR consumer; TIER_ORDER and CosmeticService GLOW gained it too. Verified live: the crate odds panel shows ANCIENT · 0.2% and the reel labels Prism ANCIENT.
+> - **Chroma skins** — Eclipse (knife) and Prism (pistol), Ancient + chroma, reusing the Coldsnap/Alibi meshes via the manifest so no new asset is needed. ItemCard viewports cycle the blade through every hue on RenderStepped, disconnecting when the card leaves. Verified live: the Prism preview part's hue shifted 0.237->0.541 in ~1.2s, and the cloud suite confirms BuildAssets gives both a preview model (they render as weapons, not diamonds).
+> - **Item values** — the inventory summary shows total collection worth and each tile shows its value (`Shop.ValueOf` + a comma formatter). The trade table already showed table value and fairness.
+> - **Global leaderboards** (`LeaderboardService` + `LeaderboardController`) — top wins, top murderer escapes, richest collection, over OrderedDataStores (live-only; empty and non-erroring in Studio). Recorded for each real player after a round settles; refreshed every 60s and on join. Verified live: the lobby LEADERBOARD panel renders its three sections with the correct empty state.
+>
+> **Tooling note.** The engine half of this was checked headlessly with the new cloud Luau-execution lane (`scripts/cloud-test.sh`, 6 tests) instead of a Studio playthrough - it confirmed the Ancient chroma asset pipeline and that all 27 services load. Lune stayed at 107.

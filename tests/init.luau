@@ -294,7 +294,14 @@ end
 
 test("every catalogue item carries the fields the code reads", function()
     local kinds = { Knife = true, Pistol = true, Effect = true, Pet = true }
-    local rarities = { Common = true, Uncommon = true, Rare = true, Legendary = true, Godly = true }
+    local rarities = {
+        Common = true,
+        Uncommon = true,
+        Rare = true,
+        Legendary = true,
+        Godly = true,
+        Ancient = true,
+    }
     for id, def in pairs(Catalog) do
         assert(type(def.name) == "string" and def.name ~= "", id .. " has no name")
         assert(kinds[def.kind], ("%s has an unknown kind %q"):format(id, tostring(def.kind)))

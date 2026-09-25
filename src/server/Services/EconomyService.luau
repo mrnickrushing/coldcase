@@ -14,7 +14,7 @@ local Analytics = require(script.Parent.Analytics)
 local LiveOpsClock = require(script.Parent.LiveOpsClock)
 
 local EconomyService = {}
-local TIER_ORDER = { "Common", "Uncommon", "Rare", "Legendary", "Godly" }
+local TIER_ORDER = { "Common", "Uncommon", "Rare", "Legendary", "Godly", "Ancient" }
 
 -- Gameplay faucets that Last Call doubles: coins earned DURING the final
 -- thirty seconds - a pickup, an examine, a revive. The end-of-round
@@ -268,6 +268,8 @@ function EconomyService:PayOut(
         if session then
             session.rounds += 1
         end
+        -- Feed the global boards (wins / murderer escapes / collection worth).
+        require(script.Parent.LeaderboardService):Record(plr, data)
 
         if withBots then
             -- The lever for paying less in a round against NPCs, so an empty

@@ -31,6 +31,13 @@ local inv = guis.inventory.Root
 local MenuController = {}
 
 local RARITY_COLOUR = ItemCard.RARITY_COLOUR
+
+-- 60000 -> "60,000", so item values and inventory worth read at a glance.
+local function commas(n: number): string
+    local s = tostring(math.floor(n))
+    local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+    return (out:gsub("^,", ""))
+end
 local GREEN = Color3.fromHex("4fb0a0")
 local QUIET_STROKE = Color3.fromHex("1f252e")
 local RAISED = Color3.fromHex("161b22")
@@ -806,7 +813,11 @@ local function renderInventory()
             c:Destroy()
         end
     end
-    inv.Summary.Text = ("%d owned · %d coins"):format(#(d.inventory or {}), d.coins or 0)
+    inv.Summary.Text = ("%d owned · worth %s · %d coins"):format(
+        #(d.inventory or {}),
+        commas(Shop.ValueOf(d.inventory or {})),
+        d.coins or 0
+    )
 
     for i, e in entries() do
         local def = Catalog[e.id]
@@ -824,9 +835,10 @@ local function renderInventory()
             card.Swatch.Visible = false
         end
         card.ItemName.Text = def.name
-        card.Rarity.Text = ("%s · %s"):format(
+        card.Rarity.Text = ("%s · %s · %s"):format(
             def.starter and "STARTER" or string.upper(def.rarity),
-            string.upper(def.kind)
+            string.upper(def.kind),
+            commas(def.value or 0)
         )
         card.Rarity.TextColor3 = colour
         card.Effect.Text = (def.kind == "Knife" and not def.starter)
@@ -905,7 +917,11 @@ ClientState.On("data", function(d)
         if d.inventory ~= renderedInventory or d.equipped ~= renderedEquipped then
             renderInventory()
         else
-            inv.Summary.Text = ("%d owned · %d coins"):format(#(d.inventory or {}), d.coins or 0)
+            inv.Summary.Text = ("%d owned · worth %s · %d coins"):format(
+                #(d.inventory or {}),
+                commas(Shop.ValueOf(d.inventory or {})),
+                d.coins or 0
+            )
         end
     end
 end)
