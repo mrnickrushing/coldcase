@@ -191,10 +191,21 @@ stylua --check src tests
 selene src tests
 rojo sourcemap -o sourcemap.json
 luau-lsp analyze --definitions=types/globalTypes.d.luau --sourcemap=sourcemap.json --ignore="vendor/**" src
-lune run tests
+lune run tests                       # fast, local: pure modules
+ROBLOX_API_KEY=... ./scripts/cloud-test.sh   # engine suite in a real Roblox VM
 ```
 
-CI runs the same on every push and pull request.
+CI runs the lint/analyze/`lune` line on every push and pull request.
+
+**Two test lanes.** `lune run tests` ([tests/init.luau](tests/init.luau)) runs the
+pure modules locally in seconds, but it has no Color3/Vector3/CFrame and cannot
+`require` a server Service. `scripts/cloud-test.sh` ([tests/cloud/init.luau](tests/cloud/init.luau))
+covers exactly that gap: it builds the place, publishes a **non-live** Saved version,
+and runs the engine suite inside a real Roblox VM through the Open Cloud Luau
+Execution API — smoke-loading every Service (catching require cycles before a
+Studio launch does) and testing the datatype-built modules like `CosmeticFx`.
+Reach for it instead of a Studio playthrough when a change touches a Service or
+Roblox-datatype code.
 
 ## Open design questions
 
