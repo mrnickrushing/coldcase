@@ -43,9 +43,11 @@ end
 
 function RoleService:Assign(participants: { Player })
     roles = {}
+    local mode = Modes.Get(ReplicatedStorage:GetAttribute("Mode"))
     local count = #participants
     local murderers = count >= Config.SECOND_MURDERER_AT and 2 or 1
-    local sheriffs = count >= Config.SECOND_SHERIFF_AT and 2 or 1
+    -- Whodunnit has no sheriff: the town convicts the killer by vote, not the gun.
+    local sheriffs = if mode.noSheriff then 0 elseif count >= Config.SECOND_SHERIFF_AT then 2 else 1
 
     -- Onboarding: a player's first round is always innocent. Newcomers only
     -- enter the special-role pool when there are not enough veterans to fill it.
@@ -86,7 +88,6 @@ function RoleService:Assign(participants: { Player })
     end
     -- A medic can bring back a person or an NPC (BotService rebuilds the
     -- body), so a round filled with NPCs is a full round for the medic too.
-    local mode = Modes.Get(ReplicatedStorage:GetAttribute("Mode"))
     if count >= Config.MEDIC_AT and #pool > 2 and not mode.noMedic then
         local medic = drawPreferHuman()
         if medic then

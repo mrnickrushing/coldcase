@@ -185,6 +185,10 @@ RemoteGuard.Connect("RequestExpose", function(plr)
     SnitchService:RequestExpose(plr)
 end)
 
+RemoteGuard.Connect("RequestAccuse", function(plr, targetName)
+    require(Services.WhodunnitService):Accuse(plr, targetName)
+end)
+
 require(Services.BotService):Prepare() -- builds the NPC rig before the first round
 RoundService:Start()
 -- The place version says which publish this server is running, so a fix that

@@ -162,6 +162,7 @@ return {
         RequestSpectate = 4,
         RequestLobbyMode = 4,
         RequestExpose = 2, -- one use a round; a low cap is only anti-spam
+        RequestAccuse = 4, -- Whodunnit: change your vote, not spam it
         HintSeen = 5,
     },
 

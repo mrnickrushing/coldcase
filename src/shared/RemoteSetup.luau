@@ -29,6 +29,7 @@ local NAMES = {
     "Deduction", -- snitch-only: the suspect board and expose availability
     "Expose", -- all clients: the killer has been named, highlight them
     "Leaderboard", -- all clients: the top wins / killers / richest boards
+    "AccuseTally", -- Whodunnit: who is accused of the murder, and by how many
     -- client -> server (every one is rate-limited and re-validated)
     "RequestStab",
     "RequestThrow",
@@ -52,6 +53,7 @@ local NAMES = {
     "RequestSpectate",
     "RequestLobbyMode",
     "RequestExpose", -- snitch blows the whistle: name the killer to everyone
+    "RequestAccuse", -- Whodunnit: name a living suspect as the killer
 }
 
 return function()
