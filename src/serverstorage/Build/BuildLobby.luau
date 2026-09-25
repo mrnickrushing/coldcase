@@ -163,6 +163,48 @@ local function tradeTable(parent: Instance, centre: Vector3)
     CollectionService:AddTag(model, "TradeTable")
 end
 
+-- A showcase pedestal: a base, a column and a small top platform, with a prompt
+-- to feature your equipped knife on it. Tagged "Pedestal"; PedestalService fills
+-- the Owner/OwnerName/Item attributes, and clients render the knife from those.
+local function pedestal(parent: Instance, centre: Vector3)
+    local model = Instance.new("Model")
+    model.Name = "Pedestal"
+    block(
+        "Base",
+        model,
+        Vector3.new(2.2, 0.4, 2.2),
+        centre + Vector3.new(0, 0.2, 0),
+        Color3.fromHex("3a3430"),
+        Enum.Material.Slate
+    )
+    local column = block(
+        "Column",
+        model,
+        Vector3.new(1, 2.4, 1),
+        centre + Vector3.new(0, 1.6, 0),
+        Color3.fromHex("4a423c"),
+        Enum.Material.Slate
+    )
+    local platform = block(
+        "Platform",
+        model,
+        Vector3.new(1.7, 0.3, 1.7),
+        centre + Vector3.new(0, 2.95, 0),
+        Color3.fromHex("6b4f34"),
+        Enum.Material.Wood
+    )
+    local prompt = Instance.new("ProximityPrompt")
+    prompt.ActionText = "Display Knife"
+    prompt.ObjectText = "Pedestal"
+    prompt.HoldDuration = 0.3
+    prompt.MaxActivationDistance = 8
+    prompt.RequiresLineOfSight = false
+    prompt.Parent = column
+    model.PrimaryPart = platform
+    model.Parent = parent
+    CollectionService:AddTag(model, "Pedestal")
+end
+
 return function()
     local lobby = workspace:FindFirstChild("Lobby")
     local floor = lobby and lobby:FindFirstChild("LobbyFloor")
@@ -323,6 +365,11 @@ return function()
     -- Two trade tables in the open floor either side of spawn.
     tradeTable(dressing, top + Vector3.new(-17, 0, 16))
     tradeTable(dressing, top + Vector3.new(17, 0, 16))
+
+    -- A row of showcase pedestals along the -X wall.
+    for _, z in { -16, 0, 16 } do
+        pedestal(dressing, top + Vector3.new(-54, 0, z))
+    end
 
     dressing.Parent = lobby
 end
