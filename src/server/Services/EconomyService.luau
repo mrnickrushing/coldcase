@@ -268,6 +268,8 @@ function EconomyService:PayOut(
         if session then
             session.rounds += 1
         end
+        -- Feed the global boards (wins / murderer escapes / collection worth).
+        require(script.Parent.LeaderboardService):Record(plr, data)
 
         if withBots then
             -- The lever for paying less in a round against NPCs, so an empty
