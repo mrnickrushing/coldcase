@@ -49,79 +49,86 @@ function RoleService:Assign(participants: { Player })
     -- Whodunnit has no sheriff: the town convicts the killer by vote, not the gun.
     local sheriffs = if mode.noSheriff then 0 elseif count >= Config.SECOND_SHERIFF_AT then 2 else 1
 
-    -- Onboarding: a player's first round is always innocent. Newcomers only
-    -- enter the special-role pool when there are not enough veterans to fill it.
-    local pool, newcomers = {}, {}
-    for _, plr in participants do
-        table.insert(isFirstRound(plr) and newcomers or pool, plr)
-    end
-    Shuffle.Shuffle(pool)
-    Shuffle.Shuffle(newcomers)
-    while #pool < murderers + sheriffs and #newcomers > 0 do
-        table.insert(pool, table.remove(newcomers))
-    end
+    -- Assassin is a free-for-all: everyone is armed and hunts a target.
+    if mode.ffa then
+        for _, plr in participants do
+            roles[plr] = "assassin"
+        end
+    else
+        -- Onboarding: a player's first round is always innocent. Newcomers only
+        -- enter the special-role pool when there are not enough veterans to fill it.
+        local pool, newcomers = {}, {}
+        for _, plr in participants do
+            table.insert(isFirstRound(plr) and newcomers or pool, plr)
+        end
+        Shuffle.Shuffle(pool)
+        Shuffle.Shuffle(newcomers)
+        while #pool < murderers + sheriffs and #newcomers > 0 do
+            table.insert(pool, table.remove(newcomers))
+        end
 
-    for _ = 1, murderers do
-        local m = drawMurderer(pool)
-        if m then
-            roles[m] = "murderer"
-        end
-    end
-    for _ = 1, sheriffs do
-        local s = table.remove(pool)
-        if s then
-            roles[s] = "sheriff"
-        end
-    end
-    -- An NPC medic never revives anyone and an NPC snitch's reveal reaches no
-    -- screen, so these two lean toward a person. Only a lean: preferring a
-    -- human every time handed the same player medic round after round.
-    local function drawPreferHuman(): Player?
-        if math.random() < 0.5 then
-            for i = #pool, 1, -1 do
-                if not Participant.IsBot(pool[i]) then
-                    return table.remove(pool, i)
-                end
+        for _ = 1, murderers do
+            local m = drawMurderer(pool)
+            if m then
+                roles[m] = "murderer"
             end
         end
-        return table.remove(pool)
-    end
-    -- A medic can bring back a person or an NPC (BotService rebuilds the
-    -- body), so a round filled with NPCs is a full round for the medic too.
-    if count >= Config.MEDIC_AT and #pool > 2 and not mode.noMedic then
-        local medic = drawPreferHuman()
-        if medic then
-            roles[medic] = "medic"
+        for _ = 1, sheriffs do
+            local s = table.remove(pool)
+            if s then
+                roles[s] = "sheriff"
+            end
         end
-    end
-    if count >= Config.SNITCH_AT and #pool > 2 then
-        local snitch = drawPreferHuman()
-        if snitch then
-            roles[snitch] = "snitch"
-        end
-    end
-    for _, plr in pool do
-        roles[plr] = "innocent"
-    end
-    for _, plr in newcomers do
-        roles[plr] = "innocent"
-    end
-
-    -- Studio only: set ServerStorage.ForceRole = "medic" to play a role on
-    -- demand. The first person swaps roles with whoever drew it, so the
-    -- round still has exactly the roles it would have had.
-    local force = RunService:IsStudio() and ServerStorage:GetAttribute("ForceRole")
-    if type(force) == "string" then
-        for _, plr in participants do
-            if not Participant.IsBot(plr) then
-                for other, role in roles do
-                    if role == force then
-                        roles[other] = roles[plr]
-                        break
+        -- An NPC medic never revives anyone and an NPC snitch's reveal reaches no
+        -- screen, so these two lean toward a person. Only a lean: preferring a
+        -- human every time handed the same player medic round after round.
+        local function drawPreferHuman(): Player?
+            if math.random() < 0.5 then
+                for i = #pool, 1, -1 do
+                    if not Participant.IsBot(pool[i]) then
+                        return table.remove(pool, i)
                     end
                 end
-                roles[plr] = force
-                break
+            end
+            return table.remove(pool)
+        end
+        -- A medic can bring back a person or an NPC (BotService rebuilds the
+        -- body), so a round filled with NPCs is a full round for the medic too.
+        if count >= Config.MEDIC_AT and #pool > 2 and not mode.noMedic then
+            local medic = drawPreferHuman()
+            if medic then
+                roles[medic] = "medic"
+            end
+        end
+        if count >= Config.SNITCH_AT and #pool > 2 then
+            local snitch = drawPreferHuman()
+            if snitch then
+                roles[snitch] = "snitch"
+            end
+        end
+        for _, plr in pool do
+            roles[plr] = "innocent"
+        end
+        for _, plr in newcomers do
+            roles[plr] = "innocent"
+        end
+
+        -- Studio only: set ServerStorage.ForceRole = "medic" to play a role on
+        -- demand. The first person swaps roles with whoever drew it, so the
+        -- round still has exactly the roles it would have had.
+        local force = RunService:IsStudio() and ServerStorage:GetAttribute("ForceRole")
+        if type(force) == "string" then
+            for _, plr in participants do
+                if not Participant.IsBot(plr) then
+                    for other, role in roles do
+                        if role == force then
+                            roles[other] = roles[plr]
+                            break
+                        end
+                    end
+                    roles[plr] = force
+                    break
+                end
             end
         end
     end
@@ -149,7 +156,7 @@ end
 -- held all round would name the murderer to anyone who looks.
 function RoleService:Arm(plr: Player)
     local role = roles[plr]
-    if role == "murderer" then
+    if role == "murderer" or role == "assassin" then
         CosmeticService:GiveWeapon(plr, "knife")
     elseif role == "sheriff" or role == "hero" then
         CosmeticService:GiveWeapon(plr, "gun")

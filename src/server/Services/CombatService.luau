@@ -70,6 +70,12 @@ local function inGrace(): boolean
     return os.clock() - roundStart < Config.WEAPON_GRACE
 end
 
+-- Who may swing a knife: the murderer, or any assassin in the free-for-all.
+local function knifeArmed(plr: Player): boolean
+    local role = RoleService:Get(plr)
+    return role == "murderer" or role == "assassin"
+end
+
 -- Server-side cooldown per player per action. The client cooldown is cosmetic.
 local function ready(plr: Player, action: string, cooldown: number): boolean
     local t = os.clock()
@@ -124,7 +130,7 @@ end
 
 -- The client asks to stab. The server decides whether it happened.
 function CombatService:RequestStab(plr: Player, target: Player)
-    if target == plr or inGrace() or RoleService:Get(plr) ~= "murderer" then
+    if target == plr or inGrace() or not knifeArmed(plr) then
         return
     end
     local myChar, theirChar = liveCharacter(plr), liveCharacter(target)
@@ -148,7 +154,7 @@ end
 
 function CombatService:RequestThrow(plr: Player, aimPoint: Vector3)
     local char = liveCharacter(plr)
-    if not char or inGrace() or RoleService:Get(plr) ~= "murderer" then
+    if not char or inGrace() or not knifeArmed(plr) then
         return
     end
     local origin = char:GetPivot().Position + Vector3.new(0, 1.5, 0)

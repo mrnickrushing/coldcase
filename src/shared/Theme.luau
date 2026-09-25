@@ -31,6 +31,7 @@ Theme.ROLE = {
     hero = Color3.fromHex("37bcf0"),
     medic = Color3.fromHex("4fb0a0"),
     snitch = Color3.fromHex("b45fe8"),
+    assassin = Color3.fromHex("d9443f"),
 }
 
 -- Evidence log left-border colour per clue kind

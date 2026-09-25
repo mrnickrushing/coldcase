@@ -23,6 +23,7 @@ local Participant = require(script.Parent.Participant)
 local LightingMood = require(script.Parent.LightingMood)
 local SnitchService = require(script.Parent.SnitchService)
 local WhodunnitService = require(script.Parent.WhodunnitService)
+local AssassinService = require(script.Parent.AssassinService)
 local Lobby = require(ReplicatedStorage.Shared.Lobby)
 
 local RoundService = {}
@@ -383,6 +384,7 @@ function RoundService:MarkDead(plr: Player, killer: Player?, method: string)
         BotService:OnDeath(plr, killer, method, pos)
     end
     WhodunnitService:Recheck() -- a death drops stale votes / can tip a conviction
+    AssassinService:OnDeath(plr) -- FFA: rehunt anyone who was hunting the fallen
     self:CheckWinConditions(method)
 end
 
@@ -579,6 +581,7 @@ function RoundService:Advance()
         BotService:StartRound()
         SnitchService:OnRoundStart()
         WhodunnitService:Reset()
+        AssassinService:OnRoundStart()
         -- Mode effects. Hardcore dims the whole round (so it never fires a
         -- random event) and announces itself; the client reads the Mode
         -- attribute for reduced vision.
@@ -591,7 +594,8 @@ function RoundService:Advance()
             Remotes.Notify:FireAllClients(("%s — %s"):format(modeDef.name, modeDef.blurb))
         end
     elseif state == "ACTIVE" then
-        self:Resolve("innocents", "time")
+        -- Time out: innocents survived, or in the free-for-all whoever is left.
+        self:Resolve(Modes.Get(currentMode).ffa and "assassin" or "innocents", "time")
     elseif state == "RESOLUTION" then
         self:ReturnToLobby()
         self:EnterLobby()
@@ -602,6 +606,17 @@ end
 -- murderer who disconnects is not reported to the room as one who was killed.
 function RoundService:CheckWinConditions(method: string?)
     if state ~= "ACTIVE" then
+        return
+    end
+    -- Assassin free-for-all: the last blade standing wins.
+    if Modes.Get(currentMode).ffa then
+        local living = 0
+        for _ in alive do
+            living += 1
+        end
+        if living <= 1 then
+            self:Resolve("assassin", "lastStanding")
+        end
         return
     end
     local murdererAlive, othersAlive = false, 0
@@ -698,5 +713,6 @@ AbilityService:BindRound(RoundService)
 BotService:BindRound(RoundService)
 SnitchService:BindRound(RoundService)
 WhodunnitService:BindRound(RoundService)
+AssassinService:BindRound(RoundService)
 
 return RoundService

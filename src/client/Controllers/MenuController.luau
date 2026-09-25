@@ -353,6 +353,8 @@ local BLURB = {
     wiped = "No one left to tell it. The murderer walks.",
     time = "Time ran out. The survivors make it to dawn.",
     left = "The murderer bolted. Case closed, nobody caught.",
+    convicted = "The town named the killer. Justice, by vote.",
+    lastStanding = "Last blade standing. The rest are on the floor.",
 }
 local lastReward = nil
 local pendingResults = false

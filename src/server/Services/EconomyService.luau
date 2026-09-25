@@ -246,7 +246,10 @@ function EconomyService:PayOut(
         end
 
         local role = RoleService:Get(plr)
-        local won = ((role == "murderer") and "murderer" or "innocents") == winner
+        -- In the free-for-all the last one alive is the winner; everyone else lost.
+        local won = if role == "assassin"
+            then survivors[plr] == true
+            else ((role == "murderer") and "murderer" or "innocents") == winner
 
         local coins = won and Config.COINS_WIN or Config.COINS_LOSS
         local xp = won and Config.XP_WIN or Config.XP_LOSS
