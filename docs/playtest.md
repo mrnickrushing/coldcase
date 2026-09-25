@@ -578,3 +578,9 @@ weapon are both in that state.
 > - **Global leaderboards** (`LeaderboardService` + `LeaderboardController`) — top wins, top murderer escapes, richest collection, over OrderedDataStores (live-only; empty and non-erroring in Studio). Recorded for each real player after a round settles; refreshed every 60s and on join. Verified live: the lobby LEADERBOARD panel renders its three sections with the correct empty state.
 >
 > **Tooling note.** The engine half of this was checked headlessly with the new cloud Luau-execution lane (`scripts/cloud-test.sh`, 6 tests) instead of a Studio playthrough - it confirmed the Ancient chroma asset pipeline and that all 27 services load. Lune stayed at 107.
+
+## 2026-09-25 · Social lobby: the knife showcase
+
+> The lobby is where players already wait out INTERMISSION; this makes it a hangout you can read at a glance. Every player's equipped knife floats and slowly spins ~2.6 studs above their head with a rarity-coloured nameplate, drawn locally from a new public "Knife" attribute (CosmeticService sets it on equip, load and respawn) using the already-replicated PreviewModels. Chroma blades cycle their hue up there too. Modelled on PetController; only shown in the lobby (INTERMISSION) and cleared the moment a round starts, so the real weapon is what you carry into the round.
+>
+> **Verified live:** equipped Eclipse (chroma) showed as a floating model named "UncleNickRush" in workspace.KnifeShowcase, 2.6 studs above the head, nameplate "ECLIPSE", hue animating 0.224->0.473. Lune 107; stylua/selene clean.
