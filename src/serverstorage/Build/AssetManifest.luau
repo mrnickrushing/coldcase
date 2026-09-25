@@ -35,6 +35,18 @@ return {
             texture = "rbxassetid://80602905847098",
             size = { 0.392, 1.366, 1.9 },
         },
+        -- Chroma (Ancient) skins reuse a top-tier mesh; the blade cycles hue at
+        -- render time (ItemCard / CosmeticService), so no new asset is needed.
+        eclipse = {
+            mesh = "rbxassetid://84490447749820", -- Coldsnap blade
+            texture = "rbxassetid://129785326300390",
+            size = { 0.477, 2.074, 2.2 },
+        },
+        prism = {
+            mesh = "rbxassetid://133294799991956", -- The Alibi frame
+            texture = "rbxassetid://129116981529801",
+            size = { 0.32, 1.274, 1.9 },
+        },
         ember = {
             mesh = "rbxassetid://113813559655941",
             texture = "rbxassetid://98068305489691",

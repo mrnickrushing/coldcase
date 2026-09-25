@@ -14,7 +14,7 @@ local Analytics = require(script.Parent.Analytics)
 local LiveOpsClock = require(script.Parent.LiveOpsClock)
 
 local EconomyService = {}
-local TIER_ORDER = { "Common", "Uncommon", "Rare", "Legendary", "Godly" }
+local TIER_ORDER = { "Common", "Uncommon", "Rare", "Legendary", "Godly", "Ancient" }
 
 -- Gameplay faucets that Last Call doubles: coins earned DURING the final
 -- thirty seconds - a pickup, an examine, a revive. The end-of-round

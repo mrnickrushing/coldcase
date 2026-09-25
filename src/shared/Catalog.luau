@@ -36,6 +36,11 @@ return {
     coldsnap = { name = "Coldsnap", kind = "Knife", rarity = "Godly", value = 22000 },
     thealibi = { name = "The Alibi", kind = "Pistol", rarity = "Godly", value = 28000 },
 
+    -- Ancient · chroma. The rarest pull (~0.2%): a top mesh whose blade cycles
+    -- through every hue. `chroma` is read by ItemCard and CosmeticService.
+    eclipse = { name = "Eclipse", kind = "Knife", rarity = "Ancient", value = 60000, chroma = true },
+    prism = { name = "Prism", kind = "Pistol", rarity = "Ancient", value = 65000, chroma = true },
+
     -- VIP exclusive. `vip` items never drop from a crate or craft; the VIP pass
     -- mints exactly one, once, when the pass is owned (see MonetizationService).
     regalia = { name = "Regalia", kind = "Effect", rarity = "Legendary", value = 5000, vip = true },

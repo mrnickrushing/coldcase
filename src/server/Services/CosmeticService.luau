@@ -193,6 +193,7 @@ local GLOW: { [string]: { outline: number, fill: number } } = {
     Rare = { outline = 0.35, fill = 1 },
     Legendary = { outline = 0.2, fill = 0.82 },
     Godly = { outline = 0.08, fill = 0.7 },
+    Ancient = { outline = 0.05, fill = 0.6 },
 }
 
 local function blockout(slot: string, rarity: string?): Tool

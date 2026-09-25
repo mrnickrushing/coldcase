@@ -1,6 +1,7 @@
 --!strict
 -- One item tile, used by the crate reel, direct-buy shelf, inventory and trade.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local Theme = require(script.Parent.Parent.Theme)
 local Catalog = require(script.Parent.Parent.Catalog)
 local Rarities = require(script.Parent.Parent.RarityTable)
@@ -40,6 +41,31 @@ local function fill(vp: ViewportFrame, id: string)
     cam.FieldOfView = 40
     vp.CurrentCamera = cam
     cam.Parent = vp
+
+    -- Chroma: the blade cycles through every hue. Runs only while the viewport
+    -- is on screen and disconnects itself when it (or the model) goes away.
+    if Catalog[id] and Catalog[id].chroma then
+        local parts = {}
+        for _, d in model:GetDescendants() do
+            if d:IsA("BasePart") then
+                table.insert(parts, d)
+            end
+        end
+        if model:IsA("BasePart") then
+            table.insert(parts, model)
+        end
+        local conn
+        conn = RunService.RenderStepped:Connect(function()
+            if not (vp.Parent and model.Parent) then
+                conn:Disconnect()
+                return
+            end
+            local colour = Color3.fromHSV((os.clock() * 0.25) % 1, 0.85, 1)
+            for _, p in parts do
+                p.Color = colour
+            end
+        end)
+    end
 end
 
 local function mountPreview(parent: Instance, id: string): boolean

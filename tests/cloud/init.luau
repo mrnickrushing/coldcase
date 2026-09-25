@@ -94,6 +94,24 @@ test("every Effect item has an aura look", function()
     end
 end)
 
+-- BuildAssets rebuilds the meshes from the manifest. Every knife/pistol/pet must
+-- end up with a preview model, or it renders as a bare diamond in the crate and
+-- shop instead of the real weapon. Catches a missing manifest entry headlessly.
+test("BuildAssets gives every knife, pistol and pet a preview model", function()
+    require(game:GetService("ServerStorage").Build.BuildAssets)()
+    local pv = ReplicatedStorage:FindFirstChild("PreviewModels")
+    assertf(pv ~= nil, "no PreviewModels folder after BuildAssets")
+    local missing = {}
+    for id, item in pairs(Catalog) do
+        if item.kind == "Knife" or item.kind == "Pistol" or item.kind == "Pet" then
+            if not pv:FindFirstChild(id) then
+                table.insert(missing, id)
+            end
+        end
+    end
+    assertf(#missing == 0, "no preview model for: " .. table.concat(missing, ", "))
+end)
+
 -- FibreBands turns the killer's torso colour into the fibre clue; exercise it
 -- with real Color3 HSV values the Lune suite cannot construct.
 test("FibreBands.Describe names a band for any colour", function()
