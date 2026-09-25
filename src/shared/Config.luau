@@ -7,12 +7,13 @@ return {
     REVEAL_TIME = 4,
     RESOLUTION_TIME = 6,
     KILLCAM_TIME = 2.5, -- of RESOLUTION_TIME, before the results screen
-    -- Three to four minutes. At 110-150s a family round was over before anyone
+    -- Four to five minutes. At 110-150s a family round was over before anyone
     -- had crossed the building twice, and a player killed early sat out longer
-    -- than they had played.
-    ROUND_LENGTH_SMALL = 180, -- fewer than 8 players; the buildings are big
-    ROUND_LENGTH = 200,
-    ROUND_LENGTH_LARGE = 240, -- 12+ players
+    -- than they had played; a later pass added a minute to every tier for more
+    -- time to investigate and hunt.
+    ROUND_LENGTH_SMALL = 240, -- fewer than 8 players; the buildings are big
+    ROUND_LENGTH = 260,
+    ROUND_LENGTH_LARGE = 300, -- 12+ players
     ROUND_SMALL_UNDER = 8, -- below this headcount a round uses the small length
     ROUND_LARGE_AT = 12, -- at or above it, the large one
     MIN_PLAYERS = 4,
