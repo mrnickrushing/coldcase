@@ -108,6 +108,17 @@ function SnitchService:AddClue(snitch, clue)
     self:Push(snitch)
 end
 
+-- Round has begun: show the snitch the live suspect list at once (all unknown
+-- until they read a body), so the panel and its gated button are correct from
+-- the start rather than blank until the first clue.
+function SnitchService:OnRoundStart()
+    for _, p in RoleService:Participants() do
+        if RoleService:Get(p) == "snitch" then
+            self:Push(p)
+        end
+    end
+end
+
 -- The 30s mutual reveal has fired: every human snitch may now Expose.
 function SnitchService:OnReveal()
     for _, p in RoleService:Participants() do

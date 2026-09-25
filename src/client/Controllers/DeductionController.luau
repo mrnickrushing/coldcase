@@ -198,6 +198,11 @@ local function refresh()
     gui.Enabled = visible()
 end
 
+-- Correct state before any server push: an empty board and a gated button, so
+-- the snitch never sees EXPOSE lit until they have actually earned it.
+renderRows()
+renderExpose()
+
 Remotes.Deduction.OnClientEvent:Connect(function(payload)
     latest = payload
     renderRows()
