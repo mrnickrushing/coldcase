@@ -120,7 +120,7 @@ local function interact()
         return
     end
     local role = ClientState.role
-    if role == "murderer" then
+    if role == "murderer" or role == "assassin" then
         local target = nearestTarget(pos)
         if target then
             if cooled("knife", Config.KNIFE_COOLDOWN) then
@@ -165,7 +165,7 @@ end
 
 local function throw()
     if
-        ClientState.role == "murderer"
+        (ClientState.role == "murderer" or ClientState.role == "assassin")
         and inRound()
         and myPosition()
         and cooled("throw", Config.THROW_COOLDOWN)
@@ -419,7 +419,7 @@ local function refreshBindings()
     bind("CC_Drag", dragStart, dragStop, "DRAG", Enum.KeyCode.F, Enum.KeyCode.ButtonB)
     if role == "sheriff" or role == "hero" then
         bind("CC_Fire", fire, nil, "FIRE", Enum.KeyCode.ButtonR2)
-    elseif role == "murderer" then
+    elseif role == "murderer" or role == "assassin" then
         bind("CC_Throw", throw, nil, "THROW", Enum.KeyCode.Q, Enum.KeyCode.ButtonY)
     elseif role == "medic" then
         bind("CC_Revive", revive, nil, "REVIVE", Enum.KeyCode.R, Enum.KeyCode.ButtonY)

@@ -579,7 +579,9 @@ end)
 -- unknown key renders an empty line, so a new reason can ship looking fine in
 -- Studio and silently say nothing to players. These two lists must agree.
 test("every round-over reason the server sends has a blurb", function()
+    -- Resolve is called from RoundService and the mode services it delegates to.
     local server = fs.readFile("src/server/Services/RoundService.luau")
+        .. fs.readFile("src/server/Services/WhodunnitService.luau")
     local client = fs.readFile("src/client/Controllers/MenuController.luau")
 
     local blurbs = {}
@@ -591,10 +593,10 @@ test("every round-over reason the server sends has a blurb", function()
 
     -- A reason is not always a literal argument: one call picks between two
     -- with an `and/or`, so read every string on the line and drop the winners.
-    local winners = { innocents = true, murderer = true }
+    local winners = { innocents = true, murderer = true, assassin = true }
     local reasons, found = {}, 0
     for line in server:gmatch("[^\n]+") do
-        if line:find("self:Resolve(", 1, true) then
+        if line:find(":Resolve(", 1, true) then
             found += 1
             for literal in line:gmatch('"(%w+)"') do
                 if not winners[literal] then

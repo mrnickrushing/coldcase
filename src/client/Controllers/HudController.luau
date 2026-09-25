@@ -19,6 +19,7 @@ local ROLE_BRIEF = {
     hero = "You took the pistol. Finish it.",
     medic = "One revive. Spend it well.",
     snitch = "They know you now. Run or fight.",
+    assassin = "Free-for-all. Hunt your target. Last blade wins.",
 }
 local STATE_LABEL = {
     INTERMISSION = "LOBBY",
