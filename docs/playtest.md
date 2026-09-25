@@ -593,3 +593,14 @@ weapon are both in that state.
 > - **Verified live** (single client): both tables build at the right spots with two seats + the sign; the player sits (Occupant resolves to a Player, so the pair logic fires); the sign reads "TRADE · SIT TO DEAL". A full round then played clean - INNOCENT, longer 240s timer, coin pickups, and the knife showcase correctly cleared to 0 during the round. Console had no game errors. The actual two-player open can't be exercised in single-client Studio (Wine has no second client), but the path is seat -> GetPlayerFromCharacter -> OpenAtTable into the proven trade system.
 >
 > Cloud engine suite 6/6 (all 28 services load); Lune 107.
+
+## 2026-09-25 · Showcase pedestals
+
+> A row of three slate-and-wood pedestals along the lobby wall. Hold the prompt on one to feature your equipped knife on the stand; hold again to take it down (one pedestal per player). The knife hovers above the platform, slowly spinning, with an owner + item nameplate; chroma blades cycle their hue. Unlike the over-head showcase (which follows you), a pedestal display stays put while you walk off - the fixed MM2-style flex. State lives entirely in replicated attributes on each pedestal (Owner/OwnerName/Item), so no remote is needed.
+>
+> - `PedestalService` (server): the prompt's Triggered claims/releases and sets the attributes; one per player; released on leave; kept in step with the owner's equipped knife.
+> - `PedestalController` (client): renders the featured knife from the attributes, rotating with a nameplate + chroma, from the replicated PreviewModels.
+> - `BuildLobby` builds and tags the pedestals with a ProximityPrompt each.
+> - **Verified live:** 3 pedestals with 3 prompts; equipping and featuring Eclipse showed it hovering above pedestal 1 at y≈4, nameplate "NickRush · ECLIPSE", chroma animating, from a replicated Item attribute. No console errors. The actual E-hold claim needs a real player near the prompt (as with any ProximityPrompt), but the claim it performs (set three attributes -> client render) is verified.
+>
+> Cloud engine suite 6/6 (29 services load); Lune 107.
