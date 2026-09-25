@@ -9,6 +9,8 @@ export type Def = {
     blurb: string,
     dark: boolean?, -- dim the round and cut vision the whole time
     noMedic: boolean?, -- the medic role is not dealt
+    noSheriff: boolean?, -- the sheriff role is not dealt
+    vote: boolean?, -- the town convicts the killer by accusation, not the gun
     clueWindow: number?, -- seconds a body's clues stay readable (else Config)
 }
 
@@ -21,11 +23,17 @@ Modes.DEFS = {
         noMedic = true,
         clueWindow = 8,
     },
+    whodunnit = {
+        name = "Whodunnit",
+        blurb = "No sheriff. Read the clues and vote out the killer.",
+        noSheriff = true,
+        vote = true,
+    },
 } :: { [string]: Def }
 
 -- The special modes that rotate in between Classic rounds, in order. New modes
 -- join here as they ship.
-Modes.ROTATION = { "hardcore" }
+Modes.ROTATION = { "hardcore", "whodunnit" }
 
 function Modes.Get(id: string?): Def
     return (id ~= nil and Modes.DEFS[id]) or Modes.DEFS.classic

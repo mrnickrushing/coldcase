@@ -614,3 +614,9 @@ weapon are both in that state.
 > **Verified live** (ForceMode=hardcore): a round came up mode="hardcore", role innocent, anyMedic=false, Lighting.Brightness=0.6, ClockTime=2; the screen showed the tight dark-fog vision. No console errors. Lune 109 (2 new mode tests); cloud engine suite 6/6.
 >
 > Next modes to add to the framework: Whodunnit (deduction + vote), Assassin (FFA), Infection (Outbreak).
+
+## 2026-09-25 · Whodunnit mode (deduction + vote)
+
+> The flagship mode, built on the mode framework. No sheriff is dealt (RoleService reads mode.noSheriff), so the gun can't win it - the town wins only by convicting the killer. Every living player gets an accusation panel (`AccuseController`) listing the living suspects with a running vote count; naming a suspect (`RequestAccuse` -> `WhodunnitService`) counts as a vote, and when a suspect draws accusations from a majority of the living human voters they are convicted. If they are the murderer the town wins (`Resolve("innocents","convicted")`); if not, the town has lynched one of its own (`MarkDead`) and the vote resets. Deaths re-tally and can tip a conviction. Reuses the existing clue system (examine bodies, snitch board) for the deduction; lives entirely in the ACTIVE state, no new phase.
+>
+> **Verified live** (ForceMode=whodunnit, ForceRole=innocent): a round came up mode="whodunnit", anySheriff=false; the vote panel listed the five living suspects with counts; accusing the murderer (Hugo, as the sole living voter = a majority) convicted him and the round ended `innocents` (town win). No console errors. Lune 109; cloud engine suite 6/6 (30 services).

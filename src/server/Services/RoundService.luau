@@ -22,6 +22,7 @@ local BotService = require(script.Parent.BotService)
 local Participant = require(script.Parent.Participant)
 local LightingMood = require(script.Parent.LightingMood)
 local SnitchService = require(script.Parent.SnitchService)
+local WhodunnitService = require(script.Parent.WhodunnitService)
 local Lobby = require(ReplicatedStorage.Shared.Lobby)
 
 local RoundService = {}
@@ -381,6 +382,7 @@ function RoundService:MarkDead(plr: Player, killer: Player?, method: string)
         end
         BotService:OnDeath(plr, killer, method, pos)
     end
+    WhodunnitService:Recheck() -- a death drops stale votes / can tip a conviction
     self:CheckWinConditions(method)
 end
 
@@ -576,6 +578,7 @@ function RoundService:Advance()
         setState("ACTIVE", roundLength)
         BotService:StartRound()
         SnitchService:OnRoundStart()
+        WhodunnitService:Reset()
         -- Mode effects. Hardcore dims the whole round (so it never fires a
         -- random event) and announces itself; the client reads the Mode
         -- attribute for reduced vision.
@@ -694,5 +697,6 @@ CoinService:BindRound(RoundService)
 AbilityService:BindRound(RoundService)
 BotService:BindRound(RoundService)
 SnitchService:BindRound(RoundService)
+WhodunnitService:BindRound(RoundService)
 
 return RoundService
