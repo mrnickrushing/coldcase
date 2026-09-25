@@ -584,3 +584,12 @@ weapon are both in that state.
 > The lobby is where players already wait out INTERMISSION; this makes it a hangout you can read at a glance. Every player's equipped knife floats and slowly spins ~2.6 studs above their head with a rarity-coloured nameplate, drawn locally from a new public "Knife" attribute (CosmeticService sets it on equip, load and respawn) using the already-replicated PreviewModels. Chroma blades cycle their hue up there too. Modelled on PetController; only shown in the lobby (INTERMISSION) and cleared the moment a round starts, so the real weapon is what you carry into the round.
 >
 > **Verified live:** equipped Eclipse (chroma) showed as a floating model named "UncleNickRush" in workspace.KnifeShowcase, 2.6 studs above the head, nameplate "ECLIPSE", hue animating 0.224->0.473. Lune 107; stylua/selene clean.
+
+## 2026-09-25 · Trade-at-a-table in the lobby
+
+> Two wooden trade tables flank the lobby spawn, each with a chair on either side facing across and a "TRADE · SIT TO DEAL" sign. When two players sit down together the game opens a trade between them - the seating IS the mutual consent that an invite otherwise needs (TradeService already required both players to ask each other). Everything after that is the existing trade UI (offers, locks, confirms, table value + fairness). Standing up closes it.
+>
+> - `TradeService:OpenAtTable` (gated Open) and `:CloseFor`; `TradeTableService` watches each tagged table's two Seats' Occupant and opens/closes on the pair. `BuildLobby` builds and tags the tables.
+> - **Verified live** (single client): both tables build at the right spots with two seats + the sign; the player sits (Occupant resolves to a Player, so the pair logic fires); the sign reads "TRADE · SIT TO DEAL". A full round then played clean - INNOCENT, longer 240s timer, coin pickups, and the knife showcase correctly cleared to 0 during the round. Console had no game errors. The actual two-player open can't be exercised in single-client Studio (Wine has no second client), but the path is seat -> GetPlayerFromCharacter -> OpenAtTable into the proven trade system.
+>
+> Cloud engine suite 6/6 (all 28 services load); Lune 107.
