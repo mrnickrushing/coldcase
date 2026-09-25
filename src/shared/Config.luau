@@ -17,6 +17,7 @@ return {
     ROUND_SMALL_UNDER = 8, -- below this headcount a round uses the small length
     ROUND_LARGE_AT = 12, -- at or above it, the large one
     MIN_PLAYERS = 4,
+    MODE_ROTATE_EVERY = 4, -- every Nth round runs a special mode (see Shared/Modes)
     -- The server cap. It mirrors the place's server size, which is set on the
     -- Creator Dashboard (it is not a place-file property: Rojo drops a
     -- Players.MaxPlayers entry without a word). Every headcount threshold
@@ -87,6 +88,7 @@ return {
     VISION_NORMAL = 130, -- past the 60 stud median sightline, short of the 240 longest
     VISION_DARK = 88,
     VISION_SURGE = 130,
+    VISION_HARDCORE = 70, -- reduced sight the whole round in Hardcore mode
     FOG_NAMETAG_RANGE = 40,
 
     -- Events

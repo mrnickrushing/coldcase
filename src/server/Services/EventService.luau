@@ -37,6 +37,25 @@ local function relight()
     Lighting.ClockTime = BASE.ClockTime
 end
 
+-- Hardcore's steady gloom: dimmer than daylight but not the pitch black of a
+-- Lights Out event, so a body can still just be read (IsDark stays false) while
+-- sight is cut. Reverted by Clear() at round end like any other lighting change.
+local function dim()
+    Lighting.Brightness = 0.6
+    Lighting.Ambient = Color3.fromRGB(28, 30, 40)
+    Lighting.OutdoorAmbient = Color3.fromRGB(36, 40, 52)
+    Lighting.EnvironmentDiffuseScale = 0.2
+    Lighting.ClockTime = 2
+end
+
+function EventService:SetModeDark(on: boolean)
+    if on then
+        dim()
+    else
+        relight()
+    end
+end
+
 -- One event per round. Chaos stops being an event when it is the weather.
 -- `anywhere` events ignore the indoor/outdoor split. Lockdown is one of them:
 -- every map builds LockdownDoor parts (the Pier has five) and MapPlan's

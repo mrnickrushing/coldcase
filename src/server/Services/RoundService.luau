@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Shuffle = require(ReplicatedStorage.Shared.Shuffle)
+local Modes = require(ReplicatedStorage.Shared.Modes)
 local Remotes = ReplicatedStorage.Remotes
 local RoleService = require(script.Parent.RoleService)
 local EventService = require(script.Parent.EventService)
@@ -31,6 +32,23 @@ local votes: { [Player]: string } = {}
 local alive: { [Player]: boolean } = {}
 local diedConnections: { RBXScriptConnection } = {}
 local eventFired, snitchRevealed, lastCallFired = false, false, false
+local roundsPlayed = 0
+local currentMode = "classic"
+
+-- Classic by default; a special mode every MODE_ROTATE_EVERY rounds, cycling
+-- through Modes.ROTATION. Studio can force one with ServerStorage.ForceMode.
+local function pickMode(): string
+    local forced = RunService:IsStudio() and ServerStorage:GetAttribute("ForceMode")
+    if type(forced) == "string" and Modes.DEFS[forced] then
+        return forced
+    end
+    roundsPlayed += 1
+    if #Modes.ROTATION > 0 and roundsPlayed % Config.MODE_ROTATE_EVERY == 0 then
+        local slot = (roundsPlayed // Config.MODE_ROTATE_EVERY - 1) % #Modes.ROTATION + 1
+        return Modes.ROTATION[slot]
+    end
+    return "classic"
+end
 local currentMapName, mapIsIndoor = "none", true
 local activeStart, roundLength = 0, Config.ROUND_LENGTH
 -- Public only after the round resolves: { at, killer?, victim, method }
@@ -529,6 +547,9 @@ function RoundService:Advance()
         end
         participants = present
         self:SetMovementLocked(true)
+        -- Pick the mode before roles are dealt, so RoleService can read it.
+        currentMode = pickMode()
+        ReplicatedStorage:SetAttribute("Mode", currentMode)
         RoleService:Assign(participants)
 
         alive = {}
@@ -555,6 +576,17 @@ function RoundService:Advance()
         setState("ACTIVE", roundLength)
         BotService:StartRound()
         SnitchService:OnRoundStart()
+        -- Mode effects. Hardcore dims the whole round (so it never fires a
+        -- random event) and announces itself; the client reads the Mode
+        -- attribute for reduced vision.
+        local modeDef = Modes.Get(currentMode)
+        if modeDef.dark then
+            eventFired = true
+            EventService:SetModeDark(true)
+        end
+        if currentMode ~= "classic" then
+            Remotes.Notify:FireAllClients(("%s — %s"):format(modeDef.name, modeDef.blurb))
+        end
     elseif state == "ACTIVE" then
         self:Resolve("innocents", "time")
     elseif state == "RESOLUTION" then
@@ -618,6 +650,7 @@ function RoundService:Resolve(winner: string, reason: string)
     SpectatorService:Reset()
     CoinService:Disarm()
     EventService:Clear()
+    ReplicatedStorage:SetAttribute("Mode", "classic") -- lobby is never a special mode
     setState("RESOLUTION", Config.RESOLUTION_TIME)
 end
 
