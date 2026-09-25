@@ -554,6 +554,7 @@ function RoundService:Advance()
         OnboardingService:NoteRoundStart(participants)
         setState("ACTIVE", roundLength)
         BotService:StartRound()
+        SnitchService:OnRoundStart()
     elseif state == "ACTIVE" then
         self:Resolve("innocents", "time")
     elseif state == "RESOLUTION" then
