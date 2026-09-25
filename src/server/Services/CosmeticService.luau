@@ -83,6 +83,7 @@ function CosmeticService:Equip(plr: Player, ref: string)
     end
 
     data.equipped[slot] = id
+    plr:SetAttribute("Knife", data.equipped.knife) -- public: the lobby knife showcase
     Remotes.DataChanged:FireClient(plr, { equipped = data.equipped })
     if slot == "effect" or slot == "pet" then
         self:ApplyWorn(plr)
@@ -119,6 +120,7 @@ function CosmeticService:ApplyWorn(plr: Player)
         return
     end
     plr:SetAttribute("Pet", data.equipped.pet)
+    plr:SetAttribute("Knife", data.equipped.knife) -- public: the lobby knife showcase
     local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
     if not root then
         return
