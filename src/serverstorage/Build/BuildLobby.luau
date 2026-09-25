@@ -5,6 +5,7 @@
   The floor and spawn themselves come from default.project.json.
 ]]
 local ServerStorage = game:GetService("ServerStorage")
+local CollectionService = game:GetService("CollectionService")
 local Lobby = require(game.ReplicatedStorage.Shared.Lobby)
 local Theme = require(game.ReplicatedStorage.Shared.Theme)
 
@@ -103,6 +104,63 @@ local function caseBoard(parent: Instance, position: Vector3)
     line.TextScaled = true
     line.TextColor3 = Theme.DANGER
     line.Parent = gui
+end
+
+-- A trade table: a wooden top on a pedestal with a chair on each side facing
+-- across, and a floating sign. Tagged "TradeTable" so TradeTableService opens a
+-- trade when both chairs hold a player (the seating is the mutual consent).
+local function tradeTable(parent: Instance, centre: Vector3)
+    local model = Instance.new("Model")
+    model.Name = "TradeTable"
+    local topPart = block(
+        "Top",
+        model,
+        Vector3.new(5, 0.3, 3),
+        centre + Vector3.new(0, 2, 0),
+        Color3.fromHex("6b4f34"),
+        Enum.Material.Wood
+    )
+    block(
+        "Leg",
+        model,
+        Vector3.new(0.9, 2, 0.9),
+        centre + Vector3.new(0, 1, 0),
+        Color3.fromHex("4a3826"),
+        Enum.Material.Wood
+    )
+    for _, side in { 2.4, -2.4 } do
+        local seat = Instance.new("Seat")
+        seat.Name = "Chair"
+        seat.Anchored = true
+        seat.Size = Vector3.new(2, 0.5, 2)
+        seat.TopSurface = Enum.SurfaceType.Smooth
+        local pos = centre + Vector3.new(0, 1, side)
+        seat.CFrame = CFrame.lookAt(pos, Vector3.new(centre.X, pos.Y, centre.Z))
+        seat.Color = Color3.fromHex("8a5a3a")
+        seat.Material = Enum.Material.Wood
+        seat.Parent = model
+    end
+    local sign = Instance.new("BillboardGui")
+    sign.Name = "Sign"
+    sign.Size = UDim2.fromOffset(170, 30)
+    sign.StudsOffset = Vector3.new(0, 2.4, 0)
+    sign.AlwaysOnTop = true
+    sign.MaxDistance = 60
+    sign.LightInfluence = 0
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundTransparency = 1
+    label.FontFace = Theme.DISPLAY
+    label.TextSize = 16
+    label.Text = "TRADE · SIT TO DEAL"
+    label.TextColor3 = Color3.fromHex("f2a63b")
+    label.TextStrokeTransparency = 0.5
+    label.Parent = sign
+    sign.Adornee = topPart
+    sign.Parent = topPart
+    model.PrimaryPart = topPart
+    model.Parent = parent
+    CollectionService:AddTag(model, "TradeTable")
 end
 
 return function()
@@ -261,6 +319,10 @@ return function()
             prop.Parent = dressing
         end
     end
+
+    -- Two trade tables in the open floor either side of spawn.
+    tradeTable(dressing, top + Vector3.new(-17, 0, 16))
+    tradeTable(dressing, top + Vector3.new(17, 0, 16))
 
     dressing.Parent = lobby
 end

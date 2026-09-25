@@ -28,6 +28,7 @@ local SocialService = require(Services.SocialService)
 local SpectatorService = require(Services.SpectatorService)
 local SnitchService = require(Services.SnitchService)
 require(Services.LeaderboardService) -- starts the global-board refresh loop
+require(Services.TradeTableService) -- lobby trade tables (needs BuildLobby's tags)
 require(Services.PlayerPolicy) -- regional policy for paid random items and trading
 require(Services.MonetizationService) -- installs ProcessReceipt
 

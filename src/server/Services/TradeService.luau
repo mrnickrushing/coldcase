@@ -68,6 +68,34 @@ function TradeService:Open(a: Player, b: Player)
     push(s)
 end
 
+-- Close whatever session a player is in, if any (a trade-table seat emptied).
+function TradeService:CloseFor(plr: Player)
+    local id = sessionOf[plr]
+    local s = id and sessions[id]
+    if s then
+        self:Close(s)
+    end
+end
+
+-- Two players sat down across a lobby trade table: the seating is the mutual
+-- consent an invite needs, so open directly after the same gating an invite runs.
+function TradeService:OpenAtTable(a: Player, b: Player)
+    if a == b or sessionOf[a] or sessionOf[b] then
+        return
+    end
+    if not LiveOps.IsTradingOpen(LiveOpsClock.Day()) then
+        return
+    end
+    local PlayerPolicy = require(script.Parent.PlayerPolicy)
+    if not (PlayerPolicy:CanTradePaidItems(a) and PlayerPolicy:CanTradePaidItems(b)) then
+        return
+    end
+    if not (DataService:Get(a) and DataService:Get(b)) then
+        return
+    end
+    self:Open(a, b)
+end
+
 -- Both players must ask for each other before a table opens
 function TradeService:Invite(from: Player, to: Player)
     if to == from or to.Parent ~= Players then
