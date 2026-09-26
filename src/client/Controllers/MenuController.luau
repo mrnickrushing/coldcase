@@ -15,6 +15,7 @@ local Rarities = require(Shared.RarityTable)
 local Shop = require(Shared.Shop)
 local Progression = require(Shared.Progression)
 local Lobby = require(Shared.Lobby)
+local Modes = require(Shared.Modes)
 local LiveOps = require(Shared.LiveOps)
 local Products = require(Shared.Products)
 local BuildMenus = require(Shared.Build.BuildMenus)
@@ -28,6 +29,7 @@ local lobby = guis.lobby.Root
 local results = guis.results.Root
 local crate = guis.crate.Root
 local inv = guis.inventory.Root
+local modes = guis.modes.Root
 local MenuController = {}
 
 local RARITY_COLOUR = ItemCard.RARITY_COLOUR
@@ -102,6 +104,66 @@ end
 Remotes.VoteTally.OnClientEvent:Connect(function(t)
     tally = t
     renderVotes()
+end)
+
+------------------------------------------------------------ Mode vote (MODES)
+-- The next round's mode is a lobby vote now, not just the silent rotation.
+local modeOrder = { "classic" }
+for _, id in Modes.ROTATION do
+    table.insert(modeOrder, id)
+end
+local myMode: string? = nil
+local modeTally: { [string]: number } = {}
+
+local function renderModes()
+    local open = ClientState.GetRoundState() == "INTERMISSION"
+    local leader, leaderN = nil, 0
+    for id, n in modeTally do
+        if n > leaderN then
+            leader, leaderN = id, n
+        end
+    end
+    for _, id in modeOrder do
+        local card = modes.List:FindFirstChild("Mode_" .. id)
+        if card then
+            card.Votes.Text = tostring(modeTally[id] or 0)
+            local isLeader = leaderN > 0 and id == leader
+            card.Stroke.Color = if id == myMode
+                then Theme.AMBER
+                elseif isLeader then GREEN
+                else QUIET_STROKE
+            local vote = card.Vote
+            vote.Text = if not open then "CLOSED" elseif id == myMode then "VOTED" else "VOTE"
+            setEnabled(vote, open)
+        end
+    end
+end
+
+for _, id in modeOrder do
+    local card = modes.List:FindFirstChild("Mode_" .. id)
+    if card then
+        card.Vote.Activated:Connect(function()
+            if ClientState.GetRoundState() ~= "INTERMISSION" then
+                return
+            end
+            myMode = id
+            Remotes.RequestModeVote:FireServer(id)
+            renderModes()
+        end)
+    end
+end
+Remotes.ModeTally.OnClientEvent:Connect(function(t)
+    modeTally = t
+    -- An empty tally means the round consumed the votes, so our pick is spent.
+    local any = false
+    for _ in t do
+        any = true
+        break
+    end
+    if not any then
+        myMode = nil
+    end
+    renderModes()
 end)
 
 local reported: { [number]: boolean } = {} -- UserIds this client has reported
@@ -889,6 +951,13 @@ lobby.Side.Buttons.OpenInventory.Activated:Connect(function()
     show("inventory")
     renderInventory()
 end)
+lobby.Side.Buttons.OpenModes.Activated:Connect(function()
+    show("modes")
+    renderModes()
+end)
+modes.Buttons.Close.Activated:Connect(function()
+    show(nil) -- back to the walkable room
+end)
 results.Lower.Buttons.NextRound.Activated:Connect(function()
     show(nil) -- back to the walkable room
 end)
@@ -946,6 +1015,7 @@ local function onState()
     local st = ClientState.GetRoundState()
     if st == "INTERMISSION" then
         myVote, tally, lastReward = nil, {}, nil
+        myMode, modeTally = nil, {}
         -- MM2-style: land in the walkable room, not a menu. The ☰ LOBBY MENU
         -- button opens the vote/store on demand.
         if current == "results" or current == "loading" then
@@ -963,6 +1033,7 @@ local function onState()
         end
     end
     renderVotes()
+    renderModes()
 end
 ReplicatedStorage:GetAttributeChangedSignal("RoundState"):Connect(onState)
 
@@ -1062,6 +1133,7 @@ end
 renderPlayers()
 renderSide()
 renderVotes()
+renderModes()
 onState()
 
 return MenuController

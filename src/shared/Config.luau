@@ -163,6 +163,7 @@ return {
         RequestLobbyMode = 4,
         RequestExpose = 2, -- one use a round; a low cap is only anti-spam
         RequestAccuse = 4, -- Whodunnit: change your vote, not spam it
+        RequestModeVote = 4, -- lobby: change your next-mode pick, not spam it
         HintSeen = 5,
     },
 

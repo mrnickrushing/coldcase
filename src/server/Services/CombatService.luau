@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Config = require(game.ReplicatedStorage.Shared.Config)
+local Modes = require(game.ReplicatedStorage.Shared.Modes)
 local RoleService = require(script.Parent.RoleService)
 local AudioService = require(script.Parent.AudioService)
 local EvidenceService = require(script.Parent.EvidenceService)
@@ -257,6 +258,30 @@ function CombatService:Eliminate(victim: Player, killer: Player, method: string)
     if not char then
         return
     end
+
+    -- Infection: a killer's blade converts a living survivor into a killer
+    -- rather than eliminating them, and the infected never cut down their own.
+    -- The gun is unaffected, so a sheriff's shot still kills an infected outright.
+    if
+        Modes.Get(game.ReplicatedStorage:GetAttribute("Mode")).infection
+        and killer
+        and (method == "knife" or method == "throw")
+        and RoleService:Get(killer) == "murderer"
+    then
+        if RoleService:Get(victim) == "murderer" then
+            return -- infected don't turn on each other
+        end
+        local hitPos = char:GetPivot().Position
+        CombatFx.Impact(hitPos)
+        AudioService:Emit("knife_hit", hitPos)
+        RoleService:Infect(victim)
+        if not Participant.IsBot(killer) then
+            Remotes.KillConfirm:FireClient(killer, "infected")
+        end
+        round:CheckWinConditions(method) -- a survivor turned; the town may be gone
+        return
+    end
+
     local pos = char:GetPivot().Position
     CombatFx.Impact(pos)
 

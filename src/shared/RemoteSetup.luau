@@ -30,6 +30,7 @@ local NAMES = {
     "Expose", -- all clients: the killer has been named, highlight them
     "Leaderboard", -- all clients: the top wins / killers / richest boards
     "AccuseTally", -- Whodunnit: who is accused of the murder, and by how many
+    "ModeTally", -- lobby: how many have voted for each next-round mode
     -- client -> server (every one is rate-limited and re-validated)
     "RequestStab",
     "RequestThrow",
@@ -54,6 +55,7 @@ local NAMES = {
     "RequestLobbyMode",
     "RequestExpose", -- snitch blows the whistle: name the killer to everyone
     "RequestAccuse", -- Whodunnit: name a living suspect as the killer
+    "RequestModeVote", -- lobby: vote which mode runs next round
 }
 
 return function()
