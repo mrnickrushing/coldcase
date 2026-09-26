@@ -181,6 +181,12 @@ RemoteGuard.Connect("RequestLobbyMode", function(plr, mode)
     end
 end)
 
+RemoteGuard.Connect("RequestModeVote", function(plr, modeId)
+    if type(modeId) == "string" then
+        RoundService:CastModeVote(plr, modeId)
+    end
+end)
+
 RemoteGuard.Connect("RequestExpose", function(plr)
     SnitchService:RequestExpose(plr)
 end)

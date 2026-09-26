@@ -366,6 +366,45 @@ test("Config.MODE_ROTATE_EVERY is a positive whole number", function()
     )
 end)
 
+test("all four game modes ship, and Infection carries its flag", function()
+    for _, id in { "hardcore", "whodunnit", "assassin", "infection" } do
+        assert(Modes.DEFS[id], "missing mode: " .. id)
+        assert(table.find(Modes.ROTATION, id), "mode not in rotation: " .. id)
+    end
+    assert(Modes.Get("infection").infection, "infection mode must set the infection flag")
+    -- Infection keeps the killer/gun asymmetry, so the medic is not dealt.
+    assert(Modes.Get("infection").noMedic, "infection should not deal a medic")
+end)
+
+test("RoleService exposes Infect and CombatService routes infection kills to it", function()
+    local role = fs.readFile("src/server/Services/RoleService.luau")
+    assert(role:find("function RoleService:Infect"), "RoleService:Infect missing")
+    local combat = fs.readFile("src/server/Services/CombatService.luau")
+    assert(combat:find("RoleService:Infect"), "CombatService never converts an infection victim")
+end)
+
+test("the lobby can vote the next mode end to end", function()
+    -- remotes exist
+    local remotes = fs.readFile("src/shared/RemoteSetup.luau")
+    assert(remotes:find("RequestModeVote"), "RequestModeVote remote missing")
+    assert(remotes:find("ModeTally"), "ModeTally remote missing")
+    -- rate cap set
+    assert(Config.REMOTE_LIMITS.RequestModeVote, "RequestModeVote has no rate cap")
+    -- server tallies and honours the vote
+    local round = fs.readFile("src/server/Services/RoundService.luau")
+    assert(round:find("function RoundService:CastModeVote"), "CastModeVote missing")
+    assert(round:find("modeVotes"), "RoundService never tracks mode votes")
+    -- bootstrap wires the remote
+    local boot = fs.readFile("src/server/Bootstrap.server.luau")
+    assert(boot:find("RequestModeVote"), "Bootstrap does not handle RequestModeVote")
+    -- the menu builds a MODES panel and the controller drives it
+    local menus = fs.readFile("src/shared/Build/BuildMenus.luau")
+    assert(menus:find("ModesGui"), "no ModesGui panel built")
+    assert(menus:find("OpenModes"), "no MODES button in the lobby")
+    local ctrl = fs.readFile("src/client/Controllers/MenuController.luau")
+    assert(ctrl:find("RequestModeVote"), "MenuController never sends a mode vote")
+end)
+
 test("the snitch expose settings are sane", function()
     assert(
         type(Config.SNITCH_EXPOSE_CLUES) == "number" and Config.SNITCH_EXPOSE_CLUES >= 1,

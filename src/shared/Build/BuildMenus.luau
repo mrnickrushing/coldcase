@@ -17,6 +17,7 @@ local Theme = require(script.Parent.Parent.Theme)
 local Config = require(script.Parent.Parent.Config)
 local Rarities = require(script.Parent.Parent.RarityTable)
 local MapPlan = require(script.Parent.Parent.MapPlan)
+local Modes = require(script.Parent.Parent.Modes)
 
 local BG = Theme.GROUND
 local PANEL = Theme.PANEL
@@ -386,17 +387,21 @@ return function(parent: Instance?)
             true
         )
         list(row2, Enum.FillDirection.Horizontal, 8)
-        button("OpenCrate", row2, "CRATE", UDim2.new(0.5, -4, 1, 0)).LayoutOrder = 1
+        button("OpenCrate", row2, "CRATE", UDim2.new(1 / 3, -6, 1, 0)).LayoutOrder = 1
         local inv = button(
             "OpenInventory",
             row2,
             "COLLECTION",
-            UDim2.new(0.5, -4, 1, 0),
+            UDim2.new(1 / 3, -6, 1, 0),
             RAISED,
             Theme.CYAN
         )
         inv.LayoutOrder = 2
         stroke(inv, Theme.CYAN)
+        local modesBtn =
+            button("OpenModes", row2, "MODES", UDim2.new(1 / 3, -6, 1, 0), RAISED, Theme.AMBER)
+        modesBtn.LayoutOrder = 3
+        stroke(modesBtn, Theme.AMBER)
 
         -- Robux store. Entries with a product id of 0 stay hidden.
         local store = frame(
@@ -649,6 +654,60 @@ return function(parent: Instance?)
         back.LayoutOrder = 2
         stroke(back, Color3.fromHex("2b323c"))
         out.crate = g
+    end
+
+    ------------------------------------------------------------------ MODES
+    -- Vote the next round's mode. The room only ever rotated modes on its own;
+    -- this is the player-facing pick MenuController drives with ModeTally.
+    do
+        local g, root = screen(parent :: Instance, "ModesGui", 6, 0.35)
+        pad(root, 26)
+        local h = header(root, "NEXT ROUND", "PICK THE MODE")
+        local note = text(
+            "Note",
+            h,
+            "Most votes wins. No votes and the modes rotate on their own.",
+            12,
+            Theme.SOFT,
+            Theme.MONO,
+            Enum.TextXAlignment.Right
+        )
+        note.Position = UDim2.new(0, 0, 0, 48)
+
+        local scroll = scroller("List", root, UDim2.new(1, 0, 1, -150), UDim2.new(0, 0, 0, 92))
+        list(scroll, nil, 10)
+        local order = { "classic" }
+        for _, id in Modes.ROTATION do
+            table.insert(order, id)
+        end
+        for i, id in order do
+            local def = Modes.Get(id)
+            local card = frame("Mode_" .. id, scroll, UDim2.new(1, -6, 0, 96), nil, RAISED)
+            card:SetAttribute("ModeId", id)
+            card.LayoutOrder = i
+            stroke(card)
+            pad(card, 14)
+            local n = text("ModeName", card, string.upper(def.name), 22, Theme.INK, Theme.DISPLAY)
+            n.Size = UDim2.new(1, -160, 0, 26)
+            local blurb = text("Blurb", card, def.blurb, 13, Theme.SOFT)
+            blurb.Position = UDim2.new(0, 0, 0, 30)
+            blurb.Size = UDim2.new(1, -160, 0, 38)
+            blurb.TextWrapped = true
+            blurb.TextYAlignment = Enum.TextYAlignment.Top
+            local votes =
+                text("Votes", card, "0", 26, Theme.AMBER, Theme.DISPLAY, Enum.TextXAlignment.Right)
+            votes.Position = UDim2.new(1, -150, 0, 0)
+            votes.Size = UDim2.new(0, 140, 0, 30)
+            local vote = button("Vote", card, "VOTE", UDim2.new(0, 140, 0, Theme.TAP_MIN))
+            vote.Position = UDim2.new(1, -140, 1, -Theme.TAP_MIN)
+        end
+
+        local btns =
+            frame("Buttons", root, UDim2.new(1, 0, 0, 46), UDim2.new(0, 0, 1, -46), nil, true)
+        list(btns, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center)
+        local back = button("Close", btns, "BACK", UDim2.new(0, 160, 1, 0), RAISED, Theme.MUTED)
+        stroke(back, Color3.fromHex("2b323c"))
+        out.modes = g
     end
 
     ------------------------------------------------------------------ INVENTORY

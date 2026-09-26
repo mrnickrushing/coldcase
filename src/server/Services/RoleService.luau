@@ -185,6 +185,21 @@ function RoleService:MakeHero(plr: Player): boolean
     return true
 end
 
+-- Infection: an infected's blade turns a living survivor into a killer instead
+-- of eliminating them. They keep their body, take a knife, and join the hunt.
+-- The gun still kills outright, so the sheriff can thin the infected out.
+function RoleService:Infect(plr: Player)
+    if roles[plr] == "murderer" then
+        return -- already infected
+    end
+    roles[plr] = "murderer"
+    if not Participant.IsBot(plr) then
+        Remotes.RoleAssigned:FireClient(plr, "murderer")
+        Remotes.Notify:FireClient(plr, "You've been infected! Hunt the survivors.")
+    end
+    self:Arm(plr)
+end
+
 -- Snitch: at 30s remaining, the snitch and the murderer(s) learn each other.
 -- A full round can hold two murderers (SECOND_MURDERER_AT), so the snitch
 -- learns every murderer and every murderer learns the snitch - a single

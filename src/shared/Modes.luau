@@ -12,6 +12,7 @@ export type Def = {
     noSheriff: boolean?, -- the sheriff role is not dealt
     vote: boolean?, -- the town convicts the killer by accusation, not the gun
     ffa: boolean?, -- free-for-all: everyone is an armed assassin with a target
+    infection: boolean?, -- the killer's blade converts victims into killers too
     clueWindow: number?, -- seconds a body's clues stay readable (else Config)
 }
 
@@ -35,11 +36,17 @@ Modes.DEFS = {
         blurb = "Free-for-all. Everyone's armed. Hunt your target; last blade wins.",
         ffa = true,
     },
+    infection = {
+        name = "Infection",
+        blurb = "It starts with the killer. Everyone they cut down rises to hunt too. Survive the clock.",
+        infection = true,
+        noMedic = true,
+    },
 } :: { [string]: Def }
 
 -- The special modes that rotate in between Classic rounds, in order. New modes
 -- join here as they ship.
-Modes.ROTATION = { "hardcore", "whodunnit", "assassin" }
+Modes.ROTATION = { "hardcore", "whodunnit", "assassin", "infection" }
 
 function Modes.Get(id: string?): Def
     return (id ~= nil and Modes.DEFS[id]) or Modes.DEFS.classic

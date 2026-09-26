@@ -176,7 +176,9 @@ local function confirmKill(victimRole: string?)
     end)
     -- kill line
     local role = victimRole and victimRole:upper() or "TARGET"
-    killText.Text = "ELIMINATED · " .. role
+    killText.Text = if victimRole == "infected"
+        then "INFECTED · +1 HUNTER"
+        else "ELIMINATED · " .. role
     killText.TextColor3 = (victimRole and ROLE_COLOUR[victimRole]) or Theme.INK
     killText.TextTransparency = 0
     killText.Position = UDim2.fromScale(0.5, 0.58)

@@ -31,6 +31,7 @@ local state, stateEnds = "INTERMISSION", math.huge -- no deadline until the lobb
 local participants: { Player } = {} -- Players and NPCs (see Participant)
 local pendingBots = 0
 local votes: { [Player]: string } = {}
+local modeVotes: { [Player]: string } = {} -- lobby vote for the next round's mode
 local alive: { [Player]: boolean } = {}
 local diedConnections: { RBXScriptConnection } = {}
 local eventFired, snitchRevealed, lastCallFired = false, false, false
@@ -45,6 +46,18 @@ local function pickMode(): string
         return forced
     end
     roundsPlayed += 1
+    -- The lobby's pick wins when anyone voted; the votes are spent each round.
+    local tally, voted, votedN = {}, nil, 0
+    for _, id in modeVotes do
+        tally[id] = (tally[id] or 0) + 1
+        if tally[id] > votedN then
+            voted, votedN = id, tally[id]
+        end
+    end
+    modeVotes = {}
+    if voted and Modes.DEFS[voted] then
+        return voted
+    end
     if #Modes.ROTATION > 0 and roundsPlayed % Config.MODE_ROTATE_EVERY == 0 then
         local slot = (roundsPlayed // Config.MODE_ROTATE_EVERY - 1) % #Modes.ROTATION + 1
         return Modes.ROTATION[slot]
@@ -112,6 +125,14 @@ local function broadcastTally()
         tally[m] = (tally[m] or 0) + 1
     end
     Remotes.VoteTally:FireAllClients(tally)
+end
+
+local function broadcastModeTally()
+    local tally = {}
+    for _, id in modeVotes do
+        tally[id] = (tally[id] or 0) + 1
+    end
+    Remotes.ModeTally:FireAllClients(tally)
 end
 
 local function minPlayers(): number
@@ -219,6 +240,15 @@ function RoundService:CastVote(plr: Player, mapName: string): boolean
     end
     votes[plr] = mapName
     broadcastTally()
+    return true
+end
+
+function RoundService:CastModeVote(plr: Player, modeId: string): boolean
+    if state ~= "INTERMISSION" or not Modes.DEFS[modeId] then
+        return false
+    end
+    modeVotes[plr] = modeId
+    broadcastModeTally()
     return true
 end
 
@@ -554,6 +584,7 @@ function RoundService:Advance()
         -- Pick the mode before roles are dealt, so RoleService can read it.
         currentMode = pickMode()
         ReplicatedStorage:SetAttribute("Mode", currentMode)
+        broadcastModeTally() -- pickMode spent the votes; clear the lobby's counts
         RoleService:Assign(participants)
 
         alive = {}
@@ -694,6 +725,10 @@ Players.PlayerRemoving:Connect(function(plr)
     if votes[plr] then
         votes[plr] = nil
         broadcastTally()
+    end
+    if modeVotes[plr] then
+        modeVotes[plr] = nil
+        broadcastModeTally()
     end
     RoundService.clueCounts[plr] = nil
     if alive[plr] then
