@@ -735,7 +735,7 @@ crate.Header.Tabs.Seasonal.Activated:Connect(function()
     end
 end)
 crate.Buttons.Close.Activated:Connect(function()
-    show("lobby")
+    show(nil) -- back to the walkable room
 end)
 for _, attr in { "SeasonId", "SeasonDaysLeft", "SeasonCrateCost" } do
     ReplicatedStorage:GetAttributeChangedSignal(attr):Connect(function()
@@ -877,7 +877,7 @@ inv.Buttons.Reroll.Activated:Connect(function()
     end
 end)
 inv.Buttons.Close.Activated:Connect(function()
-    show("lobby")
+    show(nil) -- back to the walkable room
 end)
 
 lobby.Side.Buttons.OpenCrate.Activated:Connect(function()
@@ -890,7 +890,7 @@ lobby.Side.Buttons.OpenInventory.Activated:Connect(function()
     renderInventory()
 end)
 results.Lower.Buttons.NextRound.Activated:Connect(function()
-    show("lobby")
+    show(nil) -- back to the walkable room
 end)
 results.Lower.Buttons.OpenCrate.Activated:Connect(function()
     show("crate")
@@ -946,8 +946,10 @@ local function onState()
     local st = ClientState.GetRoundState()
     if st == "INTERMISSION" then
         myVote, tally, lastReward = nil, {}, nil
-        if current == nil or current == "results" then
-            show("lobby")
+        -- MM2-style: land in the walkable room, not a menu. The ☰ LOBBY MENU
+        -- button opens the vote/store on demand.
+        if current == "results" or current == "loading" then
+            show(nil)
         end
     elseif st == "LOADING" then
         show("loading")

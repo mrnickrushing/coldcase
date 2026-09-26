@@ -636,3 +636,12 @@ weapon are both in that state.
 > Fix (MenuController): the vote/store menu can now be dismissed. A "✕ WALK LOBBY" button on the menu calls show(nil) - disabling the LobbyGui and its input-sinking backdrop - so the room is fully visible, walkable, and its world objects tappable. A persistent "☰ LOBBY MENU" bar (shown while walking, INTERMISSION + no menu up) reopens it. Movement is already free in the lobby (SetMovementLocked is only on during gather/REVEAL).
 >
 > Verified live: from the lobby, dismissing the menu shows the full precinct room (board, shelves, arcade, couches) with the knife showcase overhead and the LOBBY MENU button; reopening works. No console errors. Lune 109.
+
+## 2026-09-26 · MM2-style lobby default + matte floors
+
+> Two follow-ups to the lobby fix.
+>
+> - **Room by default (MM2-style).** The vote/store menu no longer auto-opens on join or after a round; you spawn straight into the walkable room and the "☰ LOBBY MENU" button opens the menu on demand. Every menu (crate, inventory, results, the lobby menu itself) closes back to the room (show(nil)). Verified live: on join the LobbyGui is not in the auto-shown list; only the free-crate onboarding pops, and closing it lands in the room.
+> - **Less shiny floors.** The glossy SmoothPlastic floors read as plastic under Future lighting. Switched every floor to matte WoodPlanks: the lobby's floor seams and inlays, all 34 map-region floor materials, and the lobby spawn pad (also dulled from bright orange to a muted amber). Walls, stairs and the ceiling keep their materials. Verified live: the lobby floor is uniform matte wood and the bright shiny spawn pad is gone.
+>
+> Lune 109; stylua/selene clean.
