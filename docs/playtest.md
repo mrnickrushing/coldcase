@@ -628,3 +628,11 @@ weapon are both in that state.
 > **Verified live** (ForceMode=assassin): a round came up mode="assassin" with roleCounts {assassin:6} - the whole lobby, no other roles; the role card read ASSASSIN with the mode banner; the THROW action was available. Wiping the field left the player last standing and the round resolved "assassin" (round_complete ... assassin), player still alive. No console errors. Lune 109; cloud 6/6 (31 services).
 >
 > Bug caught in testing: the assassin *logic* shipped before the mode *definition* - Modes.DEFS had no "assassin", so mode.ffa was never true and ForceMode was rejected (round came up classic). Fixed by adding the def + rotation entry. A reminder that a new mode needs its Modes entry, not just the service branches.
+
+## 2026-09-26 · Fix: the lobby room was unreachable (menu sealed it off)
+
+> Player report (mobile, multiplayer): "didn't see any lobby" - only the level-vote/store menu, no room to run around, no pedestals or trade tables. Diagnosis via the Open Cloud Luau lane: the lobby ROOM builds fine on the live server (floor, 145 dressing pieces, 2 trade tables, 3 pedestals) and the only spawn is the lobby spawn - so players do spawn in the room. But the LobbyGui is a full-screen menu whose Backdrop is `Active = true` (sinks all input so clicks never reach the world) at 0.35 transparency (dims the room 65%), with no way to dismiss it. So the walkable social features (pedestals, trade tables, knife showcase) were sealed behind the menu; on a phone the menu fills the screen and the room is invisible.
+>
+> Fix (MenuController): the vote/store menu can now be dismissed. A "✕ WALK LOBBY" button on the menu calls show(nil) - disabling the LobbyGui and its input-sinking backdrop - so the room is fully visible, walkable, and its world objects tappable. A persistent "☰ LOBBY MENU" bar (shown while walking, INTERMISSION + no menu up) reopens it. Movement is already free in the lobby (SetMovementLocked is only on during gather/REVEAL).
+>
+> Verified live: from the lobby, dismissing the menu shows the full precinct room (board, shelves, arcade, couches) with the knife showcase overhead and the LOBBY MENU button; reopening works. No console errors. Lune 109.

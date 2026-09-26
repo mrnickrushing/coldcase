@@ -994,6 +994,69 @@ end
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watchCamera)
 watchCamera()
 
+-- Walkable lobby. The vote/store menu used to seal the room off (its backdrop
+-- sinks input and dims the world), so the trade tables, pedestals and knife
+-- showcase were unreachable - you never saw the room. Now the menu can be
+-- dismissed to walk it, and a persistent button brings it back.
+do
+    local function skin(inst: GuiObject, colour: Color3, textColour: Color3)
+        inst.BackgroundColor3 = colour
+        inst.BorderSizePixel = 0
+        inst.FontFace = Theme.DISPLAY
+        inst.TextColor3 = textColour
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 6)
+        corner.Parent = inst
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Theme.STROKE
+        stroke.Parent = inst
+    end
+
+    -- "Walk lobby" closes the menu to the room. Parented to the lobby Root so it
+    -- rides above the menu; ZIndex keeps it on top.
+    local walk = Instance.new("TextButton")
+    walk.Name = "WalkLobby"
+    walk.AnchorPoint = Vector2.new(1, 0)
+    walk.Position = UDim2.new(1, -16, 0, 16)
+    walk.Size = UDim2.fromOffset(160, 40)
+    walk.ZIndex = 20
+    walk.TextSize = 15
+    walk.Text = "✕  WALK LOBBY"
+    skin(walk, Theme.CARD, Theme.AMBER)
+    walk.Parent = lobby
+    walk.Activated:Connect(function()
+        show(nil)
+    end)
+
+    -- A persistent bar, shown while walking the lobby, to reopen the menu.
+    local bar = Instance.new("ScreenGui")
+    bar.Name = "LobbyBar"
+    bar.ResetOnSpawn = false
+    bar.IgnoreGuiInset = true
+    bar.DisplayOrder = 8
+    bar.Enabled = false
+    bar.Parent = pg
+    local menuBtn = Instance.new("TextButton")
+    menuBtn.AnchorPoint = Vector2.new(0.5, 1)
+    menuBtn.Position = UDim2.new(0.5, 0, 1, -18)
+    menuBtn.Size = UDim2.fromOffset(210, 46)
+    menuBtn.TextSize = 18
+    menuBtn.Text = "☰  LOBBY MENU"
+    skin(menuBtn, Theme.AMBER, Theme.GROUND)
+    menuBtn.Parent = bar
+    menuBtn.Activated:Connect(function()
+        show("lobby")
+    end)
+
+    local function refreshBar()
+        -- Show the reopen button only when in the lobby with the menu dismissed.
+        bar.Enabled = ClientState.GetRoundState() == "INTERMISSION" and ClientState.screen == nil
+    end
+    ClientState.On("screen", refreshBar)
+    ReplicatedStorage:GetAttributeChangedSignal("RoundState"):Connect(refreshBar)
+    refreshBar()
+end
+
 renderPlayers()
 renderSide()
 renderVotes()
