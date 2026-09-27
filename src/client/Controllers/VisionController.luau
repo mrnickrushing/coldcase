@@ -88,28 +88,30 @@ local function isDarkNow(): boolean
 end
 
 local function aura(char: Model, on: boolean)
-    local light = char:FindFirstChild("ColdCaseAura") :: PointLight?
-    local glow = char:FindFirstChild("ColdCaseAuraGlow") :: Highlight?
+    -- The light lives on the root part (a PointLight only emits from a BasePart),
+    -- so it must be found there too - looking under the Model missed it, which
+    -- both stacked a fresh light every frame (blinding) and never let it be
+    -- removed when the lights came back. Find it where it actually lives.
+    local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+    local light = root and root:FindFirstChild("ColdCaseAura")
+    local glow = char:FindFirstChild("ColdCaseAuraGlow")
     if on then
-        if not light then
-            local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
-            if root and root:IsA("BasePart") then
-                local l = Instance.new("PointLight")
-                l.Name = "ColdCaseAura"
-                l.Color = Color3.fromHex("ffe1a6") -- warm lantern
-                l.Brightness = 2.2
-                l.Range = 18
-                l.Shadows = false
-                l.Parent = root
-            end
+        if not light and root and root:IsA("BasePart") then
+            local l = Instance.new("PointLight")
+            l.Name = "ColdCaseAura"
+            l.Color = Color3.fromHex("ffe1a6") -- warm lantern
+            l.Brightness = 0.9
+            l.Range = 9
+            l.Shadows = false
+            l.Parent = root
         end
         if not glow then
             local h = Instance.new("Highlight")
             h.Name = "ColdCaseAuraGlow"
             h.FillColor = Color3.fromHex("ffe1a6")
-            h.FillTransparency = 0.86
+            h.FillTransparency = 0.92
             h.OutlineColor = Color3.fromHex("ffe1a6")
-            h.OutlineTransparency = 0.45
+            h.OutlineTransparency = 0.6
             h.DepthMode = Enum.HighlightDepthMode.Occluded
             h.Parent = char
         end

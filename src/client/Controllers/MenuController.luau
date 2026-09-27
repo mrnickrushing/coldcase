@@ -1047,10 +1047,12 @@ local function fit()
     for _, g in guis do
         local root = g.Root
         local size = root.Size
-        -- Never clamp above what fits: a floor of 0.35 left a 1040 wide canvas
-        -- hanging off the side of a small phone. Small and on screen beats
-        -- large and cut off.
-        root.Scale.Scale = math.min((vp.X - 24) / size.X.Offset, (vp.Y - 24) / size.Y.Offset, 1)
+        -- Fill the screen up to 1.5x native: at 1x the 1040x640 canvas floated
+        -- small in the middle of a tablet with wide empty margins and read as
+        -- broken. Now it grows to fill a big screen (capped so a large desktop
+        -- monitor does not blow it up), and still shrinks to fit a small phone -
+        -- a floor of 0.35 once left it hanging off the side, so there is none.
+        root.Scale.Scale = math.min((vp.X - 24) / size.X.Offset, (vp.Y - 24) / size.Y.Offset, 1.5)
     end
 end
 local viewportConn
