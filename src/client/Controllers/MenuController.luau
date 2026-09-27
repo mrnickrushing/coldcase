@@ -1121,9 +1121,42 @@ do
         show("lobby")
     end)
 
+    -- A prominent GAME MODE button in the walkable room: mode selection was
+    -- otherwise buried inside the menu. Shows the mode currently winning the
+    -- vote (or the next one) and opens the MODES vote panel directly.
+    local modeBtn = Instance.new("TextButton")
+    modeBtn.AnchorPoint = Vector2.new(0.5, 1)
+    modeBtn.Position = UDim2.new(0.5, 0, 1, -18 - 46 - 8)
+    modeBtn.Size = UDim2.fromOffset(210, 40)
+    modeBtn.TextSize = 15
+    skin(modeBtn, Theme.CARD, Theme.AMBER)
+    modeBtn.Parent = bar
+    modeBtn.Activated:Connect(function()
+        show("modes")
+        renderModes()
+    end)
+
+    local function modeButtonText(): string
+        local leader, best = nil, 0
+        for id, n in modeTally do
+            if n > best then
+                leader, best = id, n
+            end
+        end
+        if leader then
+            return ("🎮  %s  ▸"):format(string.upper(Modes.Get(leader).name))
+        end
+        return "🎮  PICK GAME MODE"
+    end
+    modeBtn.Text = modeButtonText()
+    Remotes.ModeTally.OnClientEvent:Connect(function()
+        modeBtn.Text = modeButtonText()
+    end)
+
     local function refreshBar()
-        -- Show the reopen button only when in the lobby with the menu dismissed.
+        -- Show the reopen buttons only in the lobby with the menu dismissed.
         bar.Enabled = ClientState.GetRoundState() == "INTERMISSION" and ClientState.screen == nil
+        modeBtn.Text = modeButtonText()
     end
     ClientState.On("screen", refreshBar)
     ReplicatedStorage:GetAttributeChangedSignal("RoundState"):Connect(refreshBar)

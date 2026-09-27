@@ -7414,7 +7414,6 @@ local FibreBands = require(Shared.FibreBands)
 local Modes = require(Shared.Modes)
 local Remotes = game.ReplicatedStorage.Remotes
 local Reach = require(script.Parent.Reach)
-local EventService = require(script.Parent.EventService)
 local AudioService = require(script.Parent.AudioService)
 local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
@@ -7740,11 +7739,13 @@ function EvidenceService:Examine(plr: Player, model: Instance)
         return
     end
 
-    -- Clues cannot be read in the dark. This is the murderer's window.
+    -- Clues stay readable in the dark now: everyone carries a light aura, so a
+    -- witness who gets to the body in time can still read it. Only real age
+    -- (the mode's clue window) lets the trail go cold.
     local age = os.clock() - data.at
     local window = Modes.Get(game.ReplicatedStorage:GetAttribute("Mode")).clueWindow
         or Config.BODY_CLUE_WINDOW
-    if EventService:IsDark() or age > window then
+    if age > window then
         Remotes.Clue:FireClient(plr, { cold = true })
         return
     end
@@ -10376,10 +10377,17 @@ return TradeService
 -- Sitting together is the mutual consent an invite would otherwise require.
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TradeService = require(script.Parent.TradeService)
+local LiveOps = require(ReplicatedStorage.Shared.LiveOps)
+local Remotes = ReplicatedStorage.Remotes
 
 local TradeTableService = {}
 local seated: { [Model]: { Player } } = {} -- the pair a table last opened
+
+local function tradingOpen(): boolean
+    return ReplicatedStorage:GetAttribute("TradingOpen") == true
+end
 
 local function playerOf(seat: Seat): Player?
     local occupant = seat.Occupant
@@ -10420,18 +10428,72 @@ local function evaluate(model: Model)
     end
 end
 
+-- Seat a player at a free chair of this table when they trigger the prompt.
+-- Sitting is still the mutual consent: two players in the two chairs open the
+-- trade (evaluate). Before the Day-28 unlock, say so instead of a dead press.
+local function sitAt(model: Model, plr: Player)
+    local char = plr.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hum then
+        return
+    end
+    if not tradingOpen() then
+        local day = ReplicatedStorage:GetAttribute("TradingOpensDay") or LiveOps.TRADING_UNLOCK_DAY
+        Remotes.Notify:FireClient(plr, ("Trading unlocks on Day %d."):format(day))
+        return
+    end
+    for _, seat in chairsOf(model) do
+        if not seat.Occupant then
+            seat:Sit(hum)
+            return
+        end
+    end
+    Remotes.Notify:FireClient(plr, "Both seats are taken.")
+end
+
+-- The table's floating sign reflects whether trading is open yet.
+local function refreshSign(model: Model)
+    local top = model.PrimaryPart or model:FindFirstChild("Top")
+    local sign = top and top:FindFirstChild("Sign")
+    local label = sign and sign:FindFirstChild("Label")
+    if label and label:IsA("TextLabel") then
+        if tradingOpen() then
+            label.Text = "TRADE · SIT TO DEAL"
+        else
+            local day = ReplicatedStorage:GetAttribute("TradingOpensDay")
+                or LiveOps.TRADING_UNLOCK_DAY
+            label.Text = ("TRADE · OPENS DAY %d"):format(day)
+        end
+    end
+end
+
 local function watch(model: Model)
     for _, seat in chairsOf(model) do
         seat:GetPropertyChangedSignal("Occupant"):Connect(function()
             evaluate(model)
         end)
     end
+    local top = model.PrimaryPart or model:FindFirstChild("Top")
+    local prompt = top and top:FindFirstChild("TradePrompt")
+    if prompt and prompt:IsA("ProximityPrompt") then
+        prompt.Triggered:Connect(function(plr)
+            sitAt(model, plr)
+        end)
+    end
+    refreshSign(model)
 end
 
 for _, model in CollectionService:GetTagged("TradeTable") do
     watch(model)
 end
 CollectionService:GetInstanceAddedSignal("TradeTable"):Connect(watch)
+
+-- Keep every sign current when the trading window opens or closes.
+ReplicatedStorage:GetAttributeChangedSignal("TradingOpen"):Connect(function()
+    for _, model in CollectionService:GetTagged("TradeTable") do
+        refreshSign(model)
+    end
+end)
 
 return TradeTableService
 ]]></string>
@@ -13696,12 +13758,23 @@ local function tradeTable(parent: Instance, centre: Vector3)
     label.BackgroundTransparency = 1
     label.FontFace = Theme.DISPLAY
     label.TextSize = 16
+    label.Name = "Label"
     label.Text = "TRADE · SIT TO DEAL"
     label.TextColor3 = Color3.fromHex("f2a63b")
     label.TextStrokeTransparency = 0.5
     label.Parent = sign
     sign.Adornee = topPart
     sign.Parent = topPart
+    -- A visible prompt so the table reads as interactive, not decoration.
+    -- TradeTableService seats you here (or says when trading unlocks).
+    local prompt = Instance.new("ProximityPrompt")
+    prompt.Name = "TradePrompt"
+    prompt.ActionText = "Sit & Trade"
+    prompt.ObjectText = "Trade Table"
+    prompt.KeyboardKeyCode = Enum.KeyCode.E
+    prompt.RequiresLineOfSight = false
+    prompt.MaxActivationDistance = 10
+    prompt.Parent = topPart
     model.PrimaryPart = topPart
     model.Parent = parent
     CollectionService:AddTag(model, "TradeTable")
@@ -16665,6 +16738,122 @@ return CombatFeel
         </Item>
         <Item class="ModuleScript" referent="82">
           <Properties>
+            <string name="Name">CompassController</string>
+            <string name="Source"><![CDATA[--!strict
+-- StarterPlayerScripts/Controllers/CompassController
+-- A heading ribbon across the top of the screen so players can orient
+-- themselves - find their way back to the lobby, call out a direction, or say
+-- which way the killer ran. Purely cosmetic: it reads the camera's facing and
+-- draws N/E/S/W ticks that scroll as you turn. Hidden while a full-screen menu
+-- is open. Client-only; the server never sees or trusts it.
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Theme = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Theme"))
+local ClientState = require(script.Parent.Parent.ClientState)
+
+local plr = Players.LocalPlayer
+local CompassController = {}
+
+local WIDTH = 300 -- ribbon window width in pixels
+local ARC = 160 -- how many degrees of heading the window spans
+local PX_PER_DEG = WIDTH / ARC
+
+-- Eight cardinal/inter-cardinal marks. Heading 0 = facing -Z (north), matching
+-- the clue directions EvidenceService reports, so "north" means the same thing.
+local MARKS = {
+    { deg = 0, label = "N" },
+    { deg = 45, label = "NE" },
+    { deg = 90, label = "E" },
+    { deg = 135, label = "SE" },
+    { deg = 180, label = "S" },
+    { deg = 225, label = "SW" },
+    { deg = 270, label = "W" },
+    { deg = 315, label = "NW" },
+}
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "ColdCaseCompass"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = false
+gui.DisplayOrder = 12
+gui.Enabled = false
+gui.Parent = plr:WaitForChild("PlayerGui")
+
+local window = Instance.new("Frame")
+window.Name = "Window"
+window.AnchorPoint = Vector2.new(0.5, 0)
+window.Position = UDim2.new(0.5, 0, 0, 8)
+window.Size = UDim2.fromOffset(WIDTH, 34)
+window.BackgroundColor3 = Theme.GROUND
+window.BackgroundTransparency = 0.35
+window.BorderSizePixel = 0
+window.ClipsDescendants = true
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 6)
+corner.Parent = window
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromHex("1f252e")
+stroke.Parent = window
+window.Parent = gui
+
+-- One reusable label per mark; RenderStepped only moves them.
+local labels: { [number]: TextLabel } = {}
+for i, mark in MARKS do
+    local l = Instance.new("TextLabel")
+    l.Name = mark.label
+    l.AnchorPoint = Vector2.new(0.5, 0.5)
+    l.Position = UDim2.new(0.5, 0, 0.5, 0)
+    l.Size = UDim2.fromOffset(40, 24)
+    l.BackgroundTransparency = 1
+    l.Text = mark.label
+    l.FontFace = Theme.DISPLAY
+    l.TextSize = if #mark.label == 1 then 18 else 12
+    l.TextColor3 = if mark.label == "N" then Theme.AMBER else Theme.SOFT
+    l.Parent = window
+    labels[i] = l
+end
+
+-- Centre pointer: a small notch marking the heading you actually face.
+local pointer = Instance.new("Frame")
+pointer.Name = "Pointer"
+pointer.AnchorPoint = Vector2.new(0.5, 1)
+pointer.Position = UDim2.new(0.5, 0, 1, 0)
+pointer.Size = UDim2.fromOffset(2, 12)
+pointer.BackgroundColor3 = Theme.AMBER
+pointer.BorderSizePixel = 0
+pointer.Parent = window
+
+-- Signed shortest angle from heading to a mark, in [-180, 180].
+local function delta(markDeg: number, heading: number): number
+    local d = (markDeg - heading + 540) % 360 - 180
+    return d
+end
+
+RunService.RenderStepped:Connect(function()
+    local cam = workspace.CurrentCamera
+    local shown = cam ~= nil and plr.Character ~= nil and ClientState.screen == nil
+    gui.Enabled = shown
+    if not shown then
+        return
+    end
+    local look = (cam :: Camera).CFrame.LookVector
+    local heading = math.deg(math.atan2(look.X, -look.Z)) % 360
+    for i, mark in MARKS do
+        local off = delta(mark.deg, heading) * PX_PER_DEG
+        local l = labels[i]
+        l.Position = UDim2.new(0.5, off, 0.5, 0)
+        -- fade the ones near the clipped edges so the ribbon reads cleanly
+        l.TextTransparency = math.clamp((math.abs(off) - WIDTH / 2 + 30) / 30, 0, 1)
+    end
+end)
+
+return CompassController
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="83">
+          <Properties>
             <string name="Name">DeductionController</string>
             <string name="Source"><![CDATA[--!strict
 -- StarterPlayerScripts/Controllers/DeductionController
@@ -16959,7 +17148,7 @@ return DeductionController
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="83">
+        <Item class="ModuleScript" referent="84">
           <Properties>
             <string name="Name">HudController</string>
             <string name="Source"><![CDATA[-- StarterPlayerScripts/Controllers/HudController
@@ -17281,7 +17470,7 @@ return HudController
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="84">
+        <Item class="ModuleScript" referent="85">
           <Properties>
             <string name="Name">InputController</string>
             <string name="Source"><![CDATA[-- StarterPlayerScripts/Controllers/InputController
@@ -17399,6 +17588,55 @@ local function aimPoint(): Vector3
     return aimAt(m.X, m.Y)
 end
 
+-- Aim assist for guns and thrown knives. On a phone the shot went to dead
+-- screen-centre with no crosshair, so unless a target was perfectly centred you
+-- missed and "nothing happened". This snaps the shot onto the nearest character
+-- close to where you are aiming (players and NPCs), within a cone and in range.
+-- The server still re-validates the hit and applies the sheriff's misfire rule,
+-- so this only helps you point - it can't fake a kill.
+local function assistedAim(range: number): Vector3?
+    local cam = workspace.CurrentCamera
+    if not cam then
+        return nil
+    end
+    local vp = cam.ViewportSize
+    local center = Vector2.new(vp.X, vp.Y) / 2
+    local limit = math.min(vp.X, vp.Y) * 0.22 -- how far off centre we still help
+    local eye = cam.CFrame.Position
+    local best, bestPixels = nil, limit
+    local function consider(char: Model?)
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local root = char
+            and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
+        if not (hum and hum.Health > 0 and root and root:IsA("BasePart")) then
+            return
+        end
+        local pos = root.Position + Vector3.new(0, 0.5, 0)
+        if (pos - eye).Magnitude > range then
+            return
+        end
+        local sp, onScreen = cam:WorldToViewportPoint(pos)
+        if not onScreen or sp.Z <= 0 then
+            return
+        end
+        local pixels = (Vector2.new(sp.X, sp.Y) - center).Magnitude
+        if pixels < bestPixels then
+            best, bestPixels = pos, pixels
+        end
+    end
+    for _, other in Players:GetPlayers() do
+        if other ~= plr then
+            consider(other.Character)
+        end
+    end
+    for _, model in CollectionService:GetTagged("BotCharacter") do
+        if model:IsA("Model") then
+            consider(model)
+        end
+    end
+    return best
+end
+
 ---------------------------------------------------------------- Actions
 local function interact()
     local pos = myPosition()
@@ -17444,7 +17682,8 @@ local function fire()
         and myPosition()
         and cooled("gun", Config.GUN_COOLDOWN)
     then
-        Remotes.RequestShoot:FireServer(aimPoint())
+        local aim = isTouch() and (assistedAim(Config.GUN_RANGE) or aimPoint()) or aimPoint()
+        Remotes.RequestShoot:FireServer(aim)
         CombatFeel.Kick(0.26, 0.15)
     end
 end
@@ -17456,7 +17695,9 @@ local function throw()
         and myPosition()
         and cooled("throw", Config.THROW_COOLDOWN)
     then
-        Remotes.RequestThrow:FireServer(aimPoint())
+        local reach = Config.THROW_MAX_FLIGHT * Config.THROW_SPEED
+        local aim = isTouch() and (assistedAim(reach) or aimPoint()) or aimPoint()
+        Remotes.RequestThrow:FireServer(aim)
         CombatFeel.Kick(0.19, 0.13)
     end
 end
@@ -17755,6 +17996,52 @@ Remotes.AbilityState.OnClientEvent:Connect(function(kind: string, duration: numb
 end)
 
 ---------------------------------------------------------------- Context prompt
+---------------------------------------------------------------- aim reticle
+-- A crosshair at screen centre for phone players: touch shots fire at the
+-- centre, so without this you aimed at nothing and missed. Shown only while
+-- armed and in a round, and hidden behind any open menu.
+local reticleDot: Frame? = nil
+local function reticle(): Frame
+    if reticleDot and reticleDot.Parent then
+        return reticleDot
+    end
+    local g = Instance.new("ScreenGui")
+    g.Name = "ColdCaseReticle"
+    g.ResetOnSpawn = false
+    g.IgnoreGuiInset = true
+    g.DisplayOrder = 15
+    g.Parent = plr:WaitForChild("PlayerGui")
+    local dot = Instance.new("Frame")
+    dot.Name = "Dot"
+    dot.AnchorPoint = Vector2.new(0.5, 0.5)
+    dot.Position = UDim2.fromScale(0.5, 0.5)
+    dot.Size = UDim2.fromOffset(6, 6)
+    dot.BackgroundColor3 = Theme.INK
+    dot.BackgroundTransparency = 0.1
+    dot.BorderSizePixel = 0
+    dot.Visible = false
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = dot
+    for _, rot in { 0, 90, 180, 270 } do
+        local tick = Instance.new("Frame")
+        tick.AnchorPoint = Vector2.new(0.5, 0.5)
+        tick.Size = UDim2.fromOffset(2, 9)
+        tick.Rotation = rot
+        tick.BackgroundColor3 = Theme.INK
+        tick.BackgroundTransparency = 0.4
+        tick.BorderSizePixel = 0
+        local rad = math.rad(rot)
+        tick.Position = UDim2.new(0.5, math.sin(rad) * 12, 0.5, -math.cos(rad) * 12)
+        tick.Parent = dot
+    end
+    dot.Parent = g
+    reticleDot = dot
+    return dot
+end
+local AIMS: { [string]: boolean } =
+    { sheriff = true, hero = true, murderer = true, assassin = true }
+
 -- The touch USE button relabels to what it will do, like the E prompt does
 local shownTitle: string, shownFor: string? = "USE", nil
 
@@ -17807,6 +18094,13 @@ task.spawn(function()
         end
         ClientState.Set("prompt", text)
 
+        -- Phone crosshair: visible only while armed, in a round, no menu open.
+        reticle().Visible = isTouch()
+            and role ~= nil
+            and AIMS[role :: string] == true
+            and inRound()
+            and ClientState.screen == nil
+
         -- A role change rebinds the button, which resets it to USE
         if role ~= shownFor then
             shownFor, shownTitle = role, "USE"
@@ -17828,7 +18122,7 @@ return InputController
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="85">
+        <Item class="ModuleScript" referent="86">
           <Properties>
             <string name="Name">KillCamController</string>
             <string name="Source"><![CDATA[-- StarterPlayerScripts/Controllers/KillCamController
@@ -17945,7 +18239,7 @@ return KillCamController
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="86">
+        <Item class="ModuleScript" referent="87">
           <Properties>
             <string name="Name">LeaderboardController</string>
             <string name="Source"><![CDATA[--!strict
@@ -18098,7 +18392,7 @@ return {}
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="87">
+        <Item class="ModuleScript" referent="88">
           <Properties>
             <string name="Name">MenuController</string>
             <string name="Source"><![CDATA[-- StarterPlayerScripts/Controllers/MenuController
@@ -19224,9 +19518,42 @@ do
         show("lobby")
     end)
 
+    -- A prominent GAME MODE button in the walkable room: mode selection was
+    -- otherwise buried inside the menu. Shows the mode currently winning the
+    -- vote (or the next one) and opens the MODES vote panel directly.
+    local modeBtn = Instance.new("TextButton")
+    modeBtn.AnchorPoint = Vector2.new(0.5, 1)
+    modeBtn.Position = UDim2.new(0.5, 0, 1, -18 - 46 - 8)
+    modeBtn.Size = UDim2.fromOffset(210, 40)
+    modeBtn.TextSize = 15
+    skin(modeBtn, Theme.CARD, Theme.AMBER)
+    modeBtn.Parent = bar
+    modeBtn.Activated:Connect(function()
+        show("modes")
+        renderModes()
+    end)
+
+    local function modeButtonText(): string
+        local leader, best = nil, 0
+        for id, n in modeTally do
+            if n > best then
+                leader, best = id, n
+            end
+        end
+        if leader then
+            return ("🎮  %s  ▸"):format(string.upper(Modes.Get(leader).name))
+        end
+        return "🎮  PICK GAME MODE"
+    end
+    modeBtn.Text = modeButtonText()
+    Remotes.ModeTally.OnClientEvent:Connect(function()
+        modeBtn.Text = modeButtonText()
+    end)
+
     local function refreshBar()
-        -- Show the reopen button only when in the lobby with the menu dismissed.
+        -- Show the reopen buttons only in the lobby with the menu dismissed.
         bar.Enabled = ClientState.GetRoundState() == "INTERMISSION" and ClientState.screen == nil
+        modeBtn.Text = modeButtonText()
     end
     ClientState.On("screen", refreshBar)
     ReplicatedStorage:GetAttributeChangedSignal("RoundState"):Connect(refreshBar)
@@ -19243,7 +19570,7 @@ return MenuController
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="88">
+        <Item class="ModuleScript" referent="89">
           <Properties>
             <string name="Name">NoticeController</string>
             <string name="Source"><![CDATA[--!strict
@@ -19396,7 +19723,7 @@ return NoticeController
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="89">
+        <Item class="ModuleScript" referent="90">
           <Properties>
             <string name="Name">PedestalController</string>
             <string name="Source"><![CDATA[--!strict
@@ -19518,7 +19845,7 @@ return {}
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="90">
+        <Item class="ModuleScript" referent="91">
           <Properties>
             <string name="Name">PetController</string>
             <string name="Source"><![CDATA[-- StarterPlayerScripts/Controllers/PetController
@@ -19682,7 +20009,7 @@ return PetController
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="91">
+        <Item class="ModuleScript" referent="92">
           <Properties>
             <string name="Name">ShowcaseController</string>
             <string name="Source"><![CDATA[--!strict
@@ -19849,7 +20176,7 @@ return ShowcaseController
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="92">
+        <Item class="ModuleScript" referent="93">
           <Properties>
             <string name="Name">SocialController</string>
             <string name="Source"><![CDATA[--!strict
@@ -20086,7 +20413,7 @@ return SocialController
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="93">
+        <Item class="ModuleScript" referent="94">
           <Properties>
             <string name="Name">SoundController</string>
             <string name="Source"><![CDATA[--!strict
@@ -20219,7 +20546,7 @@ return SoundController
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="94">
+        <Item class="ModuleScript" referent="95">
           <Properties>
             <string name="Name">SpectatorController</string>
             <string name="Source"><![CDATA[--!strict
@@ -20413,7 +20740,7 @@ return SpectatorController
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="95">
+        <Item class="ModuleScript" referent="96">
           <Properties>
             <string name="Name">TradeController</string>
             <string name="Source"><![CDATA[-- StarterPlayerScripts/Controllers/TradeController
@@ -20668,7 +20995,7 @@ return TradeController
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="96">
+        <Item class="ModuleScript" referent="97">
           <Properties>
             <string name="Name">VisionController</string>
             <string name="Source"><![CDATA[-- StarterPlayerScripts/Controllers/VisionController
@@ -20750,6 +21077,52 @@ local function targetRadius(): number
     return Config.VISION_NORMAL
 end
 
+-- When the room goes black (a Lights Out / Power Surge event, or the Hardcore
+-- gloom), give every figure a warm light aura so people are visible and can
+-- find their way and read a body. Each person carries their own glow.
+local function isDarkNow(): boolean
+    if event == "LIGHTS_OUT" or event == "POWER_SURGE" then
+        return true
+    end
+    return ReplicatedStorage:GetAttribute("Mode") == "hardcore"
+end
+
+local function aura(char: Model, on: boolean)
+    local light = char:FindFirstChild("ColdCaseAura") :: PointLight?
+    local glow = char:FindFirstChild("ColdCaseAuraGlow") :: Highlight?
+    if on then
+        if not light then
+            local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+            if root and root:IsA("BasePart") then
+                local l = Instance.new("PointLight")
+                l.Name = "ColdCaseAura"
+                l.Color = Color3.fromHex("ffe1a6") -- warm lantern
+                l.Brightness = 2.2
+                l.Range = 18
+                l.Shadows = false
+                l.Parent = root
+            end
+        end
+        if not glow then
+            local h = Instance.new("Highlight")
+            h.Name = "ColdCaseAuraGlow"
+            h.FillColor = Color3.fromHex("ffe1a6")
+            h.FillTransparency = 0.86
+            h.OutlineColor = Color3.fromHex("ffe1a6")
+            h.OutlineTransparency = 0.45
+            h.DepthMode = Enum.HighlightDepthMode.Occluded
+            h.Parent = char
+        end
+    else
+        if light then
+            light:Destroy()
+        end
+        if glow then
+            glow:Destroy()
+        end
+    end
+end
+
 local function outline(char: Model, on: boolean)
     local hl = char:FindFirstChild("LastCallOutline") :: Highlight?
     if on and not hl then
@@ -20808,8 +21181,13 @@ RunService.RenderStepped:Connect(function(dt)
             )
         end
     end
+    local dark = active and isDarkNow()
+    if myChar then
+        aura(myChar, dark == true)
+    end
     for _, other in others do
         local char = other.char
+        aura(char, dark == true)
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then
             if active and myPos then
@@ -20837,24 +21215,24 @@ return VisionController
       </Item>
     </Item>
   </Item>
-  <Item class="TextChatService" referent="97">
+  <Item class="TextChatService" referent="98">
     <Properties>
       <string name="Name">TextChatService</string>
       <token name="ChatVersion">1</token>
     </Properties>
   </Item>
-  <Item class="Workspace" referent="98">
+  <Item class="Workspace" referent="99">
     <Properties>
       <string name="Name">Workspace</string>
       <bool name="NeedsPivotMigration">false</bool>
       <bool name="StreamingEnabled">false</bool>
     </Properties>
-    <Item class="Model" referent="99">
+    <Item class="Model" referent="100">
       <Properties>
         <string name="Name">Lobby</string>
         <bool name="NeedsPivotMigration">false</bool>
       </Properties>
-      <Item class="Part" referent="100">
+      <Item class="Part" referent="101">
         <Properties>
           <string name="Name">LobbyFloor</string>
           <bool name="Anchored">true</bool>
@@ -20881,7 +21259,7 @@ return VisionController
           </Vector3>
         </Properties>
       </Item>
-      <Item class="SpawnLocation" referent="101">
+      <Item class="SpawnLocation" referent="102">
         <Properties>
           <string name="Name">LobbySpawn</string>
           <bool name="Anchored">true</bool>

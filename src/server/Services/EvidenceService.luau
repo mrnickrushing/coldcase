@@ -6,7 +6,6 @@ local FibreBands = require(Shared.FibreBands)
 local Modes = require(Shared.Modes)
 local Remotes = game.ReplicatedStorage.Remotes
 local Reach = require(script.Parent.Reach)
-local EventService = require(script.Parent.EventService)
 local AudioService = require(script.Parent.AudioService)
 local DataService = require(script.Parent.DataService)
 local Analytics = require(script.Parent.Analytics)
@@ -332,11 +331,13 @@ function EvidenceService:Examine(plr: Player, model: Instance)
         return
     end
 
-    -- Clues cannot be read in the dark. This is the murderer's window.
+    -- Clues stay readable in the dark now: everyone carries a light aura, so a
+    -- witness who gets to the body in time can still read it. Only real age
+    -- (the mode's clue window) lets the trail go cold.
     local age = os.clock() - data.at
     local window = Modes.Get(game.ReplicatedStorage:GetAttribute("Mode")).clueWindow
         or Config.BODY_CLUE_WINDOW
-    if EventService:IsDark() or age > window then
+    if age > window then
         Remotes.Clue:FireClient(plr, { cold = true })
         return
     end

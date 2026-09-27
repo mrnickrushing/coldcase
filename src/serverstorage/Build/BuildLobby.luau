@@ -152,12 +152,23 @@ local function tradeTable(parent: Instance, centre: Vector3)
     label.BackgroundTransparency = 1
     label.FontFace = Theme.DISPLAY
     label.TextSize = 16
+    label.Name = "Label"
     label.Text = "TRADE · SIT TO DEAL"
     label.TextColor3 = Color3.fromHex("f2a63b")
     label.TextStrokeTransparency = 0.5
     label.Parent = sign
     sign.Adornee = topPart
     sign.Parent = topPart
+    -- A visible prompt so the table reads as interactive, not decoration.
+    -- TradeTableService seats you here (or says when trading unlocks).
+    local prompt = Instance.new("ProximityPrompt")
+    prompt.Name = "TradePrompt"
+    prompt.ActionText = "Sit & Trade"
+    prompt.ObjectText = "Trade Table"
+    prompt.KeyboardKeyCode = Enum.KeyCode.E
+    prompt.RequiresLineOfSight = false
+    prompt.MaxActivationDistance = 10
+    prompt.Parent = topPart
     model.PrimaryPart = topPart
     model.Parent = parent
     CollectionService:AddTag(model, "TradeTable")
