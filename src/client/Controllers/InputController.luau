@@ -113,6 +113,55 @@ local function aimPoint(): Vector3
     return aimAt(m.X, m.Y)
 end
 
+-- Aim assist for guns and thrown knives. On a phone the shot went to dead
+-- screen-centre with no crosshair, so unless a target was perfectly centred you
+-- missed and "nothing happened". This snaps the shot onto the nearest character
+-- close to where you are aiming (players and NPCs), within a cone and in range.
+-- The server still re-validates the hit and applies the sheriff's misfire rule,
+-- so this only helps you point - it can't fake a kill.
+local function assistedAim(range: number): Vector3?
+    local cam = workspace.CurrentCamera
+    if not cam then
+        return nil
+    end
+    local vp = cam.ViewportSize
+    local center = Vector2.new(vp.X, vp.Y) / 2
+    local limit = math.min(vp.X, vp.Y) * 0.22 -- how far off centre we still help
+    local eye = cam.CFrame.Position
+    local best, bestPixels = nil, limit
+    local function consider(char: Model?)
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local root = char
+            and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
+        if not (hum and hum.Health > 0 and root and root:IsA("BasePart")) then
+            return
+        end
+        local pos = root.Position + Vector3.new(0, 0.5, 0)
+        if (pos - eye).Magnitude > range then
+            return
+        end
+        local sp, onScreen = cam:WorldToViewportPoint(pos)
+        if not onScreen or sp.Z <= 0 then
+            return
+        end
+        local pixels = (Vector2.new(sp.X, sp.Y) - center).Magnitude
+        if pixels < bestPixels then
+            best, bestPixels = pos, pixels
+        end
+    end
+    for _, other in Players:GetPlayers() do
+        if other ~= plr then
+            consider(other.Character)
+        end
+    end
+    for _, model in CollectionService:GetTagged("BotCharacter") do
+        if model:IsA("Model") then
+            consider(model)
+        end
+    end
+    return best
+end
+
 ---------------------------------------------------------------- Actions
 local function interact()
     local pos = myPosition()
@@ -158,7 +207,8 @@ local function fire()
         and myPosition()
         and cooled("gun", Config.GUN_COOLDOWN)
     then
-        Remotes.RequestShoot:FireServer(aimPoint())
+        local aim = isTouch() and (assistedAim(Config.GUN_RANGE) or aimPoint()) or aimPoint()
+        Remotes.RequestShoot:FireServer(aim)
         CombatFeel.Kick(0.26, 0.15)
     end
 end
@@ -170,7 +220,9 @@ local function throw()
         and myPosition()
         and cooled("throw", Config.THROW_COOLDOWN)
     then
-        Remotes.RequestThrow:FireServer(aimPoint())
+        local reach = Config.THROW_MAX_FLIGHT * Config.THROW_SPEED
+        local aim = isTouch() and (assistedAim(reach) or aimPoint()) or aimPoint()
+        Remotes.RequestThrow:FireServer(aim)
         CombatFeel.Kick(0.19, 0.13)
     end
 end
@@ -469,6 +521,52 @@ Remotes.AbilityState.OnClientEvent:Connect(function(kind: string, duration: numb
 end)
 
 ---------------------------------------------------------------- Context prompt
+---------------------------------------------------------------- aim reticle
+-- A crosshair at screen centre for phone players: touch shots fire at the
+-- centre, so without this you aimed at nothing and missed. Shown only while
+-- armed and in a round, and hidden behind any open menu.
+local reticleDot: Frame? = nil
+local function reticle(): Frame
+    if reticleDot and reticleDot.Parent then
+        return reticleDot
+    end
+    local g = Instance.new("ScreenGui")
+    g.Name = "ColdCaseReticle"
+    g.ResetOnSpawn = false
+    g.IgnoreGuiInset = true
+    g.DisplayOrder = 15
+    g.Parent = plr:WaitForChild("PlayerGui")
+    local dot = Instance.new("Frame")
+    dot.Name = "Dot"
+    dot.AnchorPoint = Vector2.new(0.5, 0.5)
+    dot.Position = UDim2.fromScale(0.5, 0.5)
+    dot.Size = UDim2.fromOffset(6, 6)
+    dot.BackgroundColor3 = Theme.INK
+    dot.BackgroundTransparency = 0.1
+    dot.BorderSizePixel = 0
+    dot.Visible = false
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = dot
+    for _, rot in { 0, 90, 180, 270 } do
+        local tick = Instance.new("Frame")
+        tick.AnchorPoint = Vector2.new(0.5, 0.5)
+        tick.Size = UDim2.fromOffset(2, 9)
+        tick.Rotation = rot
+        tick.BackgroundColor3 = Theme.INK
+        tick.BackgroundTransparency = 0.4
+        tick.BorderSizePixel = 0
+        local rad = math.rad(rot)
+        tick.Position = UDim2.new(0.5, math.sin(rad) * 12, 0.5, -math.cos(rad) * 12)
+        tick.Parent = dot
+    end
+    dot.Parent = g
+    reticleDot = dot
+    return dot
+end
+local AIMS: { [string]: boolean } =
+    { sheriff = true, hero = true, murderer = true, assassin = true }
+
 -- The touch USE button relabels to what it will do, like the E prompt does
 local shownTitle: string, shownFor: string? = "USE", nil
 
@@ -520,6 +618,13 @@ task.spawn(function()
             text = ability.text
         end
         ClientState.Set("prompt", text)
+
+        -- Phone crosshair: visible only while armed, in a round, no menu open.
+        reticle().Visible = isTouch()
+            and role ~= nil
+            and AIMS[role :: string] == true
+            and inRound()
+            and ClientState.screen == nil
 
         -- A role change rebinds the button, which resets it to USE
         if role ~= shownFor then

@@ -77,6 +77,52 @@ local function targetRadius(): number
     return Config.VISION_NORMAL
 end
 
+-- When the room goes black (a Lights Out / Power Surge event, or the Hardcore
+-- gloom), give every figure a warm light aura so people are visible and can
+-- find their way and read a body. Each person carries their own glow.
+local function isDarkNow(): boolean
+    if event == "LIGHTS_OUT" or event == "POWER_SURGE" then
+        return true
+    end
+    return ReplicatedStorage:GetAttribute("Mode") == "hardcore"
+end
+
+local function aura(char: Model, on: boolean)
+    local light = char:FindFirstChild("ColdCaseAura") :: PointLight?
+    local glow = char:FindFirstChild("ColdCaseAuraGlow") :: Highlight?
+    if on then
+        if not light then
+            local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+            if root and root:IsA("BasePart") then
+                local l = Instance.new("PointLight")
+                l.Name = "ColdCaseAura"
+                l.Color = Color3.fromHex("ffe1a6") -- warm lantern
+                l.Brightness = 2.2
+                l.Range = 18
+                l.Shadows = false
+                l.Parent = root
+            end
+        end
+        if not glow then
+            local h = Instance.new("Highlight")
+            h.Name = "ColdCaseAuraGlow"
+            h.FillColor = Color3.fromHex("ffe1a6")
+            h.FillTransparency = 0.86
+            h.OutlineColor = Color3.fromHex("ffe1a6")
+            h.OutlineTransparency = 0.45
+            h.DepthMode = Enum.HighlightDepthMode.Occluded
+            h.Parent = char
+        end
+    else
+        if light then
+            light:Destroy()
+        end
+        if glow then
+            glow:Destroy()
+        end
+    end
+end
+
 local function outline(char: Model, on: boolean)
     local hl = char:FindFirstChild("LastCallOutline") :: Highlight?
     if on and not hl then
@@ -135,8 +181,13 @@ RunService.RenderStepped:Connect(function(dt)
             )
         end
     end
+    local dark = active and isDarkNow()
+    if myChar then
+        aura(myChar, dark == true)
+    end
     for _, other in others do
         local char = other.char
+        aura(char, dark == true)
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then
             if active and myPos then
