@@ -1136,6 +1136,22 @@ do
         renderModes()
     end)
 
+    -- INVENTORY in the walkable room too: your unlocked weapons live in the
+    -- collection, and this opens it straight to equip them without the menu.
+    local invBtn = Instance.new("TextButton")
+    invBtn.AnchorPoint = Vector2.new(0.5, 1)
+    invBtn.Position = UDim2.new(0.5, 0, 1, -18 - 46 - 8 - 40 - 8)
+    invBtn.Size = UDim2.fromOffset(210, 40)
+    invBtn.TextSize = 15
+    invBtn.Text = "🎒  INVENTORY"
+    skin(invBtn, Theme.CARD, Theme.CYAN)
+    invBtn.Parent = bar
+    invBtn.Activated:Connect(function()
+        inv.Status.Text = ""
+        show("inventory")
+        renderInventory()
+    end)
+
     local function modeButtonText(): string
         local leader, best = nil, 0
         for id, n in modeTally do
