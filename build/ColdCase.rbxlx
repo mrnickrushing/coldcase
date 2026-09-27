@@ -16775,7 +16775,7 @@ local MARKS = {
 local gui = Instance.new("ScreenGui")
 gui.Name = "ColdCaseCompass"
 gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = false
+gui.IgnoreGuiInset = true -- share the HUD's coordinate space so it sits under it
 gui.DisplayOrder = 12
 gui.Enabled = false
 gui.Parent = plr:WaitForChild("PlayerGui")
@@ -16783,8 +16783,9 @@ gui.Parent = plr:WaitForChild("PlayerGui")
 local window = Instance.new("Frame")
 window.Name = "Window"
 window.AnchorPoint = Vector2.new(0.5, 0)
-window.Position = UDim2.new(0.5, 0, 0, 8)
-window.Size = UDim2.fromOffset(WIDTH, 34)
+-- Just below the round stat bar (Top: y 14..72), so it never overlaps it.
+window.Position = UDim2.new(0.5, 0, 0, 78)
+window.Size = UDim2.fromOffset(WIDTH, 28)
 window.BackgroundColor3 = Theme.GROUND
 window.BackgroundTransparency = 0.35
 window.BorderSizePixel = 0
@@ -19533,6 +19534,22 @@ do
         renderModes()
     end)
 
+    -- INVENTORY in the walkable room too: your unlocked weapons live in the
+    -- collection, and this opens it straight to equip them without the menu.
+    local invBtn = Instance.new("TextButton")
+    invBtn.AnchorPoint = Vector2.new(0.5, 1)
+    invBtn.Position = UDim2.new(0.5, 0, 1, -18 - 46 - 8 - 40 - 8)
+    invBtn.Size = UDim2.fromOffset(210, 40)
+    invBtn.TextSize = 15
+    invBtn.Text = "🎒  INVENTORY"
+    skin(invBtn, Theme.CARD, Theme.CYAN)
+    invBtn.Parent = bar
+    invBtn.Activated:Connect(function()
+        inv.Status.Text = ""
+        show("inventory")
+        renderInventory()
+    end)
+
     local function modeButtonText(): string
         local leader, best = nil, 0
         for id, n in modeTally do
@@ -20155,8 +20172,12 @@ RunService.RenderStepped:Connect(function()
         local head = char and char:FindFirstChild("Head")
         if head and head:IsA("BasePart") then
             local pos = head.Position + Vector3.new(0, 2.6, 0)
+            -- The preview models stand blade-up (their long axis is local Y), so
+            -- shown as-is they read as a vertical sliver. Tip them flat (90deg
+            -- about X) so the blade lies horizontal and the shape is legible,
+            -- then spin about the vertical for the slow showpiece turn.
             show.model:PivotTo(
-                CFrame.new(pos) * CFrame.Angles(0, t * 1.4, 0) * CFrame.Angles(math.rad(20), 0, 0)
+                CFrame.new(pos) * CFrame.Angles(0, t * 1.4, 0) * CFrame.Angles(math.rad(90), 0, 0)
             )
             show.model.Parent = folder
             if show.chroma then

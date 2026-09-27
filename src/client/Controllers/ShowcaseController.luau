@@ -141,8 +141,12 @@ RunService.RenderStepped:Connect(function()
         local head = char and char:FindFirstChild("Head")
         if head and head:IsA("BasePart") then
             local pos = head.Position + Vector3.new(0, 2.6, 0)
+            -- The preview models stand blade-up (their long axis is local Y), so
+            -- shown as-is they read as a vertical sliver. Tip them flat (90deg
+            -- about X) so the blade lies horizontal and the shape is legible,
+            -- then spin about the vertical for the slow showpiece turn.
             show.model:PivotTo(
-                CFrame.new(pos) * CFrame.Angles(0, t * 1.4, 0) * CFrame.Angles(math.rad(20), 0, 0)
+                CFrame.new(pos) * CFrame.Angles(0, t * 1.4, 0) * CFrame.Angles(math.rad(90), 0, 0)
             )
             show.model.Parent = folder
             if show.chroma then
