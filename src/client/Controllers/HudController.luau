@@ -218,6 +218,13 @@ local function onState()
     if state ~= "REVEAL" then
         roleCard.Visible = false
     end
+    -- The weapon/prompt panel and the clue log belong to a live round. In the
+    -- lobby the HUD still shows (you walk the room), but these sit bottom-centre
+    -- and left, right over the lobby's own buttons - so hide them until ACTIVE.
+    local live = state == "ACTIVE"
+    action.Visible = live
+    evidence.Visible = live
+    roleTag.Visible = live -- the role tag reads "—" in the lobby; hide it too
 end
 ReplicatedStorage:GetAttributeChangedSignal("RoundState"):Connect(onState)
 onState()
